@@ -2142,6 +2142,27 @@ function kpiPop(status){
     [h("span",{text:(more?"他"+more+"件 / ":"")+"すべて見る"}), ic("chevronRight",14)]));
   return pop;
 }
+/* 最優先カード単体（モバイルのホーム最上段でも単独で使う） */
+function homePriorityCard(){
+  var late=0, revise=0;
+  rowsOfMonth().forEach(function(r){
+    if(r.status==="投稿済み") return;
+    if(r.status==="要修正") revise++;
+    if(r.planned<TODAY) late++;
+  });
+  var prio=priorityRows().length;
+  var k1=kpiCardInline("g-critical","最優先","alertCircle", prio,"件");
+  var bk=h("div",{class:"kbreak"});
+  bk.appendChild(h("div",{},[h("span",{text:"期限超過"}), h("b",{class:"num",text:late+"件"})]));
+  bk.appendChild(h("div",{},[h("span",{text:"要修正"}), h("b",{class:"num",text:revise+"件"})]));
+  k1.appendChild(bk);
+  k1.appendChild(h("div",{class:"kfoot right"},[h("span",{text:"すべて見る"}), ic("chevronRight",14)]));
+  k1.classList.add("click"); k1.setAttribute("role","button"); k1.setAttribute("tabindex","0");
+  var goPrio=function(){ FILTER.sort="delay"; FILTER.status="open"; FILTER.editor="__all__"; VIEW="list"; render(); };
+  k1.addEventListener("click", goPrio);
+  k1.addEventListener("keydown", function(e){ if(e.key==="Enter") goPrio(); });
+  return k1;
+}
 function homeKpis(){
   var rows=rowsOfMonth(), cs=contractsOf();
   var target=0; cs.forEach(function(c){ target+=c.count; });
@@ -2153,7 +2174,6 @@ function homeKpis(){
     if(r.status==="要修正") revise++;
     if(r.planned<TODAY) late++;
   });
-  var prio=priorityRows().length;
 
   /* ペース（投稿目標カード用）。営業日の消化率から期待本数を出す */
   var bd=bizDays(MONTH)||[], done=bd.filter(function(d){ return d<=TODAY; }).length;
@@ -2163,17 +2183,7 @@ function homeKpis(){
   var g=h("div",{class:"kpis home5"});
 
   /* 最優先（critical）：件数はラベル行に inline（完成イメージ準拠）。クリックで動画一覧を遅延順に */
-  var k1=kpiCardInline("g-critical","最優先","alertCircle", prio,"件");
-  var bk=h("div",{class:"kbreak"});
-  bk.appendChild(h("div",{},[h("span",{text:"期限超過"}), h("b",{class:"num",text:late+"件"})]));
-  bk.appendChild(h("div",{},[h("span",{text:"要修正"}), h("b",{class:"num",text:revise+"件"})]));
-  k1.appendChild(bk);
-  k1.appendChild(h("div",{class:"kfoot right"},[h("span",{text:"すべて見る"}), ic("chevronRight",14)]));
-  k1.classList.add("click"); k1.setAttribute("role","button"); k1.setAttribute("tabindex","0");
-  var goPrio=function(){ FILTER.sort="delay"; FILTER.status="open"; FILTER.editor="__all__"; VIEW="list"; render(); };
-  k1.addEventListener("click", goPrio);
-  k1.addEventListener("keydown", function(e){ if(e.key==="Enter") goPrio(); });
-  g.appendChild(k1);
+  g.appendChild(homePriorityCard());
 
   /* 投稿目標（blue）：クリックで動画一覧の進行トラックへ。
      完成イメージ：大きい実績数字＋「/ 目標 本」、右端に「残り n本」、バー下に達成率 */
@@ -4364,8 +4374,13 @@ function showToast(msg, undo){
 /* =====================================================================
    シェルの組み立て
    ===================================================================== */
+var _PREV_VIEW=null;
 function render(){
-  var sy=window.scrollY||0;
+  /* スクロール位置の維持は「同じ画面の再描画」のときだけ。
+     画面を切り替えたら必ず最上部から表示する（ホーム→動画一覧→ホーム 等） */
+  var sameView = (_PREV_VIEW===VIEW);
+  _PREV_VIEW = VIEW;
+  var sy = sameView ? (window.scrollY||0) : 0;
   var d0=document.querySelector(".detail"), t0=document.querySelector(".taskscroll"), c0=document.querySelector(".cscroll");
   var dTop=d0?d0.scrollTop:0, tTop=t0?t0.scrollTop:0, cTop=c0?c0.scrollTop:0;
 
@@ -4398,9 +4413,10 @@ function render(){
   if(VIEW==="home"){
     /* モバイルは My Tasks を最上段に（§37：編集スタッフが最短で作業開始できる順） */
     if(mob){
+      /* モバイルのホームは「最優先」カード → My Tasks のみ（2026-08-28 指示）。
+         他のKPI・停滞中カードは出さない */
+      wrap.appendChild(homePriorityCard());
       wrap.appendChild(MyTasksCard());
-      wrap.appendChild(homeKpis());
-      wrap.appendChild(homeStalled());
     } else {
       /* 完成イメージ01：KPI全幅 → 左（My Tasks＋停滞中）／右（動画詳細カード） */
       wrap.appendChild(homeKpis());
@@ -4444,10 +4460,12 @@ function render(){
     root.appendChild(BottomNav());
   }
 
-  var d1=document.querySelector(".detail"); if(d1) d1.scrollTop=dTop;
-  var t1=document.querySelector(".taskscroll"); if(t1) t1.scrollTop=tTop;
-  var c1=document.querySelector(".cscroll"); if(c1) c1.scrollTop=cTop;
-  if(sy) window.scrollTo(0,sy);
+  if(sameView){
+    var d1=document.querySelector(".detail"); if(d1) d1.scrollTop=dTop;
+    var t1=document.querySelector(".taskscroll"); if(t1) t1.scrollTop=tTop;
+    var c1=document.querySelector(".cscroll"); if(c1) c1.scrollTop=cTop;
+  }
+  window.scrollTo(0,sy);
 }
 
 var _RZ=null;
