@@ -1,4 +1,5 @@
 <title>SOCIAL BASE</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap">
 <style>
 /* =====================================================================
@@ -860,6 +861,106 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
   .staffcards{grid-template-columns:repeat(2,minmax(0,1fr))}
   .wcard{grid-template-columns:44px minmax(0,1fr) auto}
   .wcard .meta{grid-column:2/4}
+  .calduo{grid-template-columns:minmax(0,1fr)}
+  .clienttop{grid-template-columns:minmax(0,1fr)}
+  .clienttop .kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .todayduo{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .todayduo .queue{grid-column:1/3}
+}
+
+/* =====================================================================
+   モバイル（§36〜42：0–767px）。PC版の縮小ではなく専用レイアウト
+   ===================================================================== */
+/* 共有部品（モバイル以外では出ない・出さない） */
+.taskdrive{display:none}
+.trev{font-size:11.5px;color:#FDA4AF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.vcards{display:flex;flex-direction:column;gap:10px}
+.vcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);
+  padding:12px 13px;display:flex;flex-direction:column;gap:9px;box-shadow:var(--shadow-card);
+  cursor:pointer;min-width:0}
+.vcard[aria-selected="true"]{border-color:var(--brand-blue)}
+.vcard .top{display:flex;align-items:center;gap:9px;min-width:0}
+.vcard .tt{flex:1;min-width:0;display:flex;flex-direction:column}
+.vcard .tt span{font-size:11.5px;color:var(--text-secondary)}
+.vcard .tt b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vmeta{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--text-secondary);align-items:center}
+.vmeta .od{color:var(--late);font-weight:700}
+.vcard .actbtns{width:100%}
+.vcard .actbtns .cta,.vcard .actbtns .outbtn{flex:1;min-width:0}
+
+@media (max-width:767px){
+  .shell,.shell.nodetail{display:block}
+  /* サイドバー → ハンバーガードロワー（§36） */
+  .side{position:fixed;left:0;top:0;bottom:0;width:264px;z-index:70;height:100vh;
+    transform:translateX(-103%);transition:transform 160ms ease}
+  .side.open{transform:none}
+  .brand{position:relative;padding-right:52px}
+  .brand .close{position:absolute;right:8px;top:-4px;color:#fff}
+  /* モバイルヘッダー（§36：56px程度） */
+  .mhead{display:flex;align-items:center;gap:6px;padding:8px 12px;min-height:56px;
+    background:var(--surface);border-bottom:1px solid var(--border);
+    position:sticky;top:0;z-index:50}
+  .iconbtn.mh{width:44px;height:44px;color:var(--text-primary)}
+  .mlogo{display:flex;align-items:center;gap:7px}
+  .mlogo .wordmark{font-size:13.5px;font-weight:800;letter-spacing:.05em;color:var(--text-primary);position:relative}
+  .mlogo .wordmark i{font-style:normal;position:relative}
+  .mlogo .wordmark i::after{content:"";position:absolute;left:50%;bottom:1px;transform:translateX(-50%);
+    width:3px;height:3px;border-radius:50%;background:var(--brand-blue)}
+  .avbtn{background:none;border:0;padding:0;cursor:pointer;min-width:44px;min-height:44px;
+    display:flex;align-items:center;justify-content:center}
+  .msearch{margin:8px 12px 0}
+  .msub{display:flex;align-items:center;gap:8px;padding:8px 12px 0;flex-wrap:wrap}
+  .wrap{padding:14px 12px 92px;gap:14px}
+  .kpis,.kpis.four,.kpis.three,.clienttop .kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .kpi{padding:13px 13px 11px}
+  .kpi .val .n{font-size:27px}
+  .kpi .lab{font-size:13px}
+  .duo,.todayduo,.calduo,.clienttop{display:flex;flex-direction:column;gap:14px}
+  .staffcards,.pcards{grid-template-columns:1fr}
+  /* KPIポップオーバーはインラインアコーディオンにする（§15.3 mobile） */
+  .kpipop{position:static;margin-top:8px;max-width:none;min-width:0}
+  /* My Tasks 行 → タスクカード（§37） */
+  .taskscroll{max-height:none}
+  .trow{flex-wrap:wrap;min-height:0;padding:12px 13px;gap:9px}
+  .trow .mid{flex:1 1 46%}
+  .trow .prio{order:2}
+  .trow .due{order:3;margin-left:auto}
+  .trow .taskdrive{order:4}
+  .trow .actbtns{order:5}
+  .taskdrive{display:flex;width:100%;gap:8px}
+  .taskdrive .drivebtn{flex:1;justify-content:center;height:44px}
+  .dark .drivebtn{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.22);color:#fff}
+  .dark .drivebtn:hover{background:rgba(255,255,255,.16)}
+  .actbtns{width:100%}
+  .cta,.outbtn{height:44px}
+  .actbtns .cta,.actbtns .outbtn{flex:1;min-width:0}
+  /* 動画詳細 → ボトムシート（§38） */
+  .detail{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;max-width:none;max-height:90vh;
+    border-radius:18px 18px 0 0;border-left:0;z-index:75;overflow-y:auto;
+    box-shadow:0 -14px 44px rgba(6,29,60,.35);
+    transform:translateY(103%);transition:transform 180ms ease}
+  .detail.open{transform:none}
+  .detail::before{content:"";display:block;width:44px;height:4px;border-radius:999px;
+    background:var(--border-strong);margin:8px auto 0}
+  .dfoot{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--border);
+    padding:10px 18px calc(12px + env(safe-area-inset-bottom))}
+  /* 投稿カレンダー（§41）：セルは点＋件数中心。土日祝の色はPCと同じ */
+  .caltable td{height:58px;padding:3px 4px}
+  .caltable .dn{font-size:11.5px}
+  .ev{gap:3px} .ev i{width:7px;height:7px} .ev span{display:none}
+  .evmore{font-size:10px}
+  .calfb .calsel{flex:1 1 44%;max-width:none}
+  /* 固定ボトムナビ（§36） */
+  .bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:60;display:flex;background:var(--surface);
+    border-top:1px solid var(--border);padding:4px 4px calc(4px + env(safe-area-inset-bottom))}
+  .bottomnav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+    background:none;border:0;padding:6px 2px;min-height:52px;cursor:pointer;
+    color:var(--text-muted);font-size:10.5px;font-weight:600;border-radius:10px;min-width:0}
+  .bottomnav button span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bottomnav button[aria-current="page"]{color:var(--brand-blue)}
+  /* モーダルはほぼ全幅 */
+  .modal{max-width:calc(100vw - 28px)}
+  .mstep .ms{min-width:calc(50% - 4px)}
 }
 </style>
 
@@ -1391,7 +1492,8 @@ var ICON = {
   inbox:'<path d="M3 12h5l1.5 2.5h5L16 12h5"/><path d="M5.5 5h13l2.5 7v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6z"/>',
   search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/>',
   building:'<rect x="4" y="3" width="12" height="18" rx="1"/><path d="M16 9h4a0 0 0 0 1 0 0v12"/><path d="M8 7h2M8 11h2M8 15h2M12 7h1M12 11h1M12 15h1M2 21h20"/>',
-  sort:'<path d="M4 7h13M4 12h9M4 17h5"/><path d="m17 14 3 3 3-3"/>'
+  sort:'<path d="M4 7h13M4 12h9M4 17h5"/><path d="m17 14 3 3 3-3"/>',
+  menu:'<path d="M4 6h16M4 12h16M4 18h16"/>'
 };
 function ic(name, size){
   var s=svgEl("svg",{viewBox:"0 0 24 24",width:String(size||18),height:String(size||18),
@@ -1525,6 +1627,9 @@ function isPast(){ return MONTH < monthOf(TODAY); }
 function writable(){ return CAN_WRITE && !STATE.maintenance && !isPast(); }
 function daysSince(d){ return Math.floor((toUTC(TODAY)-toUTC(d))/86400000); }
 function narrow(){ try{ return window.matchMedia("(max-width:1279px)").matches; }catch(e){ return false; } }
+/* モバイル（§35.1：0–767px）。PCの縮小ではなく専用レイアウトに切り替える */
+function mobile(){ try{ return window.matchMedia("(max-width:767px)").matches; }catch(e){ return false; } }
+var MNAV=false, MSEARCH=false;   /* ハンバーガードロワー／検索オーバーレイ */
 var WD=["日","月","火","水","木","金","土"];
 function jpFull(s){ var a=s.split("-"); return (+a[0])+"年"+(+a[1])+"月"+(+a[2])+"日（"+WD[dow(s)]+"）"; }
 function fmtStamp(v){
@@ -1637,9 +1742,14 @@ function noticePop(ns){
    サイドバー
    --------------------------------------------------------------- */
 function Sidebar(){
-  var side=h("div",{class:"side"});
+  var side=h("div",{class:"side"+(MNAV?" open":"")});
 
-  side.appendChild(h("div",{class:"brand"},[sbMark(32), sbWordmark()]));
+  var brand=h("div",{class:"brand"},[sbMark(32), sbWordmark()]);
+  if(mobile()){
+    brand.appendChild(h("button",{class:"iconbtn mh close","aria-label":"メニューを閉じる",
+      onclick:function(){ MNAV=false; render(); }},[ic("x",20)]));
+  }
+  side.appendChild(brand);
 
   /* ---- ナビゲーション（§14）。ルートは3群に分ける ----
      制作＝毎日開く画面 / 管理＝社員だけの画面 / 要対応＝件数から入る導線。
@@ -1648,7 +1758,7 @@ function Sidebar(){
      残っていると、どれを操作しているのか分からなくなる */
   function goto(v){ return function(){
     if(VIEW!==v) SELECTED=null;
-    VIEW=v; POP=false; DRAWER=false; render(); }; }
+    VIEW=v; POP=false; DRAWER=false; MNAV=false; render(); }; }
   /* plain=true は「要対応」側の導線。同じ行き先でも現在地の強調は
      ルート側（制作・管理）だけに出す。二重に光ると現在地が読めない */
   function navBtn(label, iconName, view, badge, plain){
@@ -1686,7 +1796,75 @@ function Sidebar(){
 /* ---------------------------------------------------------------
    ヘッダー
    --------------------------------------------------------------- */
+/* モバイルヘッダー（§36）：hamburger / コンパクトロゴ / 検索アイコン / avatar */
+function MobileHeader(){
+  var box=h("div");
+  var top=h("div",{class:"mhead"});
+  top.appendChild(h("button",{class:"iconbtn mh","aria-label":"メニューを開く",
+    onclick:function(){ MNAV=true; render(); }},[ic("menu",22)]));
+  top.appendChild(h("div",{class:"mlogo"},[sbMark(26), sbWordmark()]));
+  top.appendChild(h("div",{class:"spacer"}));
+  top.appendChild(h("button",{class:"iconbtn mh","aria-label":"検索",
+    "aria-expanded":MSEARCH?"true":"false",
+    onclick:function(){ MSEARCH=!MSEARCH; render();
+      var el=document.querySelector(".msearch input"); if(el) el.focus(); }},[ic("search",20)]));
+  var av=h("div",{class:"avatar",text:(ME||"？").slice(0,1),"aria-hidden":"true"});
+  av.style.cssText="width:34px;height:34px;font-size:13px";
+  av.style.background=tileBg(ME||"?");
+  top.appendChild(h("button",{class:"avbtn","aria-label":"利用者を切り替える",onclick:openWho},[av]));
+  box.appendChild(top);
+
+  if(MSEARCH){
+    var sb=h("div",{class:"searchbox msearch"});
+    sb.appendChild(ic("search",18));
+    var si=h("input",{type:"search",placeholder:"動画やクライアント名で検索",
+      value:FILTER.q||"","aria-label":"動画やクライアント名で検索"});
+    si.addEventListener("keydown",function(e){
+      if(e.key==="Enter"){
+        FILTER.q=si.value.trim(); if(FILTER.q) FILTER.status="all";
+        MSEARCH=false; VIEW="list"; SELECTED=null; render();
+      }
+    });
+    sb.appendChild(si);
+    box.appendChild(sb);
+  }
+
+  /* 月ナビとお知らせは1行に畳む */
+  var sub=h("div",{class:"msub"});
+  var months=monthList(), mi=months.indexOf(MONTH);
+  var mn=h("div",{class:"mnav"});
+  mn.appendChild(h("button",{class:"iconbtn","aria-label":"前の月",disabled:mi<=0,
+    onclick:function(){ MONTH=months[mi-1]; SELECTED=null; SELECTEDC=null; render(); }},[ic("chevronLeft",16)]));
+  mn.appendChild(h("b",{text:MONTH.replace("-","年")+"月"}));
+  mn.appendChild(h("button",{class:"iconbtn","aria-label":"次の月",disabled:mi>=months.length-1,
+    onclick:function(){ MONTH=months[mi+1]; SELECTED=null; SELECTEDC=null; render(); }},[ic("chevronRight",16)]));
+  sub.appendChild(mn);
+  var ns=notices(), bad=ns.filter(function(x){ return x.lv!=="ok"; }).length;
+  var rel=h("div",{class:"rel"});
+  rel.appendChild(h("button",{class:"chipbtn"+(bad?" warn":""),"aria-expanded":POP?"true":"false",
+    "aria-label":"お知らせ "+ns.length+"件",
+    onclick:function(e){ e.stopPropagation(); POP=!POP; render(); }},
+    [ic(bad?"alert":"info",16), h("span",{class:"n",text:String(ns.length)})]));
+  if(POP) rel.appendChild(noticePop(ns));
+  sub.appendChild(rel);
+  if(writable()) sub.appendChild(h("button",{class:"cta",style:"min-width:0;margin-left:auto",
+    onclick:openAddVideo},[ic("plus",16), h("span",{text:"動画追加"})]));
+  box.appendChild(sub);
+  return box;
+}
+/* 固定ボトムナビ（§36）。共通5画面。クライアント管理はドロワー内のみ */
+function BottomNav(){
+  var bn=h("nav",{class:"bottomnav","aria-label":"主要ページ"});
+  var SHORT={"投稿カレンダー":"カレンダー","チーム負荷":"チーム","動画一覧":"動画"};
+  visibleViews().filter(function(v){ return v[0]!=="client"; }).forEach(function(v){
+    bn.appendChild(h("button",{"aria-current":VIEW===v[0]?"page":null,
+      onclick:function(){ if(VIEW!==v[0]) SELECTED=null; VIEW=v[0]; POP=false; DRAWER=false; MNAV=false; render(); }},
+      [ic(v[2],20), h("span",{text:SHORT[v[1]]||v[1]})]));
+  });
+  return bn;
+}
 function Header(){
+  if(mobile()) return MobileHeader();
   var top=h("div",{class:"topbar"});
 
   /* グローバル検索（§47）。対象＝クライアント名・動画タイトル。
@@ -1952,6 +2130,8 @@ function taskRow(r){
   sub.appendChild(sBadge(r.status, true));
   sub.appendChild(h("span",{text:c.display+"・"+r.kind+"・"+(r.editor||"未割当")}));
   mid.appendChild(sub);
+  /* 修正指示があれば1行で見せる（§37。全文は詳細パネル） */
+  if(r.revisionNote) mid.appendChild(h("div",{class:"trev",text:"修正指示：" + r.revisionNote}));
   row.appendChild(mid);
 
   var od=(r.planned<TODAY);
@@ -1964,6 +2144,11 @@ function taskRow(r){
   row.appendChild(h("span",{class:"prio "+p, text:prioLabel(p), title:"優先度 "+prioLabel(p)}));
 
   var ab=actionButtons(r), pend={}; OPS.all().forEach(function(o){ pend[o.target]=1; });
+  /* モバイルのタスクカードには Drive 2ボタンを添える（§37）。desktop では出さない */
+  if(mobile()){
+    var db=driveButtons((contractById(r.contractId)||{client:r.client}).client);
+    if(db){ db.classList.add("taskdrive"); row.appendChild(db); }
+  }
   if(ab){
     row.appendChild(ab);
   } else {
@@ -2375,6 +2560,42 @@ function listKpiStrip(){
 function trackBlock(){
   var s=sectCard("クライアント進行トラック","クライアント単位の今月の進捗。行をクリックすると下の一覧をそのクライアントに絞り込みます");
   s.card.id="trackblock";
+  /* モバイルはカード（テーブルの縮小はしない §36） */
+  if(mobile()){
+    var mbox=h("div",{class:"vcards"});
+    clientNames().forEach(function(n){
+      var ids={}, disp=n, cid=null;
+      SEED_CONTRACTS.forEach(function(c){ if(c.client===n){ ids[c.id]=1; disp=c.display; if(!cid) cid=c.id; } });
+      var rows=rowsOfMonth().filter(function(r){ return ids[r.contractId]; });
+      var goal=0; SEED_CONTRACTS.forEach(function(c){ if(ids[c.id]) goal+=c.count; });
+      var posted=rows.filter(function(r){ return r.status==="投稿済み"; }).length;
+      var j=judge(rows, TODAY), p=pct(posted, goal);
+      var card=h("div",{class:"vcard",role:"button",tabindex:"0",
+        onclick:function(){ FILTER.q=n; FILTER.status="all"; FILTER.editor="__all__"; render();
+          var el=document.getElementById("listwrap"); if(el) el.scrollIntoView({block:"start"}); },
+        onkeydown:function(e){ if(e.key==="Enter"){ e.preventDefault(); this.click(); } }});
+      var top=h("div",{class:"top"});
+      top.appendChild(tile(cid, disp.slice(0,2), 30, 22, 11));
+      var tt=h("div",{class:"tt"});
+      tt.appendChild(h("b",{text:n}));
+      top.appendChild(tt);
+      if(j.level==="late") top.appendChild(h("span",{class:"mchip late",text:"遅延リスク"}));
+      else if(j.level==="warn") top.appendChild(h("span",{class:"mchip warn",text:"注意"}));
+      else top.appendChild(h("span",{class:"mchip",text:posted>=goal&&goal>0?"達成":"進行中"}));
+      card.appendChild(top);
+      var meta=h("div",{class:"vmeta"});
+      meta.appendChild(h("span",{},[txt("投稿 "), num(posted), txt(" / "+goal+"本　")]));
+      var bar=h("div",{class:"pbar"}); var i=h("i"); i.style.width=Math.min(100,p)+"%";
+      if(j.level==="late") i.style.background="var(--critical)";
+      else if(j.level==="warn") i.style.background="var(--warning)";
+      bar.appendChild(i); meta.appendChild(bar);
+      meta.appendChild(h("span",{class:"pcv",text:p+"%"}));
+      card.appendChild(meta);
+      mbox.appendChild(card);
+    });
+    s.bd.appendChild(mbox);
+    return s.card;
+  }
   var wrap=h("div",{class:"tblwrap"});
   var t=h("table",{class:"list clienttbl"});
   var hr=h("tr");
@@ -2571,7 +2792,38 @@ function filteredRows(){
   else rows.sort(byPlanned);
   return rows;
 }
+/* モバイルの動画一覧（§39）。テーブルの横スクロールにせずカード化する */
+function listCards(){
+  var rows=filteredRows();
+  var box=h("div",{class:"vcards"});
+  if(!rows.length) box.appendChild(h("p",{class:"sub",text:"条件に合う動画がありません。"}));
+  rows.forEach(function(r){
+    var c=contractById(r.contractId)||{display:r.client,client:r.client};
+    var card=h("div",{class:"vcard",role:"button",tabindex:"0",
+      "aria-selected":SELECTED===r.id?"true":"false",
+      onclick:function(){ selectRow(r.id); },
+      onkeydown:function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); selectRow(r.id); } }});
+    var top=h("div",{class:"top"});
+    top.appendChild(tile(r.contractId, shortName(c), 34, 24, 12));
+    var tt=h("div",{class:"tt"});
+    tt.appendChild(h("span",{text:c.client}));
+    tt.appendChild(h("b",{text:r.title||(c.display+" "+r.kind)}));
+    top.appendChild(tt);
+    top.appendChild(sBadge(r.status));
+    card.appendChild(top);
+    var meta=h("div",{class:"vmeta"});
+    var lateP=(r.planned<TODAY && r.status!=="投稿済み");
+    meta.appendChild(h("span",{class:lateP?"od":"",text:"投稿予定 "+jpDate(r.planned)}));
+    meta.appendChild(h("span",{text:"担当 "+(r.editor||"未割当")}));
+    card.appendChild(meta);
+    var ab=actionButtons(r);
+    if(ab) card.appendChild(ab);
+    box.appendChild(card);
+  });
+  return box;
+}
 function listTable(){
+  if(mobile()) return listCards();
   var rows=filteredRows();
   var t=h("table",{class:"list"});
   var hr=h("tr");
@@ -3669,13 +3921,51 @@ function panelClient(){
 }
 function fmtD(d){ return d ? (+d.slice(5,7))+"/"+(+d.slice(8)) : "未設定"; }
 function clientTable(aggs){
-  var s=sectCard("クライアント一覧","クライアント名をクリックすると、右に詳細が表示されます");
+  var s=sectCard("クライアント一覧","クライアント名をクリックすると、詳細が表示されます");
   var list=aggs.filter(function(a){
     if(CLFILTER.plan!=="__all__" && (a.cd.planningStatus||"未着手")!==CLFILTER.plan) return false;
     if(CLFILTER.editor!=="__all__" && a.editors.indexOf(CLFILTER.editor)<0) return false;
     if(CLFILTER.material!=="__all__" && (a.cd.materialStatus||"未依頼")!==CLFILTER.material) return false;
     return true;
   });
+  /* モバイル（§42）はカード化 */
+  if(mobile()){
+    var box=h("div",{class:"vcards"});
+    if(!list.length) box.appendChild(h("p",{class:"sub",text:"条件に合うクライアントがありません。"}));
+    list.forEach(function(a){
+      var cd=a.cd;
+      var card=h("div",{class:"vcard",role:"button",tabindex:"0",
+        "aria-selected":CLSEL===a.name?"true":"false",
+        onclick:function(){ CLSEL=a.name; render();
+          var el=document.querySelector(".daypanel"); if(el) el.scrollIntoView({block:"start"}); },
+        onkeydown:function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); this.click(); } }});
+      var top=h("div",{class:"top"});
+      top.appendChild(tile(a.contractId, a.display.slice(0,2), 34, 24, 12));
+      var tt=h("div",{class:"tt"});
+      tt.appendChild(h("b",{text:a.name}));
+      tt.appendChild(h("span",{text:"担当 "+(a.editors.join("・")||"—")}));
+      top.appendChild(tt);
+      top.appendChild(h("span",{class:"mchip"+(materialLate(cd)?" late":""),text:cd.materialStatus||"未依頼"}));
+      card.appendChild(top);
+      var meta=h("div",{class:"vmeta"});
+      meta.appendChild(h("span",{text:"撮影 "+fmtD(cd.nextShootDate)}));
+      meta.appendChild(h("span",{class:(cd.planningDeadline&&cd.planningDeadline<TODAY&&(cd.planningStatus||"")!=="完了")?"od":"",
+        text:"企画 "+fmtD(cd.planningDeadline)}));
+      meta.appendChild(h("span",{text:"定例 "+fmtD(cd.nextRegularMeeting)}));
+      card.appendChild(meta);
+      var pr=h("div",{class:"vmeta"});
+      var bar=h("div",{class:"pbar"}); var i=h("i"); i.style.width=Math.min(100,a.pct)+"%";
+      if(a.late>0) i.style.background="var(--warning)";
+      bar.appendChild(i);
+      pr.appendChild(h("span",{},[txt("投稿 "), num(a.posted), txt(" / "+a.goal+"本　")]));
+      pr.appendChild(bar);
+      pr.appendChild(h("span",{class:"pcv",text:a.pct+"%"}));
+      card.appendChild(pr);
+      box.appendChild(card);
+    });
+    s.bd.appendChild(box);
+    return s.card;
+  }
   var wrap=h("div",{class:"tblwrap"});
   var t=h("table",{class:"list clienttbl"});
   var hr=h("tr");
@@ -4094,7 +4384,8 @@ function render(){
   /* 動画を選べるビューは同じ詳細パネルを使う（§6.1）。
      チーム負荷はスタッフを見る画面で動画の選択が無いため出さない */
   var showDetail=!!DETAIL_VIEWS[VIEW];
-  var shell=h("div",{class:"shell"+(showDetail?"":" nodetail")});
+  var mob=mobile();
+  var shell=h("div",{class:"shell"+(showDetail?"":" nodetail")+(mob?" mob":"")});
   shell.appendChild(Sidebar());
 
   var main=h("div",{class:"main"});
@@ -4110,9 +4401,16 @@ function render(){
   if(VIEW==="pending"){ VIEW="list"; FILTER.status="投稿待ち"; }
 
   if(VIEW==="home"){
-    wrap.appendChild(homeKpis());
-    wrap.appendChild(MyTasksCard());
-    wrap.appendChild(homeStalled());
+    /* モバイルは My Tasks を最上段に（§37：編集スタッフが最短で作業開始できる順） */
+    if(mob){
+      wrap.appendChild(MyTasksCard());
+      wrap.appendChild(homeKpis());
+      wrap.appendChild(homeStalled());
+    } else {
+      wrap.appendChild(homeKpis());
+      wrap.appendChild(MyTasksCard());
+      wrap.appendChild(homeStalled());
+    }
   } else if(VIEW==="list"){
     wrap.appendChild(panelList());
   } else if(VIEW==="today"){
@@ -4136,6 +4434,11 @@ function render(){
   }
   if(showDetail && DRAWER && narrow()){
     root.appendChild(h("div",{class:"backdrop",onclick:function(){ DRAWER=false; render(); }}));
+  }
+  if(mob){
+    if(MNAV) root.appendChild(h("div",{class:"backdrop",style:"z-index:65",
+      onclick:function(){ MNAV=false; render(); }}));
+    root.appendChild(BottomNav());
   }
 
   var d1=document.querySelector(".detail"); if(d1) d1.scrollTop=dTop;
