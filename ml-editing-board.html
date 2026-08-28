@@ -220,6 +220,88 @@ svg{flex:none}
 .kpi .sub{font-size:13px;color:var(--on-kpi-sub);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .kpi .prog{height:6px;border-radius:999px;background:rgba(255,255,255,.26);margin-top:7px;overflow:hidden}
 .kpi .prog i{display:block;height:100%;background:#fff;border-radius:999px}
+.kpi.click{cursor:pointer}
+/* KPI内の内訳行（最優先カードの 期限超過/要修正 など） */
+.kbreak{display:flex;flex-direction:column;gap:5px;margin:2px 0 8px}
+.kbreak > div{display:flex;justify-content:space-between;align-items:center;gap:8px;
+  background:rgba(255,255,255,.16);border-radius:8px;padding:5px 10px;font-size:12.5px;font-weight:600}
+/* KPIカードの下端リンク行 */
+.kfoot{display:flex;align-items:center;justify-content:center;gap:4px;margin-top:9px;
+  padding-top:8px;border-top:1px solid rgba(255,255,255,.22);font-size:12.5px;font-weight:700}
+/* カード直下ポップオーバー（§15.3） */
+.kpiwrap{position:relative;min-width:0}
+.kpipop{position:absolute;top:calc(100% + 8px);left:0;min-width:250px;max-width:320px;z-index:60;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);
+  box-shadow:var(--shadow-elev);padding:8px;display:flex;flex-direction:column;gap:2px}
+.kpirow{display:flex;align-items:center;gap:9px;width:100%;background:none;border:0;
+  border-radius:8px;padding:6px 8px;cursor:pointer;text-align:left;color:var(--text-primary);min-width:0}
+.kpirow:hover{background:var(--surface-blue-soft)}
+.kpirow .t{flex:1;min-width:0;font-size:13px;font-weight:600;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpimore{display:flex;align-items:center;justify-content:center;gap:4px;background:none;border:0;
+  border-top:1px solid var(--border);margin-top:5px;padding:9px 8px 4px;cursor:pointer;
+  font-size:12.5px;font-weight:700;color:var(--brand-blue)}
+/* 停滞中の動画（§18：白地＋critical の淡い警告カード。My Tasks と同じ濃色にしない） */
+.card.stalled{background:var(--critical-soft);border-color:var(--critical-border)}
+.card.stalled .hd h3{display:flex;align-items:center;gap:7px;color:var(--critical)}
+.card.stalled .hd{padding-top:13px}
+.seeall{display:flex;align-items:center;gap:4px;background:none;border:0;cursor:pointer;
+  font-size:12.5px;font-weight:700;color:var(--critical)}
+.strow{display:flex;align-items:center;gap:11px;width:100%;background:var(--surface);
+  border:1px solid var(--critical-border);border-radius:10px;padding:9px 12px;margin:0 0 8px;
+  cursor:pointer;text-align:left;color:var(--text-primary);min-width:0}
+.strow:hover{border-color:var(--critical)}
+.strow .mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.strow .mid b{font-size:12px;color:var(--text-secondary);font-weight:600}
+.strow .mid span{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.strow .days{flex:none;font-size:16px;font-weight:800;color:var(--critical);font-variant-numeric:tabular-nums}
+/* ---- 今日（§19.2）。下段はすべて白/淡色カード、濃色にしない ---- */
+.todayduo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) minmax(0,1fr);
+  gap:18px;align-items:start}
+.todayright{display:flex;flex-direction:column;gap:18px;min-width:0}
+.prcard{background:var(--surface);border:1px solid var(--critical-border);border-radius:10px;
+  padding:10px 12px;margin-bottom:9px;display:flex;flex-direction:column;gap:7px}
+.prcard .top{display:flex;gap:9px;align-items:center;min-width:0}
+.prcard .tt{min-width:0;display:flex;flex-direction:column}
+.prcard .tt b{font-size:12.5px;color:var(--text-secondary);font-weight:600}
+.prcard .tt span{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cta.wide{width:100%}
+.cta.crit{background:var(--gradient-critical)}
+.cta.crit:hover:not([disabled]){box-shadow:0 6px 16px rgba(255,49,95,.35)}
+.card.queue .hd h3{display:flex;align-items:center;gap:7px;color:var(--brand-blue)}
+.card.review{background:var(--warning-soft);border-color:var(--warning-border)}
+.card.review .hd h3{display:flex;align-items:center;gap:7px;color:#B45309}
+.rvgroup{background:var(--surface);border:1px solid var(--warning-border);border-radius:10px;
+  padding:9px 11px;margin-bottom:9px}
+.rvgroup .gh{display:flex;align-items:center;gap:7px;font-size:13px;margin-bottom:4px}
+.rvgroup .gh b{flex:1;font-size:13px}
+.rvgroup .gc{color:#B45309;font-weight:700}
+.rvline{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;
+  background:none;border:0;padding:3px 0;cursor:pointer;font-size:12.5px;color:var(--text-secondary);
+  text-align:left;min-width:0}
+.rvline span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rvline i{font-style:normal;flex:none;color:var(--brand-blue);font-weight:700}
+.rvline:hover span{color:var(--text-primary)}
+.card.memo{background:var(--surface-blue-soft)}
+.card.memo .hd h3{display:flex;align-items:center;gap:7px}
+.memotext{margin:2px 0 12px;font-size:13px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere}
+.memota{width:100%;border:1px solid var(--border);border-radius:10px;padding:10px 12px;
+  font-size:13px;line-height:1.7;resize:vertical;background:var(--surface)}
+.mrow{display:flex;gap:9px;justify-content:flex-end;margin:10px 0 12px}
+/* ---- 負荷調整の提案（§26） ---- */
+.card.suggest{background:var(--critical-soft);border-color:var(--critical-border)}
+.card.suggest .hd h3{color:var(--critical)}
+.sgcard{background:var(--surface);border:1px solid var(--critical-border);border-radius:10px;
+  padding:11px 13px;margin-bottom:9px;display:flex;flex-direction:column;gap:8px}
+.sgcard .flow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.sgcard .pp{display:flex;align-items:center;gap:7px;font-size:13px}
+.sgcard .pp .num{border-radius:999px;padding:1px 8px;font-size:12px;font-weight:700}
+.sgcard .pp .hotp{background:var(--critical-soft);color:var(--critical)}
+.sgcard .pp .lowp{background:var(--success-soft);color:var(--success)}
+.sgcard .sv{display:flex;align-items:center;gap:8px;font-size:12.5px;background:var(--surface-soft);
+  border-radius:8px;padding:6px 9px;min-width:0}
+.sgcard .sv span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sgcard .why{margin:0;font-size:12.5px;color:var(--text-secondary);line-height:1.7}
 
 /* ---- 2カラム ---- */
 .duo{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr);gap:22px;align-items:start}
@@ -265,6 +347,7 @@ svg{flex:none}
 .prio.low{background:rgba(255,255,255,.10);color:var(--text-on-dark-muted)}
 .cta{background:var(--gradient-nav);color:#fff;border:0;border-radius:10px;height:38px;min-width:100px;
   padding:0 14px;cursor:pointer;font-size:13px;font-weight:700;white-space:nowrap;flex:none;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
   transition:box-shadow 160ms ease,transform 160ms ease}
 .cta:hover:not([disabled]){box-shadow:0 6px 16px rgba(15,131,245,.35);transform:translateY(-1px)}
 .cta[disabled]{background:#33455c;color:#8b9bb0;cursor:not-allowed;font-weight:500}
@@ -373,6 +456,26 @@ svg{flex:none}
   white-space:nowrap;flex:none;transition:background 160ms ease}
 .outbtn:hover:not([disabled]){background:var(--surface-blue-soft)}
 .outbtn[disabled]{color:var(--text-muted);border-color:var(--border);cursor:not-allowed}
+/* 横型ステッパー（§17.5） */
+.hstep{display:flex;gap:0;margin:2px 0 0}
+.hseg{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;position:relative;min-width:0}
+.hseg::before{content:"";position:absolute;top:6px;left:-50%;width:100%;height:2px;background:var(--border)}
+.hseg:first-child::before{display:none}
+.hseg i{width:14px;height:14px;border-radius:50%;background:var(--surface);
+  border:2px solid var(--border-strong);z-index:1}
+.hseg span{font-size:10.5px;color:var(--text-muted);white-space:nowrap}
+.hseg.done i{background:var(--success);border-color:var(--success)}
+.hseg.done::before{background:var(--success)}
+.hseg.done span{color:var(--text-secondary)}
+.hseg.cur i{background:var(--brand-blue);border-color:var(--brand-blue);
+  box-shadow:0 0 0 4px rgba(22,119,242,.18)}
+.hseg.cur::before{background:var(--success)}
+.hseg.cur span{color:var(--text-primary);font-weight:700}
+.hseg.cur.rev i{background:var(--critical);border-color:var(--critical);
+  box-shadow:0 0 0 4px rgba(255,49,95,.18)}
+.hseg.cur.rev span{color:var(--critical)}
+/* モーダル（幅広） */
+.modal.wide{max-width:560px}
 /* 要修正の入力欄（§8.3：薄い critical 背景＋critical 枠。赤くしすぎない） */
 .revta{width:100%;border:1px solid var(--critical-border);background:var(--critical-soft);
   border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.7;resize:vertical;margin:10px 0 0}
@@ -637,6 +740,98 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
   cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;color:var(--text-primary);flex:none}
 .pop .mini:hover{background:#f1f5f9}
 .backdrop{position:fixed;inset:0;z-index:39;background:rgba(15,23,42,.30)}
+
+/* =====================================================================
+   投稿カレンダー（§27）
+   ===================================================================== */
+.kpis.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.calfb{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--radius-md);padding:10px 12px;box-shadow:var(--shadow-card)}
+.calsel{border:1px solid var(--border);border-radius:8px;padding:8px 10px;background:var(--surface);
+  font-size:13px;max-width:200px}
+.calduo{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px;align-items:start}
+.calwrap{background:var(--surface);border:1px solid var(--calendar-grid);border-radius:var(--radius-md);
+  overflow:hidden;box-shadow:var(--shadow-card)}
+.caltable{width:100%;border-collapse:collapse;table-layout:fixed}
+.caltable th{border:1px solid var(--calendar-grid);padding:8px 4px;font-size:12.5px;
+  background:var(--surface-soft);font-weight:700}
+.caltable th.sun{color:#D93025} .caltable th.sat{color:var(--brand-blue)}
+.caltable td{border:1px solid var(--calendar-grid);vertical-align:top;height:96px;
+  padding:5px 6px;background:var(--surface)}
+.caltable td.cd{cursor:pointer}
+.caltable td.cd:hover{background:var(--surface-blue-soft)}
+/* 土日祝はセル全体を同じ灰色（§27.3。ピンク・青の塗り分けはしない） */
+.caltable td.off,.caltable td.off:hover{background:var(--calendar-offday-bg)}
+.caltable td.sel{outline:2px solid var(--brand-blue);outline-offset:-2px}
+.caltable td.empty{background:var(--surface-soft)}
+.caltable .dn{font-size:12.5px;font-weight:700;margin-bottom:3px}
+.caltable .dn.sun{color:#D93025} .caltable .dn.sat{color:var(--brand-blue)}
+.caltable td.today .dn{display:inline-flex;align-items:center;justify-content:center;
+  width:20px;height:20px;border-radius:50%;background:var(--brand-blue);color:#fff}
+.ev{display:flex;align-items:center;gap:4px;font-size:11px;line-height:1.6;min-width:0}
+.ev i{width:6px;height:6px;border-radius:50%;flex:none}
+.ev span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.evmore{font-size:11px;color:var(--text-muted);margin-top:1px}
+.daypanel .bd{display:flex;flex-direction:column;gap:10px;padding-bottom:14px}
+.daycard{border:1px solid var(--border);border-radius:var(--radius-md);padding:11px 12px;
+  display:flex;flex-direction:column;gap:8px}
+.daycard .top{display:flex;gap:9px;align-items:center;min-width:0}
+.daycard .tt{min-width:0;display:flex;flex-direction:column}
+.daycard .tt b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.daycard .tt span{font-size:12px;color:var(--text-secondary)}
+.mini{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--text-secondary)}
+.mini b{color:var(--text-primary)}
+.linkbtn2{display:inline-flex;align-items:center;gap:4px;background:none;border:0;cursor:pointer;
+  color:var(--brand-blue);font-size:12.5px;font-weight:700;padding:2px 0}
+
+/* =====================================================================
+   クライアント管理（§29〜34）
+   ===================================================================== */
+.rolechip{font-size:12px;font-weight:700;color:var(--brand-blue);background:var(--surface-blue-soft);
+  border:1px solid var(--brand-blue);border-radius:999px;padding:2px 10px}
+.clienttop{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:stretch}
+.clienttop .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+.card.attn{background:var(--critical-soft);border-color:var(--critical-border)}
+.card.attn .hd h3{display:flex;align-items:center;gap:6px;color:var(--critical);font-size:14px}
+.attnrow{display:flex;justify-content:space-between;align-items:center;background:var(--surface);
+  border:1px solid var(--critical-border);border-radius:8px;padding:7px 11px;margin-bottom:7px;font-size:13px}
+.attnrow .num.bad{color:var(--critical)}
+.tblwrap{overflow-x:auto}
+.clienttbl th{white-space:nowrap}
+.clienttbl td{white-space:nowrap}
+.odcell{color:var(--late);font-weight:700}
+.pchip{display:inline-block;font-size:12px;font-weight:600;border-radius:999px;padding:2px 9px;
+  background:var(--neutral-soft);color:var(--neutral-text)}
+.mchip{display:inline-block;font-size:12px;font-weight:600;border-radius:999px;padding:2px 9px;
+  background:var(--surface-blue-soft);color:var(--brand-deep-blue)}
+.mchip.late{background:var(--critical-soft);color:var(--critical)}
+.mchip.warn{background:var(--warning-soft);color:#B45309}
+.mchip.ok{background:var(--success-soft);color:var(--success)}
+.pbar{width:64px;height:6px;background:var(--neutral-soft);border-radius:999px;
+  display:inline-block;overflow:hidden;vertical-align:middle}
+.pbar i{display:block;height:100%;background:var(--brand-blue);border-radius:999px}
+.pcv{font-size:12px;margin-left:6px;font-variant-numeric:tabular-nums}
+.dslabel{font-size:12px;font-weight:700;color:var(--text-secondary);margin:14px 0 8px;letter-spacing:.03em}
+.drrow{display:flex;align-items:center;gap:10px;justify-content:space-between;border:1px solid var(--border);
+  border-radius:10px;padding:9px 11px;margin-bottom:8px;min-width:0}
+.drrow .tt{display:flex;flex-direction:column;min-width:0}
+.drrow .tt b{font-size:12.5px}
+.drrow .tt span{font-size:11.5px;color:var(--text-muted)}
+.mstep{display:flex;gap:4px;flex-wrap:wrap;margin:2px 0 8px}
+.ms{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;min-width:66px;background:none;
+  border:1px solid var(--border);border-radius:10px;padding:8px 4px;cursor:pointer;
+  font-size:11px;color:var(--text-secondary);line-height:1.4;text-align:center}
+.ms i{font-style:normal;font-size:13px;color:var(--border-strong)}
+.ms.done{border-color:var(--warning-border);background:var(--warning-soft)}
+.ms.done i{color:var(--warning)}
+.ms.cur{border-color:var(--brand-blue);background:var(--surface-blue-soft);
+  color:var(--text-primary);font-weight:700}
+.ms.cur i{color:var(--brand-blue)}
+.ms[disabled]{cursor:not-allowed}
+.matnote{display:flex;gap:7px;align-items:flex-start;background:var(--surface-blue-soft);
+  border:1px solid var(--border);border-radius:10px;padding:9px 11px;font-size:12px;
+  color:var(--text-secondary);line-height:1.6}
+.matnote.late{background:var(--warning-soft);border-color:var(--warning-border);color:#7c4a03}
 
 /* =====================================================================
    レスポンシブ（Phase 1 は 1440〜1920px が最重要。1280px でドロワー）
@@ -943,6 +1138,12 @@ function nearestWorking(bd, workSet, from, taken){
 
 /* --- 操作の適用（op journal の再適用にも使う） --- */
 function applyOp(st, op){
+  /* 動画の追加（トップバーの「動画追加」）。id で冪等 */
+  if(op.type==="addrow"){
+    if(st.rows.some(function(x){ return x.id===op.target; })) return "ok";
+    st.rows.push(op.payload.row);
+    return "ok";
+  }
   /* クライアント設定（Drive URL 等）。target＝クライアント名、field 単位の last-write-wins */
   if(op.type==="client"){
     st.clients = st.clients || {};
@@ -952,6 +1153,14 @@ function applyOp(st, op){
     if((cl.updatedAt[cf]||0) > op.at) return "stale";
     cl[cf] = op.payload.value;
     cl.updatedAt[cf] = op.at;
+    return "ok";
+  }
+  /* 今日のメモ（§19）。target＝日付、last-write-wins */
+  if(op.type==="note"){
+    st.notes = st.notes || {};
+    var prev = st.notes[op.target];
+    if(prev && (prev.updatedAt||0) > op.at) return "stale";
+    st.notes[op.target] = {text:op.payload.value, updatedAt:op.at};
     return "ok";
   }
   var r=null;
@@ -993,7 +1202,7 @@ var SEED_CONTRACTS = [
 ];
 var STAFF_MAP = {"りりか":"Ririka","ゆかり":"Yukari","つかさ":"Tukasa"};
 var MEMBERS = [
- {name:"なつみ", role:"社員"},{name:"友美", role:"社員"},{name:"翔平", role:"社長"},
+ {name:"なつみ", role:"社員"},{name:"友美", role:"社員"},{name:"翔平", role:"社員"},
  {name:"りりか", role:"スタッフ"},{name:"ゆかり", role:"スタッフ"},{name:"つかさ", role:"スタッフ"}
 ];
 var SEED_SHIFTS = {"2026-08":{
@@ -1060,6 +1269,8 @@ function migrateState(st){
   });
   /* クライアント名 → {material, review, updatedAt:{}}。フォルダの自動作成はしない（§9.1） */
   st.clients = st.clients || {};
+  /* 日付 → {text, updatedAt}。今日のメモ（§19） */
+  st.notes = st.notes || {};
   return st;
 }
 /** state を埋め込んだ完全なドキュメントを作る。DOM のシリアライズはしない */
@@ -1116,7 +1327,8 @@ function newOp(type,target,payload){
    Layer A（純粋ロジック）と Layer B（アダプタ）は呼ぶだけで変更しない。
    ===================================================================== */
 var VIEW = "home", MONTH = null, SELECTED = null, SELECTEDC = null;
-var DETAIL_VIEWS = {home:1, list:1, today:1, track:1, pending:1};
+/* 右の共通詳細パネルを出す画面。カレンダー・クライアント管理は独自の右パネルを持つ */
+var DETAIL_VIEWS = {home:1, list:1, today:1};
 var TODAY_DONE_OPEN = false;   /* 今日：完了済みセクションの開閉 */
 var STAFFPICK = null;          /* チーム負荷：選択中のスタッフ */
 /* 負荷目安の重み（§12.4）。工数ではない。ここだけ触れば体感を調整できる。
@@ -1178,6 +1390,7 @@ var ICON = {
   folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
   inbox:'<path d="M3 12h5l1.5 2.5h5L16 12h5"/><path d="M5.5 5h13l2.5 7v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6z"/>',
   search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/>',
+  building:'<rect x="4" y="3" width="12" height="18" rx="1"/><path d="M16 9h4a0 0 0 0 1 0 0v12"/><path d="M8 7h2M8 11h2M8 15h2M12 7h1M12 11h1M12 15h1M2 21h20"/>',
   sort:'<path d="M4 7h13M4 12h9M4 17h5"/><path d="m17 14 3 3 3-3"/>'
 };
 function ic(name, size){
@@ -1291,15 +1504,13 @@ function shortName(c){ return (c.display||c.client||"？").slice(0,2); }
    セレクタ
    --------------------------------------------------------------- */
 function myRole(){ var m=MEMBERS.filter(function(x){return x.name===ME})[0]; return m?m.role:"社員"; }
+/* ナビ（§3）。共通5画面＋社員のみクライアント管理。
+   進行トラックは動画一覧へ統合済み・投稿待ちはホームのKPIと動画一覧の絞り込みで代替（§0.9） */
 function visibleViews(){
-  var r=myRole();
-  if(r==="社長")   return [["home","ホーム","dashboard"]];
-  /* 投稿待ちはスタッフにも見せる（投稿漏れは全員で防ぐ）。チーム負荷は社員だけ */
-  if(r==="スタッフ") return [["home","ホーム","dashboard"],["list","動画一覧","film"],
-          ["today","今日","clock"],["pending","投稿待ち","upload"]];
-  return [["home","ホーム","dashboard"],["list","動画一覧","film"],["today","今日","clock"],
-          ["track","進行トラック","activity"],["load","チーム負荷","gauge"],
-          ["pending","投稿待ち","upload"]];
+  var vs=[["home","ホーム","dashboard"],["today","今日","clock"],["list","動画一覧","film"],
+          ["load","チーム負荷","gauge"],["calendar","投稿カレンダー","calendar"]];
+  if(myRole()==="社員") vs.push(["client","クライアント管理","building"]);
+  return vs;
 }
 function hasView(k){ return visibleViews().some(function(v){ return v[0]===k; }); }
 function contractsOf(){ return SEED_CONTRACTS; }
@@ -1372,9 +1583,9 @@ function blockers(){
 function notices(){
   var out=[], stale=daysSince(SNAP.contracts)>=14;
   out.push({lv:stale?"warn":"ok",
-    t:"契約データ："+SNAP.contracts+" 取得　／　シフト："+SNAP.shifts+" 取得"+(stale?"　— 再取り込みが必要です":"")});
+    t:"クライアントデータ："+SNAP.contracts+" 取得　／　シフト："+SNAP.shifts+" 取得"+(stale?"　— 再取り込みが必要です":"")});
   if(STATE.seeded) out.push({lv:"warn",
-    t:"表示中の "+monthOf(TODAY)+" 分の進捗ステータスと投稿完了日はサンプルです。契約本数とシフトは実データです。",
+    t:"表示中の "+monthOf(TODAY)+" 分の進捗ステータスと投稿完了日はサンプルです。クライアントごとの本数とシフトは実データです。",
     act:"unseed"});
   if(PENDING.expired) out.push({lv:"ok", t:"期限切れ "+PENDING.expired+"件（72時間を過ぎた未同期の操作を破棄しました）"});
   if(isPast()) out.push({lv:"ok", t:"過去月を表示しています（読み取り専用）"});
@@ -1446,45 +1657,19 @@ function Sidebar(){
     if(badge!=null) b.appendChild(h("span",{class:"badge"+(badge?"":" dim"),text:String(badge)}));
     return b;
   }
-  function soonBtn(label, iconName){
-    var b=h("button",{disabled:true,title:label+"：準備中（この画面はまだありません）"},
-      [ic(iconName,18), h("span",{text:label})]);
-    b.appendChild(h("span",{class:"soon",text:"準備中"}));
-    return b;
-  }
-  function group(title, kids){
-    var ks=kids.filter(function(k){ return !!k; });
-    if(!ks.length) return;
-    side.appendChild(h("div",{class:"sidesec",text:title}));
-    var g=h("div",{class:"nav"});
-    ks.forEach(function(k){ g.appendChild(k); });
-    side.appendChild(g);
-  }
-
+  /* 共通5画面（§3.1）。バッジや準備中チップは置かず、迷わない一列にする */
   var top=h("div",{class:"nav"});
-  top.appendChild(navBtn("ホーム","dashboard","home"));
+  visibleViews().filter(function(v){ return v[0]!=="client"; })
+    .forEach(function(v){ top.appendChild(navBtn(v[1], v[2], v[0])); });
   side.appendChild(top);
 
-  var s=summary();
-  group("制作", [
-    hasView("today") ? navBtn("今日","clock","today") : null,
-    hasView("list")  ? navBtn("動画一覧","film","list") : null,
-    hasView("track") ? navBtn("進行トラック","activity","track") : null
-  ]);
-  group("管理", [
-    hasView("load") ? navBtn("チーム負荷","gauge","load") : null,
-    /* 将来ルートは §14.2 の候補のうち2つだけ置く。
-       サイドバーの縦を食う割に押せないため、要望の多い2画面に絞った */
-    myRole()==="社員" ? soonBtn("契約","folder") : null,
-    myRole()==="社員" ? soonBtn("カレンダー","calendar") : null
-  ]);
-  /* 要対応：実データで数え、押すと実際にその画面へ移動する */
-  group("要対応", [
-    hasView("today") ? navBtn("処理待ち","inbox","today", s.today, true) : null,
-    /* 投稿待ちは専用画面（§13）。他に入口が無いので現在地の強調はこちらに出す */
-    hasView("pending") ? navBtn("投稿待ち","upload","pending", s.waiting) : null,
-    hasView("track") ? navBtn("リスク","alert","track", s.risk, true) : null
-  ]);
+  /* クライアント管理は社員のみ（§3.2）。スタッフには項目自体を出さない */
+  if(myRole()==="社員"){
+    side.appendChild(h("div",{class:"sidesec",text:"社員のみ"}));
+    var g2=h("div",{class:"nav"});
+    g2.appendChild(navBtn("クライアント管理","building","client"));
+    side.appendChild(g2);
+  }
 
   var foot=h("div",{class:"sidefoot"});
   foot.appendChild(h("div",{class:"sidehr"}));
@@ -1526,6 +1711,12 @@ function Header(){
   top.appendChild(h("div",{class:"spacer"}));
 
   var tb=h("div",{class:"toolbar"});
+
+  /* 主要ボタン（§10.1）：動画追加＝gradient primary／Google Drive＝白アウトライン */
+  if(writable()) tb.appendChild(h("button",{class:"cta",onclick:openAddVideo},
+    [ic("plus",16), h("span",{text:"動画追加"})]));
+  tb.appendChild(h("button",{class:"chipbtn",onclick:openDriveHub},
+    [driveMark(16), h("span",{text:"Google Drive"})]));
 
   var months=monthList(), mi=months.indexOf(MONTH);
   var mn=h("div",{class:"mnav"});
@@ -1580,25 +1771,140 @@ function kpiCard(cls, label, iconName, value, unit, subKids, progress){
   }
   return c;
 }
-function SummaryGrid(){
-  var s=summary();
-  var box=h("div");
-  box.appendChild(h("div",{class:"sect"},[
-    h("h2",{text:"全社サマリー"}),
-    h("span",{text:"（"+MONTH.replace("-","年")+"月・"+s.contracts+"契約）"})]));
+/* ---------------------------------------------------------------
+   ホーム上段KPI（§15.2）。順序＝最優先/投稿目標/確認中/投稿待ち/投稿済み。
+   確認中・投稿待ち・投稿済みはクリックでカード直下ポップオーバー（§15.3）
+   --------------------------------------------------------------- */
+var HKPOP = null;   /* 開いているポップオーバー（一度に1つ） */
+/* 停滞（§18）＝現工程のまま2日以上動いていない未完了の動画 */
+function stalledRows(){
+  var out=[];
+  rowsOfMonth().forEach(function(r){
+    if(r.status==="投稿済み"||r.status==="未着手") return;
+    var t=r.trans && r.trans[r.status]; if(!t) return;
+    var d=Math.floor((Date.now()-t)/86400000);
+    if(d>=2) out.push({r:r, days:d});
+  });
+  out.sort(function(a,b){ return b.days-a.days; });
+  return out;
+}
+function priorityRows(){
+  return rowsOfMonth().filter(function(r){
+    return (r.planned<TODAY && r.status!=="投稿済み") || r.status==="要修正";
+  });
+}
+function kpiPop(status){
+  var rows=rowsOfMonth().filter(function(r){ return r.status===status; });
+  var pop=h("div",{class:"kpipop",onclick:function(e){ e.stopPropagation(); }});
+  rows.slice(0,5).forEach(function(r){
+    var c=contractById(r.contractId)||{display:r.client};
+    pop.appendChild(h("button",{class:"kpirow",onclick:function(e){
+      e.stopPropagation(); HKPOP=null; selectRow(r.id); }},[
+      tile(r.contractId, shortName(c), 26, 20, 10),
+      h("span",{class:"t",text:r.title||(c.display+" "+r.kind)})]));
+  });
+  if(!rows.length) pop.appendChild(h("p",{class:"sub",style:"margin:6px 8px",text:"該当する動画はありません"}));
+  var more=rows.length>5 ? rows.length-5 : 0;
+  pop.appendChild(h("button",{class:"kpimore",onclick:function(e){
+    e.stopPropagation(); HKPOP=null;
+    FILTER.status=status; FILTER.editor="__all__"; FILTER.q=""; VIEW="list"; render(); }},
+    [h("span",{text:(more?"他"+more+"件 / ":"")+"すべて見る"}), ic("chevronRight",14)]));
+  return pop;
+}
+function homeKpis(){
+  var rows=rowsOfMonth(), cs=contractsOf();
+  var target=0; cs.forEach(function(c){ target+=c.count; });
+  var posted=0, review=0, waiting=0, late=0, revise=0;
+  rows.forEach(function(r){
+    if(r.status==="投稿済み"){ posted++; return; }
+    if(r.status==="確認中") review++;
+    if(r.status==="投稿待ち") waiting++;
+    if(r.status==="要修正") revise++;
+    if(r.planned<TODAY) late++;
+  });
+  var prio=priorityRows().length;
+
+  /* ペース（投稿目標カード用）。営業日の消化率から期待本数を出す */
+  var bd=bizDays(MONTH)||[], done=bd.filter(function(d){ return d<=TODAY; }).length;
+  var expect=bd.length ? Math.round(target*done/bd.length) : 0;
+  var deficit=Math.max(0, expect-posted);
+
   var g=h("div",{class:"kpis"});
-  g.appendChild(kpiCard("k1","今月の投稿予定","calendar", s.planned,"本",
-    ["目標 "+s.target+"本・消化 "+pct(s.posted,s.target)+"%"], pct(s.posted,s.target)));
-  g.appendChild(kpiCard("k2","投稿済み","check", s.posted,"本",
-    ["未投稿 "+(s.planned-s.posted)+"本"]));
-  g.appendChild(kpiCard("k3","投稿待ち","upload", s.waiting,"本",
-    [ic("alert",15), "うち本日期限 "+s.dueToday+"本"]));
-  g.appendChild(kpiCard("k4","遅延","alertCircle", s.risk,"契約",
-    ["注意 "+s.warnC+"契約・全"+s.contracts+"契約"]));
-  g.appendChild(kpiCard("k5","本日の処理待ち","clock", s.today,"件",
-    ["確認・対応が必要です"]));
-  box.appendChild(g);
-  return box;
+
+  /* 最優先（critical）：クリックで動画一覧を遅延順に */
+  var k1=kpiCard("g-critical","最優先","alertCircle", prio,"件",[]);
+  var bk=h("div",{class:"kbreak"});
+  bk.appendChild(h("div",{},[h("span",{text:"期限超過"}), h("b",{class:"num",text:late+"件"})]));
+  bk.appendChild(h("div",{},[h("span",{text:"要修正"}), h("b",{class:"num",text:revise+"件"})]));
+  k1.insertBefore(bk, k1.querySelector(".sub"));
+  k1.appendChild(h("div",{class:"kfoot"},[h("span",{text:"すべて見る"}), ic("chevronRight",14)]));
+  k1.classList.add("click"); k1.setAttribute("role","button"); k1.setAttribute("tabindex","0");
+  var goPrio=function(){ FILTER.sort="delay"; FILTER.status="open"; FILTER.editor="__all__"; VIEW="list"; render(); };
+  k1.addEventListener("click", goPrio);
+  k1.addEventListener("keydown", function(e){ if(e.key==="Enter") goPrio(); });
+  g.appendChild(k1);
+
+  /* 投稿目標（blue）：クリックで動画一覧の進行トラックへ */
+  var k2=kpiCard("g-blue", MONTH.slice(5).replace(/^0/,"")+"月 投稿目標","calendar",
+    posted+" / "+target,"本", ["残り "+Math.max(0,target-posted)+"本"], pct(posted,target));
+  if(deficit>0){
+    var pw=h("div",{class:"sub"},[ic("alert",14), txt("このペースでは"+deficit+"本不足")]);
+    k2.appendChild(pw);
+  }
+  k2.appendChild(h("div",{class:"kfoot"},[h("span",{text:"詳細を見る"}), ic("chevronRight",14)]));
+  k2.classList.add("click"); k2.setAttribute("role","button"); k2.setAttribute("tabindex","0");
+  var goTrack=function(){ VIEW="list"; render();
+    var el=document.getElementById("trackblock"); if(el) el.scrollIntoView({block:"start"}); };
+  k2.addEventListener("click", goTrack);
+  k2.addEventListener("keydown", function(e){ if(e.key==="Enter") goTrack(); });
+  g.appendChild(k2);
+
+  /* 確認中／投稿待ち／投稿済み：カード直下ポップオーバー（§15.3） */
+  [["確認中","g-teal","check",review],["投稿待ち","g-purple","clock",waiting],
+   ["投稿済み","g-blue","upload",posted]].forEach(function(t){
+    var wrapEl=h("div",{class:"kpiwrap"});
+    var k=kpiCard(t[1], t[0], t[2], t[3], "本", []);
+    k.appendChild(h("div",{class:"kfoot"},[h("span",{text:"詳細を見る"}),
+      ic(HKPOP===t[0]?"chevronDown":"chevronRight",14)]));
+    k.classList.add("click"); k.setAttribute("role","button"); k.setAttribute("tabindex","0");
+    k.setAttribute("aria-expanded", HKPOP===t[0] ? "true" : "false");
+    var toggle=function(e){ if(e) e.stopPropagation(); HKPOP = HKPOP===t[0] ? null : t[0]; render(); };
+    k.addEventListener("click", toggle);
+    k.addEventListener("keydown", function(e){ if(e.key==="Enter") toggle(e); });
+    wrapEl.appendChild(k);
+    if(HKPOP===t[0]) wrapEl.appendChild(kpiPop(t[0]));
+    g.appendChild(wrapEl);
+  });
+  return g;
+}
+/* 停滞中の動画（§18）。My Tasks と違い淡い警告カードで表現する */
+function homeStalled(){
+  var items=stalledRows();
+  var card=h("div",{class:"card stalled"});
+  var hd=h("div",{class:"hd"});
+  hd.appendChild(h("h3",{},[ic("alertCircle",16), txt(" 停滞中の動画")]));
+  hd.appendChild(h("div",{class:"spacer"}));
+  if(items.length) hd.appendChild(h("button",{class:"seeall",onclick:function(){
+    FILTER.sort="delay"; FILTER.status="open"; FILTER.editor="__all__"; VIEW="list"; render(); }},
+    [h("span",{text:"すべて見る"}), ic("chevronRight",14)]));
+  card.appendChild(hd);
+  var bd=h("div",{class:"bd"});
+  if(!items.length){
+    bd.appendChild(h("p",{class:"sub",style:"margin:4px 0 10px",text:"停滞している動画はありません。"}));
+  } else {
+    items.slice(0,5).forEach(function(it){
+      var r=it.r, c=contractById(r.contractId)||{display:r.client};
+      bd.appendChild(h("button",{class:"strow",onclick:function(){ selectRow(r.id); }},[
+        tile(r.contractId, shortName(c), 30, 22, 11),
+        h("div",{class:"mid"},[
+          h("b",{text:c.display}),
+          h("span",{text:r.title||(c.display+" "+r.kind)})]),
+        sBadge(r.status),
+        h("span",{class:"days",text:it.days+"日"})]));
+    });
+  }
+  card.appendChild(bd);
+  return card;
 }
 
 /* ---------------------------------------------------------------
@@ -1935,6 +2241,21 @@ function DetailPanel(){
   s1.appendChild(kv);
   d.appendChild(s1);
 
+  /* 進行ステータス（§17.5）。主工程の横型ステッパー。要修正は分岐として注記 */
+  var hs=h("div",{class:"hstep"});
+  var curIdx=MAIN_STATUSES.indexOf(r.status==="要修正" ? "確認中" : r.status);
+  MAIN_STATUSES.forEach(function(st,i){
+    var seg=h("div",{class:"hseg"+(i<curIdx?" done":i===curIdx?" cur":"")});
+    if(i===curIdx && r.status==="要修正") seg.classList.add("rev");
+    seg.appendChild(h("i"));
+    seg.appendChild(h("span",{text:st}));
+    hs.appendChild(seg);
+  });
+  s1.appendChild(h("div",{class:"dslabel",text:"進行ステータス"}));
+  s1.appendChild(hs);
+  if(r.status==="要修正")
+    s1.appendChild(h("p",{class:"helper",text:"確認で差し戻されています（要修正）。修正完了で確認中に戻ります。"}));
+
   /* 修正指示（§17.3）。要修正のうちは詳細の上部寄りに強調表示する */
   if(r.revisionNote){
     var rn=h("div",{class:"dsec"});
@@ -2028,29 +2349,79 @@ function scopeRows(){
 }
 
 /* KPI はフィルタではなく月全体から数える（絞り込むと状況把握が壊れる） */
-function listKpiStrip(){
-  var rows=rowsOfMonth();
-  var all=rows.length, posted=0, dueToday=0, waiting=0, late=0;
-  rows.forEach(function(r){
-    if(r.status==="投稿済み"){ posted++; return; }
-    if(r.status==="投稿待ち") waiting++;
-    if(r.planned<TODAY) late++;
-    else if(r.planned===TODAY) dueToday++;
+/* 動画一覧KPI（§21）。クライアント単位で 要対応／達成見込み／未達リスク を出す */
+function clientLevels(){
+  var out={late:[], warn:[], ok:[]};
+  clientNames().forEach(function(n){
+    var ids={}; SEED_CONTRACTS.forEach(function(c){ if(c.client===n) ids[c.id]=1; });
+    var rows=rowsOfMonth().filter(function(r){ return ids[r.contractId]; });
+    var j=judge(rows, TODAY);
+    out[j.level==="late"?"late":j.level==="warn"?"warn":"ok"].push(n);
   });
-  var mine=scopeRows().filter(function(r){ return r.status!=="投稿済み"; }).length;
-  var staff=!!STAFF_MAP[ME];
-  var g=h("div",{class:"kpis"});
-  g.appendChild(kpiCard("k1","全動画","film", all,"本",
-    ["投稿済み "+posted+"本・残り "+(all-posted)+"本"], pct(posted,all)));
-  g.appendChild(kpiCard("k6", staff?"自分の未完了":"チームの未完了","clock", mine,"本",
-    [staff?"自分の担当分のみ":"編集スタッフ全員の未完了"]));
-  g.appendChild(kpiCard("k5","本日締切","calendar", dueToday,"本",
-    ["投稿予定日が今日の未投稿"]));
-  g.appendChild(kpiCard("k3","投稿待ち","upload", waiting,"本",
-    [ic("alert",15),"投稿すれば完了します"]));
-  g.appendChild(kpiCard("k4","遅延","alertCircle", late,"本",
-    ["投稿予定日を過ぎた未投稿"]));
+  return out;
+}
+function listKpiStrip(){
+  var lv=clientLevels();
+  var g=h("div",{class:"kpis three"});
+  g.appendChild(kpiCard("g-critical","要対応クライアント","alertCircle", lv.late.length,"社",
+    ["遅延が出ているクライアント"]));
+  g.appendChild(kpiCard("g-blue","今月達成見込み","check", lv.ok.length,"社",
+    ["目標達成が見込めるクライアント"]));
+  g.appendChild(kpiCard("g-purple","未達リスク","clock", lv.warn.length,"社",
+    ["未達の可能性があるクライアント"]));
   return g;
+}
+/* クライアント進行トラック（§23）。旧・独立ページをこのブロックに統合 */
+function trackBlock(){
+  var s=sectCard("クライアント進行トラック","クライアント単位の今月の進捗。行をクリックすると下の一覧をそのクライアントに絞り込みます");
+  s.card.id="trackblock";
+  var wrap=h("div",{class:"tblwrap"});
+  var t=h("table",{class:"list clienttbl"});
+  var hr=h("tr");
+  ["クライアント","今月目標","投稿済み","進行中","未着手","残り","進捗","ステータス"]
+    .forEach(function(x){ hr.appendChild(h("th",{text:x})); });
+  t.appendChild(hr);
+  clientNames().forEach(function(n){
+    var ids={}, disp=n, cid=null;
+    SEED_CONTRACTS.forEach(function(c){ if(c.client===n){ ids[c.id]=1; disp=c.display; if(!cid) cid=c.id; } });
+    var rows=rowsOfMonth().filter(function(r){ return ids[r.contractId]; });
+    var goal=0; SEED_CONTRACTS.forEach(function(c){ if(ids[c.id]) goal+=c.count; });
+    var posted=0, todo=0, doing=0;
+    rows.forEach(function(r){
+      if(r.status==="投稿済み") posted++;
+      else if(r.status==="未着手") todo++;
+      else doing++;
+    });
+    var j=judge(rows, TODAY), p=pct(posted, goal);
+    var tr=h("tr",{class:"pick",tabindex:"0",
+      onclick:function(){ FILTER.q=n; FILTER.status="all"; FILTER.editor="__all__"; render();
+        var el=document.getElementById("listwrap"); if(el) el.scrollIntoView({block:"start"}); },
+      onkeydown:function(e){ if(e.key==="Enter"){ e.preventDefault(); this.click(); } }});
+    tr.appendChild(h("td",{},[h("div",{class:"cli2"},[
+      tile(cid, disp.slice(0,2), 28, 20, 10), h("span",{text:n})])]));
+    [goal, posted, doing, todo, Math.max(0,goal-posted)].forEach(function(v){
+      tr.appendChild(h("td",{},[num(v), txt("本")]));
+    });
+    var pg=h("td");
+    var bar=h("div",{class:"pbar"}); var i=h("i"); i.style.width=Math.min(100,p)+"%";
+    /* 通常は静かな色、危険/遅延だけ赤・オレンジ（§23.3） */
+    if(j.level==="late") i.style.background="var(--critical)";
+    else if(j.level==="warn") i.style.background="var(--warning)";
+    bar.appendChild(i); pg.appendChild(bar);
+    pg.appendChild(h("span",{class:"pcv",text:p+"%"}));
+    tr.appendChild(pg);
+    var stc=h("td");
+    if(j.level==="late") stc.appendChild(h("span",{class:"mchip late",text:"遅延リスク"}));
+    else if(j.level==="warn") stc.appendChild(h("span",{class:"mchip warn",text:"注意"}));
+    else if(posted>=goal && goal>0) stc.appendChild(h("span",{class:"mchip ok",text:"達成"}));
+    else if(todo===rows.length) stc.appendChild(h("span",{class:"pchip",text:"未着手"}));
+    else stc.appendChild(h("span",{class:"mchip",text:"進行中"}));
+    tr.appendChild(stc);
+    t.appendChild(tr);
+  });
+  wrap.appendChild(t);
+  s.bd.appendChild(wrap);
+  return s.card;
 }
 
 /* 優先対応の選抜（§9.4）。理由を必ず1行添える。遅延→本日締切→投稿待ちの滞留→未入力 */
@@ -2166,7 +2537,8 @@ function panelList(){
     h("span",{text:"（"+MONTH.replace("-","年")+"月・1行＝動画1本。行を押すと右に詳細と操作が出ます）"})]));
   box.appendChild(listKpiStrip());
   box.appendChild(PriorityVideos());
-  var s=sectCard("全動画リスト");
+  box.appendChild(trackBlock());
+  var s=sectCard("すべての動画");
   s.bd.appendChild(listFilterBar());
   var wrap=h("div",{class:"listwrap",id:"listwrap"});
   wrap.appendChild(listTable());
@@ -2276,24 +2648,48 @@ function todayBuckets(){
   b.over.sort(byDue); b.now.sort(byDue); b.nodate.sort(byDue);
   return b;
 }
-function todayKpiStrip(){
-  var rows=scopeRows(), b=todayBuckets();
-  var over=0, review=0, waiting=0, todo=0;
-  rows.forEach(function(r){
-    if(r.status==="投稿済み") return;
-    if(r.planned<TODAY || r.due<TODAY) over++;
-    if(r.status==="確認中") review++;
-    else if(r.status==="投稿待ち") waiting++;
-    else if(r.status==="未着手") todo++;
+/* 要確認（§19.2）。実データから拾える3カテゴリで数える */
+function todayReview(){
+  var out={drive:[], title:[], squeezed:[]};
+  clientNames().forEach(function(n){
+    var cd=clientDrive(n);
+    if(!/^https?:\/\//i.test(String(cd.material||"")) || !/^https?:\/\//i.test(String(cd.review||"")))
+      out.drive.push(n);
   });
-  var g=h("div",{class:"kpis"});
-  g.appendChild(kpiCard("k5","今日やること","clock", b.over.length+b.now.length,"件",
-    ["超過 "+b.over.length+"件・本日 "+b.now.length+"件"]));
-  g.appendChild(kpiCard("k4","遅延","alertCircle", over,"件",
-    ["投稿予定日か編集完了希望を過ぎた動画"]));
-  g.appendChild(kpiCard("k7","確認待ち","alert", review,"件",["確認中で止まっている動画"]));
-  g.appendChild(kpiCard("k3","投稿待ち","upload", waiting,"件",["投稿すれば完了します"]));
-  g.appendChild(kpiCard("k6","未着手","film", todo,"件",["まだ編集を始めていない動画"]));
+  rowsOfMonth().forEach(function(r){
+    if(r.status==="投稿済み") return;
+    if(!(r.title||"").trim()) out.title.push(r);
+    if(r.squeezed) out.squeezed.push(r);
+  });
+  return out;
+}
+/* 上段KPI（§19.1）：最優先＝critical／今日やること＝blue／要確認＝orange */
+function todayKpiStrip(b, rv){
+  var revise=scopeRows().filter(function(r){ return r.status==="要修正"; });
+  var prio=b.over.length + revise.filter(function(r){ return b.over.indexOf(r)<0; }).length;
+  var g=h("div",{class:"kpis three"});
+
+  var k1=kpiCard("g-critical","最優先","alertCircle", prio,"件",[]);
+  var bk1=h("div",{class:"kbreak"});
+  bk1.appendChild(h("div",{},[h("span",{text:"期限超過"}), h("b",{class:"num",text:b.over.length+"件"})]));
+  bk1.appendChild(h("div",{},[h("span",{text:"要修正"}), h("b",{class:"num",text:revise.length+"件"})]));
+  k1.insertBefore(bk1, k1.querySelector(".sub"));
+  g.appendChild(k1);
+
+  var k2=kpiCard("g-blue","今日やること","clock", b.over.length+b.now.length,"件",[]);
+  var bk2=h("div",{class:"kbreak"});
+  bk2.appendChild(h("div",{},[h("span",{text:"期限超過"}), h("b",{class:"num",text:b.over.length+"件"})]));
+  bk2.appendChild(h("div",{},[h("span",{text:"本日対応予定"}), h("b",{class:"num",text:b.now.length+"件"})]));
+  k2.insertBefore(bk2, k2.querySelector(".sub"));
+  g.appendChild(k2);
+
+  var k3=kpiCard("g-orange","要確認","alert", rv.drive.length+rv.title.length+rv.squeezed.length,"件",[]);
+  var bk3=h("div",{class:"kbreak"});
+  bk3.appendChild(h("div",{},[h("span",{text:"Drive未設定"}), h("b",{class:"num",text:rv.drive.length+"社"})]));
+  bk3.appendChild(h("div",{},[h("span",{text:"タイトル未入力"}), h("b",{class:"num",text:rv.title.length+"本"})]));
+  bk3.appendChild(h("div",{},[h("span",{text:"編集期間不足"}), h("b",{class:"num",text:rv.squeezed.length+"本"})]));
+  k3.insertBefore(bk3, k3.querySelector(".sub"));
+  g.appendChild(k3);
   return g;
 }
 /* CTAを押した行に一手間だけ動きを付けてから工程を進める（§10.6）。
@@ -2359,16 +2755,137 @@ function todaySection(title, lead, rows){
   rows.forEach(function(r){ box.appendChild(todayRow(r)); });
   return box;
 }
+/* 最優先タスク（§19.2：white/critical-soft のカード＋問題に応じた具体的CTA） */
+function todayPrioCard(){
+  var b=todayBuckets();
+  var revise=scopeRows().filter(function(r){ return r.status==="要修正" && b.over.indexOf(r)<0; });
+  var items=b.over.concat(revise);
+  var card=h("div",{class:"card stalled"});
+  card.appendChild(h("div",{class:"hd"},[h("h3",{},[ic("alertCircle",16), txt(" 最優先タスク")])]));
+  var bd=h("div",{class:"bd"});
+  if(!items.length){
+    bd.appendChild(h("p",{class:"sub",style:"margin:4px 0 12px",text:"最優先のタスクはありません。"}));
+  }
+  items.slice(0,4).forEach(function(r){
+    var c=contractById(r.contractId)||{display:r.client};
+    var el=h("div",{class:"prcard"});
+    var top=h("div",{class:"top"});
+    top.appendChild(tile(r.contractId, shortName(c), 30, 22, 11));
+    var tt=h("div",{class:"tt"});
+    tt.appendChild(h("b",{text:c.display}));
+    tt.appendChild(h("span",{text:r.title||(c.display+" "+r.kind)}));
+    top.appendChild(tt);
+    el.appendChild(top);
+    var meta=h("div",{class:"mini"});
+    var line=h("div",{},[txt("期限　"), h("b",{text:jpDate(r.due)+" "})]);
+    line.appendChild(h("span",{class:"mchip late",text:r.status==="要修正"?"要修正":"期限超過"}));
+    meta.appendChild(line);
+    meta.appendChild(h("div",{},[txt("担当　"), h("b",{text:r.editor||"未割当"})]));
+    el.appendChild(meta);
+    /* 問題に応じた具体的CTA（§19.2） */
+    if(r.status==="要修正"){
+      el.appendChild(h("button",{class:"cta wide",disabled:!writable(),text:"修正完了",
+        onclick:function(){ doAction(r,"修正完了"); }}));
+    } else {
+      el.appendChild(h("button",{class:"cta wide crit",text:"対象詳細を開く",
+        onclick:function(){ selectRow(r.id); }}));
+    }
+    bd.appendChild(el);
+  });
+  if(items.length>4) bd.appendChild(h("button",{class:"kpimore",onclick:function(){
+    FILTER.sort="delay"; FILTER.status="open"; FILTER.editor="__all__"; VIEW="list"; render(); }},
+    [h("span",{text:"すべての最優先タスクを見る"}), ic("chevronRight",14)]));
+  card.appendChild(bd);
+  return card;
+}
+/* 要確認（§19.2：white/warning-soft、カテゴリでまとめる） */
+function todayReviewCard(rv){
+  var card=h("div",{class:"card review"});
+  card.appendChild(h("div",{class:"hd"},[h("h3",{},[ic("alert",16), txt(" 要確認")])]));
+  var bd=h("div",{class:"bd"});
+  function group(icName, label, count, unit, lines){
+    var gr=h("div",{class:"rvgroup"});
+    var hd2=h("div",{class:"gh"},[ic(icName,15),
+      h("b",{text:label}), h("span",{class:"gc num",text:count+unit})]);
+    gr.appendChild(hd2);
+    lines.forEach(function(l){ gr.appendChild(l); });
+    return count?gr:null;
+  }
+  var g1=group("folder","Drive未設定", rv.drive.length,"社", rv.drive.slice(0,3).map(function(n){
+    return h("button",{class:"rvline",onclick:function(){ openDriveSetup(n); }},
+      [h("span",{text:"・"+n}), h("i",{text:"設定する"})]);
+  }));
+  var g2=group("film","タイトル未入力", rv.title.length,"本", rv.title.slice(0,3).map(function(r){
+    var c=contractById(r.contractId)||{display:r.client};
+    return h("button",{class:"rvline",onclick:function(){ selectRow(r.id,"title"); }},
+      [h("span",{text:"・"+c.display+" "+jpDate(r.planned)+"予定"}), h("i",{text:"入力する"})]);
+  }));
+  var g3=group("clock","編集期間不足", rv.squeezed.length,"本", rv.squeezed.slice(0,3).map(function(r){
+    var c=contractById(r.contractId)||{display:r.client};
+    return h("button",{class:"rvline",onclick:function(){ selectRow(r.id); }},
+      [h("span",{text:"・"+c.display+" "+jpDate(r.planned)+"予定"}), h("i",{text:"確認する"})]);
+  }));
+  var any=false;
+  [g1,g2,g3].forEach(function(x){ if(x){ bd.appendChild(x); any=true; } });
+  if(!any) bd.appendChild(h("p",{class:"sub",style:"margin:4px 0 12px",text:"要確認の項目はありません。"}));
+  card.appendChild(bd);
+  return card;
+}
+/* 今日のメモ（§19.2：白〜ごく薄い青。ダーク背景禁止） */
+var MEMO_EDIT=false;
+function todayMemoCard(){
+  var note=(STATE.notes||{})[TODAY]||{};
+  var card=h("div",{class:"card memo"});
+  var hd=h("div",{class:"hd"});
+  hd.appendChild(h("h3",{},[ic("info",15), txt(" 今日のメモ")]));
+  hd.appendChild(h("div",{class:"spacer"}));
+  if(!MEMO_EDIT && writable())
+    hd.appendChild(h("button",{class:"linkbtn2",onclick:function(){ MEMO_EDIT=true; render(); }},
+      [h("span",{text:"編集する"})]));
+  card.appendChild(hd);
+  var bd=h("div",{class:"bd"});
+  if(MEMO_EDIT){
+    var ta=h("textarea",{class:"memota",rows:"5",placeholder:"共有したいことを箇条書きでどうぞ"});
+    ta.value=note.text||"";
+    bd.appendChild(ta);
+    var row=h("div",{class:"mrow"});
+    row.appendChild(h("button",{class:"ghostbtn",text:"キャンセル",
+      onclick:function(){ MEMO_EDIT=false; render(); }}));
+    row.appendChild(h("button",{class:"cta",text:"保存する",onclick:function(){
+      MEMO_EDIT=false;
+      commit(newOp("note", TODAY, {value:ta.value}));
+    }}));
+    bd.appendChild(row);
+  } else if((note.text||"").trim()){
+    bd.appendChild(h("p",{class:"memotext",text:note.text}));
+  } else {
+    bd.appendChild(h("p",{class:"sub",style:"margin:4px 0 12px",text:"まだメモはありません。"}));
+  }
+  card.appendChild(bd);
+  return card;
+}
 function panelToday(){
   var box=h("div");
   var staff=!!STAFF_MAP[ME];
   box.appendChild(h("div",{class:"sect"},[
     h("h2",{text:"今日"}),
     h("span",{text:"（"+jpFull(TODAY)+"・"+(staff?"自分の担当分":"編集スタッフ全員")+"）"})]));
-  box.appendChild(todayKpiStrip());
+  var b0=todayBuckets(), rv=todayReview();
+  box.appendChild(todayKpiStrip(b0, rv));
 
+  var duo=h("div",{class:"todayduo"});
+  duo.appendChild(todayPrioCard());
+  duo.appendChild(todayQueue());
+  var right=h("div",{class:"todayright"});
+  right.appendChild(todayReviewCard(rv));
+  right.appendChild(todayMemoCard());
+  duo.appendChild(right);
+  box.appendChild(duo);
+  return box;
+}
+function todayQueue(){
   var b=todayBuckets();
-  var s=sectCard("今日の作業キュー");
+  var s=sectCard("今日やること");
   if(!b.over.length && !b.now.length && !b.nodate.length){
     /* §10.7 空状態。黙って今週を出すと「今日やることが無い」ことが伝わらない */
     var e=h("div",{class:"emptystate"});
@@ -2397,8 +2914,8 @@ function panelToday(){
     }
     s.bd.appendChild(t);
   }
-  box.appendChild(s.card);
-  return box;
+  s.card.classList.add("queue");
+  return s.card;
 }
 
 /* ---- ③ 進行トラック（軸・レーン） ---- */
@@ -2613,19 +3130,100 @@ function loadOf(name){
          :              {k:"hot",  t:"高負荷",  v:"--st-waiting"};
   return o;
 }
+/* チーム負荷KPI（§25.2）：全体の負荷／高負荷／低負荷／期限超過リスク */
 function loadKpiStrip(loads){
-  var names=Object.keys(loads), today=0, hot=0, review=0, over=0;
+  var names=Object.keys(loads), hot=0, low=0, over=0, sum=0;
   names.forEach(function(n){
-    today+=loads[n].today; review+=loads[n].review; over+=loads[n].overdue;
+    sum+=loads[n].score; over+=loads[n].overdue;
     if(loads[n].score>=85) hot++;
+    if(loads[n].score<50) low++;
   });
+  var avg=names.length ? Math.round(sum/names.length) : 0;
   var g=h("div",{class:"kpis four"});
-  g.appendChild(kpiCard("k5","本日のタスク","clock", today,"件",["超過分を含む"]));
-  g.appendChild(kpiCard("k4","高負荷スタッフ","alert", hot,"人",["負荷目安 85以上・全"+names.length+"人"]));
-  g.appendChild(kpiCard("k7","確認待ち","alert", review,"件",["確認中で止まっている動画"]));
-  /* 遅延は全画面で赤に揃える。高負荷と2枚赤になるが、どちらも警報なので薄めない */
-  g.appendChild(kpiCard("k4","遅延","alertCircle", over,"件",["期限を過ぎた未投稿"]));
+  g.appendChild(kpiCard("g-critical","チーム全体の負荷","gauge", avg,"%",
+    [avg>=85?"高め":avg>=70?"やや高め":"適正の範囲です"], avg));
+  g.appendChild(kpiCard("g-blue","高負荷メンバー","alert", hot,"人",
+    ["全"+names.length+"人中・負荷目安85以上"]));
+  g.appendChild(kpiCard("g-teal","低負荷メンバー","check", low,"人",
+    ["全"+names.length+"人中・負荷目安50未満"]));
+  g.appendChild(kpiCard("g-orange","期限超過リスク","alertCircle", over,"件",
+    ["対応が必要な案件"]));
   return g;
+}
+/* 負荷調整の提案（§26）。0件なら描画自体を行わない。提案は動画単位。
+   システムは自動で担当変更しない。確定操作は社員のみ */
+function loadSuggestions(loads){
+  var names=Object.keys(loads);
+  var subs=[];
+  names.forEach(function(from){
+    if(loads[from].score<85) return;
+    /* 最も余裕のある移動先（負荷70未満）を1人選ぶ */
+    var to=null;
+    names.forEach(function(n){
+      if(n===from || loads[n].score>=70) return;
+      if(!to || loads[n].score<loads[to].score) to=n;
+    });
+    if(!to) return;
+    /* 動かしてよいのは未着手だけ（進行中の担当を変えると混乱する） */
+    var cand=rowsOfMonth().filter(function(r){ return r.editor===from && r.status==="未着手"; })
+      .sort(function(a,b){ return a.due<b.due?-1:1; })[0];
+    if(!cand) return;
+    subs.push({video:cand, from:from, to:to});
+  });
+  return subs;
+}
+function suggestionSection(loads){
+  var subs=loadSuggestions(loads);
+  if(!subs.length) return null;   /* §26.1：空プレースホルダーも出さない */
+  var s=sectCard("負荷調整の提案","チーム全体の負荷が高めです。以下の提案を参考に、負荷の最適化をご検討ください");
+  s.card.classList.add("suggest");
+  subs.forEach(function(sub){
+    var r=sub.video, c=contractById(r.contractId)||{display:r.client};
+    var el=h("div",{class:"sgcard"});
+    var flow=h("div",{class:"flow"});
+    function person(n, score){
+      var av=h("div",{class:"avatar",text:n.slice(0,1),"aria-hidden":"true"});
+      av.style.cssText="width:28px;height:28px;font-size:12px";
+      av.style.background=tileBg(n);
+      return h("div",{class:"pp"},[av, h("b",{text:n}),
+        h("span",{class:"num "+(score>=85?"hotp":"lowp"),text:score+"%"})]);
+    }
+    flow.appendChild(person(sub.from, loads[sub.from].score));
+    flow.appendChild(ic("arrowRight",18));
+    flow.appendChild(person(sub.to, loads[sub.to].score));
+    el.appendChild(flow);
+    var vid=h("div",{class:"sv"},[
+      tile(r.contractId, shortName(c), 26, 20, 10),
+      h("span",{text:c.display+"　"+(r.title||(r.kind+"（"+jpDate(r.planned)+"投稿予定）"))})]);
+    el.appendChild(vid);
+    el.appendChild(h("p",{class:"why",
+      text:sub.to+"さんの負荷に余裕があります。この未着手動画の担当変更で、"+sub.from+"さんの負荷を軽減できます。"}));
+    var canDo = myRole()==="社員" && writable();
+    el.appendChild(h("button",{class:"outbtn",disabled:!canDo,
+      title:canDo?null:"担当変更の確定は社員のみ行えます",
+      text:"担当変更を検討",onclick:function(){ openReassign(sub); }}));
+    subEl(el);
+    function subEl(x){ s.bd.appendChild(x); }
+  });
+  return s.card;
+}
+function openReassign(sub){
+  var r=sub.video, c=contractById(r.contractId)||{display:r.client};
+  var m=h("div",{class:"modal"});
+  m.appendChild(h("h3",{text:"担当変更の確認"}));
+  m.appendChild(h("p",{class:"sub",
+    text:"「"+(r.title||(c.display+" "+r.kind))+"」の担当を "+sub.from+" さんから "+sub.to+" さんへ変更します。よろしいですか？（自動では変更されません）"}));
+  var row=h("div",{class:"mrow"});
+  row.appendChild(h("button",{class:"ghostbtn",text:"キャンセル",onclick:closeModals}));
+  row.appendChild(h("button",{class:"cta",text:"担当を変更する",onclick:function(){
+    commit(newOp("field", r.id, {field:"editor", value:sub.to}));
+    closeModals();
+    showToast("担当を "+sub.to+" さんに変更しました", function(){
+      commit(newOp("field", r.id, {field:"editor", value:sub.from}));
+    });
+  }}));
+  m.appendChild(row);
+  modal(m);
 }
 function staffCard(name, o){
   var m=MEMBERS.filter(function(x){return x.name===name})[0]||{role:"スタッフ"};
@@ -2691,12 +3289,16 @@ function panelLoad(){
   names.forEach(function(n){ loads[n]=loadOf(n); });
   box.appendChild(loadKpiStrip(loads));
 
-  var s=sectCard("スタッフ別の負荷目安",
+  var s=sectCard("メンバー別の負荷状況",
     "カードを押すと、その人の未完了を動画一覧で開きます。数値は工数ではなく、担当件数・遅延・確認待ちから出した目安です");
-  var g=h("div",{class:"staffcards",role:"listbox","aria-label":"スタッフ別の負荷"});
+  var g=h("div",{class:"staffcards",role:"listbox","aria-label":"メンバー別の負荷"});
   names.forEach(function(n){ g.appendChild(staffCard(n, loads[n])); });
   s.bd.appendChild(g);
   box.appendChild(s.card);
+
+  /* 負荷調整の提案（§26）。必要な時だけ下部に出る */
+  var sg=suggestionSection(loads);
+  if(sg) box.appendChild(sg);
 
   var w=sectCard("今週の日別負荷",
     "編集完了希望の件数。能力マーカーは出さない（ボードはテスト10社分、シフトは全社分の労働で分母が揃わないため）。偏りだけを見る");
@@ -2807,6 +3409,408 @@ function panelPending(){
 }
 
 /* =====================================================================
+   投稿カレンダー（§27）。新設ページ
+   ===================================================================== */
+var CALSEL=null, CALFILTER={client:"__all__", editor:"__all__", status:"__all__"};
+function calRows(){
+  var rows=rowsOfMonth();
+  if(CALFILTER.client!=="__all__") rows=rows.filter(function(r){ return r.client===CALFILTER.client; });
+  if(CALFILTER.editor!=="__all__") rows=rows.filter(function(r){ return r.editor===CALFILTER.editor; });
+  if(CALFILTER.status!=="__all__") rows=rows.filter(function(r){ return r.status===CALFILTER.status; });
+  return rows;
+}
+function clientNames(){
+  var seen={}, out=[];
+  SEED_CONTRACTS.forEach(function(c){ if(!seen[c.client]){ seen[c.client]=1; out.push(c.client); } });
+  return out;
+}
+function calSelect(label, value, opts, onch){
+  var sel=h("select",{class:"calsel","aria-label":label,onchange:function(e){ onch(e.target.value); }});
+  sel.appendChild(h("option",{value:"__all__",text:"すべての"+label}));
+  opts.forEach(function(o){ sel.appendChild(h("option",{value:o,text:o})); });
+  sel.value=value;
+  return sel;
+}
+function panelCalendar(){
+  var box=h("div");
+  box.appendChild(h("div",{class:"sect"},[
+    h("h2",{text:MONTH.replace("-","年")+"月 投稿カレンダー"})]));
+
+  /* KPI（§27.1：今月予定・投稿済み・残り） */
+  var all=rowsOfMonth(), posted=all.filter(function(r){ return r.status==="投稿済み"; }).length;
+  var g=h("div",{class:"kpis three"});
+  g.appendChild(kpiCard("g-blue","今月予定","calendar", all.length,"本",["今月の投稿予定総数"]));
+  g.appendChild(kpiCard("g-teal","投稿済み","check", posted,"本",["今月の投稿完了数"]));
+  g.appendChild(kpiCard("g-purple","残り","clock", all.length-posted,"本",["未投稿の予定数"]));
+  box.appendChild(g);
+
+  /* フィルタ（§27.1） */
+  var fb=h("div",{class:"filters calfb"});
+  fb.appendChild(calSelect("クライアント", CALFILTER.client, clientNames(),
+    function(v){ CALFILTER.client=v; render(); }));
+  fb.appendChild(calSelect("担当者", CALFILTER.editor, Object.keys(STAFF_MAP),
+    function(v){ CALFILTER.editor=v; render(); }));
+  fb.appendChild(calSelect("ステータス", CALFILTER.status, STATUSES.slice(),
+    function(v){ CALFILTER.status=v; render(); }));
+  fb.appendChild(h("button",{class:"ghostbtn",onclick:function(){
+    CALFILTER={client:"__all__",editor:"__all__",status:"__all__"}; render(); }},
+    [h("span",{text:"リセット"})]));
+  box.appendChild(fb);
+
+  var duo=h("div",{class:"calduo"});
+  duo.appendChild(calGrid());
+  duo.appendChild(calDayPanel());
+  box.appendChild(duo);
+
+  /* 凡例 */
+  var lg=h("div",{class:"legend",style:"margin-top:2px"});
+  STATUSES.forEach(function(st){
+    var i=h("i"); i.style.background="var("+sv(st).v+")";
+    lg.appendChild(h("span",{},[i, txt(st)]));
+  });
+  box.appendChild(lg);
+  return box;
+}
+function calGrid(){
+  var rows=calRows(), byDay={};
+  rows.forEach(function(r){ (byDay[r.planned]=byDay[r.planned]||[]).push(r); });
+
+  var wrap=h("div",{class:"calwrap"});
+  var tbl=h("table",{class:"caltable"});
+  var hr=h("tr");
+  ["日","月","火","水","木","金","土"].forEach(function(w,i){
+    hr.appendChild(h("th",{class:i===0?"sun":i===6?"sat":"",text:w}));
+  });
+  tbl.appendChild(hr);
+
+  var a=MONTH.split("-"), y=+a[0], m=+a[1];
+  var first=ymd(y,m,1), lead=dow(first), n=daysInMonth(MONTH);
+  var cells=[]; /* 前月の埋め草は数字なしの空マス（情報を詰めない §27.4） */
+  for(var i=0;i<lead;i++) cells.push(null);
+  for(var d=1;d<=n;d++) cells.push(ymd(y,m,d));
+  while(cells.length%7) cells.push(null);
+
+  for(var wI=0;wI<cells.length;wI+=7){
+    var tr=h("tr");
+    for(var ci=0;ci<7;ci++){
+      var day=cells[wI+ci];
+      if(!day){ tr.appendChild(h("td",{class:"empty"})); continue; }
+      /* 土・日・祝はセル全体を同じ灰色で塗る（§27.3） */
+      var w=dow(day), off=(w===0||w===6||isHoliday(day));
+      var cls="cd"+(off?" off":"")+(CALSEL===day?" sel":"")+(day===TODAY?" today":"");
+      var td=h("td",{class:cls,tabindex:"0",role:"button",
+        "aria-label":jpDate(day)+"日 "+((byDay[day]||[]).length)+"件"});
+      (function(dd){
+        td.addEventListener("click", function(){ CALSEL=dd; render(); });
+        td.addEventListener("keydown", function(e){ if(e.key==="Enter"){ CALSEL=dd; render(); } });
+      })(day);
+      var numCls = w===0||isHoliday(day) ? "sun" : w===6 ? "sat" : "";
+      td.appendChild(h("div",{class:"dn "+numCls,text:String(+day.slice(8))}));
+      var evs=byDay[day]||[];
+      evs.slice(0,2).forEach(function(r){
+        var c=contractById(r.contractId)||{display:r.client};
+        var ev=h("div",{class:"ev"});
+        var dt=h("i"); dt.style.background="var("+sv(r.status).v+")";
+        ev.appendChild(dt);
+        ev.appendChild(h("span",{text:r.title||(c.display+" "+r.kind)}));
+        td.appendChild(ev);
+      });
+      if(evs.length>2) td.appendChild(h("div",{class:"evmore",text:"他"+(evs.length-2)+"件"}));
+      tr.appendChild(td);
+    }
+    tbl.appendChild(tr);
+  }
+  wrap.appendChild(tbl);
+  return wrap;
+}
+function calDayPanel(){
+  var p=h("div",{class:"daypanel card"});
+  var day=CALSEL;
+  var hd=h("div",{class:"hd"});
+  if(!day){
+    hd.appendChild(h("h3",{text:"日付を選択"}));
+    p.appendChild(hd);
+    p.appendChild(h("div",{class:"bd"},[
+      h("p",{class:"sub",style:"margin:4px 0 12px",text:"カレンダーの日付をクリックすると、その日の予定がここに出ます。"})]));
+    return p;
+  }
+  var items=calRows().filter(function(r){ return r.planned===day; });
+  hd.appendChild(h("h3",{text:day.replace(/-/g,"/")+"（"+"日月火水木金土"[dow(day)]+"）の予定"}));
+  hd.appendChild(h("div",{class:"spacer"}));
+  hd.appendChild(h("span",{class:"pill",text:items.length+"件"}));
+  p.appendChild(hd);
+  var bd=h("div",{class:"bd"});
+  if(!items.length){
+    bd.appendChild(h("p",{class:"sub",style:"margin:4px 0 12px",text:"この日の投稿予定はありません。"}));
+  }
+  items.forEach(function(r){
+    var c=contractById(r.contractId)||{display:r.client,client:r.client};
+    var card=h("div",{class:"daycard"});
+    var top=h("div",{class:"top"});
+    top.appendChild(tile(r.contractId, shortName(c), 34, 24, 12));
+    var tt=h("div",{class:"tt"});
+    tt.appendChild(h("b",{text:r.title||(c.display+" "+r.kind)}));
+    tt.appendChild(h("span",{text:c.client}));
+    top.appendChild(tt);
+    card.appendChild(top);
+    var kv=h("div",{class:"mini"});
+    kv.appendChild(h("div",{},[txt("担当　"), h("b",{text:r.editor||"未割当"})]));
+    var stw=h("div",{},[txt("ステータス　")]); stw.appendChild(sBadge(r.status));
+    kv.appendChild(stw);
+    card.appendChild(kv);
+    var db=driveButtons(c.client);
+    if(db) card.appendChild(db);
+    card.appendChild(h("button",{class:"linkbtn2",onclick:function(){ VIEW="list"; selectRow(r.id); }},
+      [h("span",{text:"詳細を開く"}), ic("chevronRight",14)]));
+    bd.appendChild(card);
+  });
+  p.appendChild(bd);
+  return p;
+}
+
+/* =====================================================================
+   クライアント管理（§29〜34）。社員のみの新設ページ
+   ===================================================================== */
+var CLSEL=null, CLFILTER={plan:"__all__", editor:"__all__", material:"__all__"};
+var MATERIAL_STEPS=["未依頼","分析・ハイライト作成中","社員対応待ち","資料完成"];
+var PLAN_STATUSES=["未着手","進行中","確認待ち","完了"];
+/* クライアント単位の集計。目標＝契約本数の合計、投稿済み＝当月rows */
+function clientAgg(name){
+  var cs=SEED_CONTRACTS.filter(function(c){ return c.client===name; });
+  var goal=0, ids={};
+  cs.forEach(function(c){ goal+=c.count; ids[c.id]=1; });
+  var posted=0, editors={}, late=0;
+  rowsOfMonth().forEach(function(r){
+    if(!ids[r.contractId]) return;
+    if(r.status==="投稿済み") posted++;
+    else if(r.planned<TODAY) late++;
+    if(r.editor) editors[r.editor]=1;
+  });
+  var cd=clientDrive(name);
+  return {name:name, display:(cs[0]||{}).display||name, contractId:(cs[0]||{}).id,
+          goal:goal, posted:posted, late:late, editors:Object.keys(editors),
+          cd:cd, pct:pct(posted,goal)};
+}
+/* 資料準備の遅延（§33.2：毎月12日まで＝分析・ハイライト完成目標） */
+function materialLate(cd){
+  var st=cd.materialStatus||"未依頼";
+  return (st==="未依頼"||st==="分析・ハイライト作成中") && TODAY > MONTH+"-12";
+}
+function clientAlerts(){
+  var out={planLate:[], goalRisk:[], matLate:[]};
+  clientNames().forEach(function(n){
+    var a=clientAgg(n);
+    if(a.cd.planningDeadline && a.cd.planningDeadline<TODAY &&
+       (a.cd.planningStatus||"未着手")!=="完了") out.planLate.push(a);
+    if(a.late>0) out.goalRisk.push(a);
+    if(materialLate(a.cd)) out.matLate.push(a);
+  });
+  return out;
+}
+function panelClient(){
+  var box=h("div");
+  box.appendChild(h("div",{class:"sect"},[
+    h("h2",{text:"クライアント管理"}),
+    h("span",{class:"rolechip",text:"社員のみ"})]));
+
+  var names=clientNames(), aggs=names.map(clientAgg);
+  var postedAll=0, goalAll=0, planning=0, matWork=0;
+  aggs.forEach(function(a){
+    postedAll+=a.posted; goalAll+=a.goal;
+    if((a.cd.planningStatus||"")==="進行中") planning++;
+    if((a.cd.materialStatus||"")==="分析・ハイライト作成中") matWork++;
+  });
+
+  /* KPI＋注意リスト（§29.2） */
+  var topg=h("div",{class:"clienttop"});
+  var g=h("div",{class:"kpis four"});
+  g.appendChild(kpiCard("g-blue","担当クライアント数","building", names.length,"社",["全社員で全社を閲覧できます"]));
+  g.appendChild(kpiCard("g-teal","今月の投稿数（合計）","check", postedAll,"本",
+    ["目標 "+goalAll+"本に対して "+pct(postedAll,goalAll)+"%"], pct(postedAll,goalAll)));
+  g.appendChild(kpiCard("g-purple","企画進行中","film", planning,"社",["企画ステータスが進行中"]));
+  g.appendChild(kpiCard("g-orange","資料準備中","clock", matWork,"社",["分析・ハイライト作成中"]));
+  topg.appendChild(g);
+
+  var al=clientAlerts();
+  var warn=h("div",{class:"card attn"});
+  warn.appendChild(h("div",{class:"hd"},[h("h3",{},[ic("alert",15), txt(" 注意が必要なクライアント")])]));
+  var wb=h("div",{class:"bd"});
+  function attnRow(label, list){
+    var row=h("div",{class:"attnrow"});
+    row.appendChild(h("span",{text:label}));
+    row.appendChild(h("b",{class:"num "+(list.length?"bad":""),text:list.length+"社"}));
+    return row;
+  }
+  wb.appendChild(attnRow("企画期限超過", al.planLate));
+  wb.appendChild(attnRow("投稿目標未達リスク", al.goalRisk));
+  wb.appendChild(attnRow("資料準備遅延", al.matLate));
+  warn.appendChild(wb);
+  topg.appendChild(warn);
+  box.appendChild(topg);
+
+  /* フィルタ */
+  var fb=h("div",{class:"filters calfb"});
+  fb.appendChild(calSelect("企画ステータス", CLFILTER.plan, PLAN_STATUSES,
+    function(v){ CLFILTER.plan=v; render(); }));
+  fb.appendChild(calSelect("担当者", CLFILTER.editor, Object.keys(STAFF_MAP),
+    function(v){ CLFILTER.editor=v; render(); }));
+  fb.appendChild(calSelect("資料準備状況", CLFILTER.material, MATERIAL_STEPS,
+    function(v){ CLFILTER.material=v; render(); }));
+  fb.appendChild(h("button",{class:"ghostbtn",onclick:function(){
+    CLFILTER={plan:"__all__",editor:"__all__",material:"__all__"}; render(); }},
+    [h("span",{text:"フィルタをクリア"})]));
+  box.appendChild(fb);
+
+  var duo=h("div",{class:"calduo"});
+  duo.appendChild(clientTable(aggs));
+  duo.appendChild(clientDetail());
+  box.appendChild(duo);
+  return box;
+}
+function fmtD(d){ return d ? (+d.slice(5,7))+"/"+(+d.slice(8)) : "未設定"; }
+function clientTable(aggs){
+  var s=sectCard("クライアント一覧","クライアント名をクリックすると、右に詳細が表示されます");
+  var list=aggs.filter(function(a){
+    if(CLFILTER.plan!=="__all__" && (a.cd.planningStatus||"未着手")!==CLFILTER.plan) return false;
+    if(CLFILTER.editor!=="__all__" && a.editors.indexOf(CLFILTER.editor)<0) return false;
+    if(CLFILTER.material!=="__all__" && (a.cd.materialStatus||"未依頼")!==CLFILTER.material) return false;
+    return true;
+  });
+  var wrap=h("div",{class:"tblwrap"});
+  var t=h("table",{class:"list clienttbl"});
+  var hr=h("tr");
+  ["クライアント","次回撮影日","企画期限","企画","今月","目標","編集進行","担当","定例MTG","資料準備"]
+    .forEach(function(x){ hr.appendChild(h("th",{text:x})); });
+  t.appendChild(hr);
+  list.forEach(function(a){
+    var cd=a.cd;
+    var tr=h("tr",{class:"pick",tabindex:"0","aria-selected":CLSEL===a.name?"true":"false",
+      onclick:function(){ CLSEL=a.name; render(); },
+      onkeydown:function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); CLSEL=a.name; render(); } }});
+    tr.appendChild(h("td",{},[h("div",{class:"cli2"},[
+      tile(a.contractId, a.display.slice(0,2), 28, 20, 10), h("span",{text:a.name})])]));
+    tr.appendChild(h("td",{text:fmtD(cd.nextShootDate)}));
+    var pl=h("td",{text:fmtD(cd.planningDeadline)});
+    if(cd.planningDeadline && cd.planningDeadline<TODAY && (cd.planningStatus||"")!=="完了")
+      pl.className="odcell";
+    tr.appendChild(pl);
+    tr.appendChild(h("td",{},[h("span",{class:"pchip",text:cd.planningStatus||"未着手"})]));
+    tr.appendChild(h("td",{},[num(a.posted), txt("本")]));
+    tr.appendChild(h("td",{},[num(a.goal), txt("本")]));
+    var pg=h("td");
+    var bar=h("div",{class:"pbar"}); var i=h("i"); i.style.width=Math.min(100,a.pct)+"%";
+    if(a.late>0) i.style.background="var(--warning)";
+    bar.appendChild(i); pg.appendChild(bar);
+    pg.appendChild(h("span",{class:"pcv",text:a.pct+"%"}));
+    tr.appendChild(pg);
+    tr.appendChild(h("td",{text:a.editors.join("・")||"—"}));
+    tr.appendChild(h("td",{text:fmtD(cd.nextRegularMeeting)}));
+    var mt=h("td");
+    mt.appendChild(h("span",{class:"mchip"+(materialLate(cd)?" late":""),
+      text:cd.materialStatus||"未依頼"}));
+    tr.appendChild(mt);
+    t.appendChild(tr);
+  });
+  if(!list.length) s.bd.appendChild(h("p",{class:"sub",text:"条件に合うクライアントがありません。"}));
+  wrap.appendChild(t);
+  s.bd.appendChild(wrap);
+  return s.card;
+}
+/* クライアント詳細（§31）。編集は社員のみ＝このページ自体が社員のみ */
+function clientField(name, label, fieldKey, type, val){
+  var lb=h("label",{class:"field"});
+  lb.appendChild(h("span",{text:label}));
+  var inp=h("input",{type:type||"date"});
+  inp.value=val||"";
+  inp.addEventListener("change", function(){
+    commit(newOp("client", name, {field:fieldKey, value:inp.value}));
+  });
+  if(!writable()) inp.disabled=true;
+  lb.appendChild(inp);
+  return lb;
+}
+function clientDetail(){
+  var p=h("div",{class:"daypanel card"});
+  var name=CLSEL;
+  if(!name){
+    p.appendChild(h("div",{class:"hd"},[h("h3",{text:"クライアントを選択"})]));
+    p.appendChild(h("div",{class:"bd"},[
+      h("p",{class:"sub",style:"margin:4px 0 12px",text:"一覧のクライアントをクリックすると、Drive・基本情報・資料準備フローがここに出ます。"})]));
+    return p;
+  }
+  var a=clientAgg(name), cd=a.cd;
+  var hd=h("div",{class:"hd"});
+  hd.appendChild(tile(a.contractId, a.display.slice(0,2), 40, 28, 13));
+  hd.appendChild(h("h3",{text:name}));
+  hd.appendChild(h("div",{class:"spacer"}));
+  hd.appendChild(h("button",{class:"iconbtn","aria-label":"詳細を閉じる",
+    onclick:function(){ CLSEL=null; render(); }},[ic("x",16)]));
+  p.appendChild(hd);
+  var bd=h("div",{class:"bd"});
+
+  /* Drive（§31.2） */
+  bd.appendChild(h("div",{class:"dslabel",text:"関連フォルダ（Google Drive）"}));
+  function dr(label, sub, url, btnLabel){
+    var row=h("div",{class:"drrow"});
+    var tt=h("div",{class:"tt"});
+    tt.appendChild(h("b",{text:label}));
+    tt.appendChild(h("span",{text:sub}));
+    row.appendChild(tt);
+    if(/^https?:\/\//i.test(String(url||"").trim())){
+      var aEl=h("a",{class:"drivebtn",href:url,target:"_blank",rel:"noopener noreferrer"},
+        [driveMark(14), h("span",{text:btnLabel})]);
+      row.appendChild(aEl);
+    } else {
+      row.appendChild(h("button",{class:"drivebtn unset",onclick:function(){ openDriveSetup(name); }},
+        [driveMark(14), h("span",{text:"Drive未設定"})]));
+    }
+    return row;
+  }
+  bd.appendChild(dr("未編集動画（素材置場）","撮影済みの素材を格納するフォルダ", cd.material,"素材を開く"));
+  bd.appendChild(dr("確認用（編集済み動画置き場）","編集済み動画を格納するフォルダ", cd.review,"確認用にアップロード"));
+  bd.appendChild(h("button",{class:"linkbtn2",onclick:function(){ openDriveSetup(name); }},
+    [h("span",{text:"フォルダURLを設定・変更する"}), ic("chevronRight",14)]));
+
+  /* 基本情報（§31.3） */
+  bd.appendChild(h("div",{class:"dslabel",text:"基本情報"}));
+  bd.appendChild(clientField(name,"次回撮影日","nextShootDate","date",cd.nextShootDate));
+  bd.appendChild(clientField(name,"企画期限","planningDeadline","date",cd.planningDeadline));
+  var lb=h("label",{class:"field"});
+  lb.appendChild(h("span",{text:"企画ステータス"}));
+  var sel=h("select",{disabled:!writable(),onchange:function(e){
+    commit(newOp("client", name, {field:"planningStatus", value:e.target.value})); }});
+  PLAN_STATUSES.forEach(function(x){ sel.appendChild(h("option",{value:x,text:x})); });
+  sel.value=cd.planningStatus||"未着手";
+  lb.appendChild(sel); bd.appendChild(lb);
+  bd.appendChild(clientField(name,"次回定例MTG","nextRegularMeeting","date",cd.nextRegularMeeting));
+  var kv=h("div",{class:"mini",style:"margin:8px 0 0"});
+  kv.appendChild(h("div",{},[txt("今月の投稿状況　"), h("b",{class:"num",text:a.posted+" / "+a.goal+"本（"+a.pct+"%）"})]));
+  kv.appendChild(h("div",{},[txt("担当編集スタッフ　"), h("b",{text:a.editors.join("・")||"未割当"})]));
+  bd.appendChild(kv);
+
+  /* 資料準備フロー（§33：4段階。分析・ハイライトは分けない） */
+  bd.appendChild(h("div",{class:"dslabel",text:"資料準備フロー"}));
+  var cur=MATERIAL_STEPS.indexOf(cd.materialStatus||"未依頼");
+  var stp=h("div",{class:"mstep"});
+  MATERIAL_STEPS.forEach(function(st,i){
+    var b=h("button",{class:"ms"+(i===cur?" cur":i<cur?" done":""),disabled:!writable(),
+      title:"「"+st+"」にする",
+      onclick:function(){ commit(newOp("client", name, {field:"materialStatus", value:st})); }});
+    b.appendChild(h("i",{text:i<cur?"●":i===cur?"●":"○"}));
+    b.appendChild(h("span",{text:st}));
+    stp.appendChild(b);
+  });
+  bd.appendChild(stp);
+  var note=h("div",{class:"matnote"+(materialLate(cd)?" late":"")});
+  note.appendChild(ic("info",14));
+  note.appendChild(h("span",{text:"分析・ハイライト作成の目標は毎月12日までです。社員対応待ちになったら「課題と改善提案」を作成してください。"}));
+  bd.appendChild(note);
+
+  p.appendChild(bd);
+  return p;
+}
+
+/* =====================================================================
    モーダル / トースト
    ===================================================================== */
 function modal(node){
@@ -2893,6 +3897,79 @@ function openDriveSetup(clientName){
     showToast(clientName+" の Drive 設定を保存しました");
   }}));
   m.appendChild(row);
+  modal(m);
+}
+
+/* ---- 動画追加（Top bar §10.1） ---- */
+function openAddVideo(){
+  var m=h("div",{class:"modal"});
+  m.appendChild(h("h3",{text:"動画を追加"}));
+  m.appendChild(h("p",{class:"sub",text:MONTH.replace("-","年")+"月分に1本追加します。追加した行は月次生成で動かされないよう日付固定になります。"}));
+  var lb1=h("label",{class:"field"});
+  lb1.appendChild(h("span",{text:"クライアント"}));
+  var selC=h("select");
+  SEED_CONTRACTS.forEach(function(c){
+    selC.appendChild(h("option",{value:c.id,text:c.client+"（"+c.kind+"）"}));
+  });
+  lb1.appendChild(selC); m.appendChild(lb1);
+  var lb2=h("label",{class:"field"});
+  lb2.appendChild(h("span",{text:"タイトル"}));
+  var inT=h("input",{type:"text",placeholder:"例：夏のキャンペーン告知動画"});
+  lb2.appendChild(inT); m.appendChild(lb2);
+  var lb3=h("label",{class:"field"});
+  lb3.appendChild(h("span",{text:"担当編集者"}));
+  var selE=h("select");
+  [""].concat(Object.keys(STAFF_MAP)).forEach(function(n){
+    selE.appendChild(h("option",{value:n,text:n||"未割当"}));
+  });
+  lb3.appendChild(selE); m.appendChild(lb3);
+  function dateField(label, def){
+    var lb=h("label",{class:"field"});
+    lb.appendChild(h("span",{text:label}));
+    var inp=h("input",{type:"date"}); inp.value=def;
+    lb.appendChild(inp); m.appendChild(lb);
+    return inp;
+  }
+  var inP=dateField("投稿予定日", TODAY);
+  var inD=dateField("編集完了希望日", TODAY);
+  var row=h("div",{class:"mrow"});
+  row.appendChild(h("button",{class:"ghostbtn",text:"キャンセル",onclick:closeModals}));
+  row.appendChild(h("button",{class:"cta",text:"追加する",onclick:function(){
+    var c=contractById(selC.value); if(!c) return;
+    if(!inP.value || !inD.value){ inP.focus(); return; }
+    if(monthOf(inP.value)!==MONTH){
+      showToast("投稿予定日は表示中の月（"+MONTH.replace("-","年")+"月）にしてください"); return;
+    }
+    var id="r-"+MONTH+"-"+c.client+"-m"+Date.now();
+    commit(newOp("addrow", id, {row:{
+      id:id, contractId:c.id, client:c.client, kind:c.kind, month:MONTH,
+      title:inT.value.trim(), editor:selE.value, status:"未着手",
+      planned:inP.value, due:inD.value, postedAt:null, trans:{}, actor:ME||"",
+      dateLocked:true, squeezed:false, url:"", note:"", revisionNote:"", updatedAt:{}
+    }}));
+    closeModals();
+    showToast("「"+(inT.value.trim()||c.client+" "+c.kind)+"」を追加しました");
+  }}));
+  m.appendChild(row);
+  modal(m);
+}
+/* ---- Google Drive ハブ（Top bar §10.1）。クライアント別の2フォルダを一覧 ---- */
+function openDriveHub(){
+  var m=h("div",{class:"modal wide"});
+  m.appendChild(h("h3",{text:"Google Drive フォルダ"}));
+  m.appendChild(h("p",{class:"sub",text:"クライアントごとの「未編集動画（素材置場）」と「確認用（編集済み動画置き場）」です。"}));
+  clientNames().forEach(function(n){
+    var row=h("div",{class:"drrow"});
+    var tt=h("div",{class:"tt"});
+    tt.appendChild(h("b",{text:n}));
+    row.appendChild(tt);
+    var btns=driveButtons(n);
+    row.appendChild(btns||h("span",{class:"sub",text:"Drive未設定"}));
+    m.appendChild(row);
+  });
+  var row2=h("div",{class:"mrow"});
+  row2.appendChild(h("button",{class:"ghostbtn",text:"閉じる",onclick:closeModals}));
+  m.appendChild(row2);
   modal(m);
 }
 
@@ -3026,44 +4103,34 @@ function render(){
   var bs=blockers();
   if(bs.length) wrap.appendChild(topBar(bs[0]));
 
+  /* クライアント管理は社員のみ（§3.2）。UI非表示に加えてルート側でも守る */
+  if(VIEW==="client" && myRole()!=="社員") VIEW="home";
+  /* 廃止ルートの保険（進行トラック→動画一覧、投稿待ち→動画一覧の絞り込み） */
+  if(VIEW==="track") VIEW="list";
+  if(VIEW==="pending"){ VIEW="list"; FILTER.status="投稿待ち"; }
+
   if(VIEW==="home"){
-    wrap.appendChild(SummaryGrid());
-    var duo=h("div",{class:"duo"});
-    var left=h("div");
-    left.appendChild(h("div",{class:"sect"},[h("h2",{text:"現場オペレーション"}),h("span",{text:"（編集スタッフ向け）"})]));
-    left.appendChild(MyTasksCard());
-    var rightB=h("div");
-    rightB.appendChild(h("div",{class:"sect"},[h("h2",{text:"マネジメント監視"}),h("span",{text:"（契約別 進捗サマリー）"})]));
-    rightB.appendChild(ContractPanel());
-    duo.appendChild(left); duo.appendChild(rightB);
-    wrap.appendChild(duo);
-    wrap.appendChild(Kanban());
+    wrap.appendChild(homeKpis());
+    wrap.appendChild(MyTasksCard());
+    wrap.appendChild(homeStalled());
   } else if(VIEW==="list"){
     wrap.appendChild(panelList());
   } else if(VIEW==="today"){
     wrap.appendChild(panelToday());
-  } else if(VIEW==="track"){
-    wrap.appendChild(h("div",{class:"sect"},[
-      h("h2",{text:"進行トラック"}),
-      h("span",{text:"（"+MONTH.replace("-","年")+"月・契約ごとの投稿ペース）"})]));
-    wrap.appendChild(trackKpiStrip());
-    wrap.appendChild(panelTrack());
-    wrap.appendChild(panelStuck());
-    var g=h("div",{class:"duo"});
-    g.appendChild(panelDaily()); g.appendChild(panelStages());
-    wrap.appendChild(g);
   } else if(VIEW==="load"){
     wrap.appendChild(panelLoad());
-  } else if(VIEW==="pending"){
-    wrap.appendChild(panelPending());
+  } else if(VIEW==="calendar"){
+    wrap.appendChild(panelCalendar());
+  } else if(VIEW==="client"){
+    wrap.appendChild(panelClient());
   }
   main.appendChild(wrap);
   shell.appendChild(main);
   if(showDetail) shell.appendChild(DetailPanel());
   root.appendChild(shell);
 
-  if(POP){
-    var bd1=h("div",{class:"backdrop",onclick:function(){ POP=false; render(); }});
+  if(POP || HKPOP){
+    var bd1=h("div",{class:"backdrop",onclick:function(){ POP=false; HKPOP=null; render(); }});
     bd1.style.background="transparent"; bd1.style.zIndex="55";
     root.appendChild(bd1);
   }
@@ -3128,6 +4195,13 @@ function boot(){
 
   window.addEventListener("beforeunload", function(e){
     if(OPS.all().length){ e.preventDefault(); e.returnValue=""; }
+  });
+
+  /* Escape で ポップオーバー／ドロワー／モーダル を閉じる（§43） */
+  document.addEventListener("keydown", function(e){
+    if(e.key!=="Escape") return;
+    closeModals();
+    if(POP || HKPOP || DRAWER){ POP=false; HKPOP=null; DRAWER=false; render(); }
   });
 
   if(window.claude && claude.use){
