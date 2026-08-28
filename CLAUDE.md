@@ -15,6 +15,7 @@
 
 - ## レスポンシブ仕様
 - `SOCIAL_BASE_TODAY_RESPONSIVE_SPEC.md`
+- 「今日」画面のTablet/Mobile実装は`SOCIAL_BASE_TODAY_RESPONSIVE_SPEC.md`を正とする。
 
 ## 正式ロゴ
 - `rogo.png`
