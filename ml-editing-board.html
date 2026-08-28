@@ -303,6 +303,11 @@ svg{flex:none}
 /* ---- 負荷調整の提案（§26） ---- */
 .card.suggest{background:var(--critical-soft);border-color:var(--critical-border)}
 .card.suggest .hd h3{color:var(--critical)}
+.sgs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.sgno{display:inline-block;background:var(--critical);color:#fff;border-radius:999px;
+  padding:1px 10px;font-size:11.5px;font-weight:700}
+.maintasks div{font-size:12px;color:var(--text-secondary);line-height:1.6}
+.sgcard .outbtn{width:100%}
 .sgcard{background:var(--surface);border:1px solid var(--critical-border);border-radius:10px;
   padding:11px 13px;margin-bottom:9px;display:flex;flex-direction:column;gap:8px}
 .sgcard .flow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
@@ -954,7 +959,7 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
   .kpi .val .n{font-size:27px}
   .kpi .lab{font-size:13px}
   .duo,.todayduo,.calduo,.clienttop{display:flex;flex-direction:column;gap:14px}
-  .staffcards,.pcards{grid-template-columns:1fr}
+  .staffcards,.pcards,.sgs{grid-template-columns:1fr}
   /* KPIポップオーバーはインラインアコーディオンにする（§15.3 mobile） */
   .kpipop{position:static;margin-top:8px;max-width:none;min-width:0}
   /* My Tasks 行 → タスクカード（§37）。desktop の grid をカードに戻す */
@@ -3289,14 +3294,27 @@ function loadSuggestions(loads){
   });
   return subs;
 }
+var SG_OPEN=true;   /* 負荷調整の提案の開閉（完成イメージ：提案を閉じる） */
 function suggestionSection(loads){
   var subs=loadSuggestions(loads);
   if(!subs.length) return null;   /* §26.1：空プレースホルダーも出さない */
   var s=sectCard("負荷調整の提案","チーム全体の負荷が高めです。以下の提案を参考に、負荷の最適化をご検討ください");
   s.card.classList.add("suggest");
-  subs.forEach(function(sub){
+  var shd=s.card.querySelector(".hd");
+  shd.appendChild(h("span",{class:"mchip warn",text:"必要時のみ表示"}));
+  shd.appendChild(h("div",{class:"spacer"}));
+  shd.appendChild(h("button",{class:"linkbtn2","aria-expanded":SG_OPEN?"true":"false",
+    onclick:function(){ SG_OPEN=!SG_OPEN; render(); }},
+    [h("span",{text:SG_OPEN?"提案を閉じる":"提案を開く"}),
+     ic(SG_OPEN?"chevronDown":"chevronRight",14)]));
+  if(!SG_OPEN) return s.card;
+  var grid=h("div",{class:"sgs"});
+  s.bd.appendChild(grid);
+  subs.forEach(function(sub, si){
     var r=sub.video, c=contractById(r.contractId)||{display:r.client};
     var el=h("div",{class:"sgcard"});
+    el.appendChild(h("div",{},[h("span",{class:"sgno",text:"提案 "+(si+1)},[]),
+      h("b",{style:"font-size:13px;margin-left:8px",text:"タスクの担当変更を提案"})]));
     var flow=h("div",{class:"flow"});
     function person(n, score){
       var av=h("div",{class:"avatar",text:n.slice(0,1),"aria-hidden":"true"});
@@ -3319,8 +3337,7 @@ function suggestionSection(loads){
     el.appendChild(h("button",{class:"outbtn",disabled:!canDo,
       title:canDo?null:"担当変更の確定は社員のみ行えます",
       text:"担当変更を検討",onclick:function(){ openReassign(sub); }}));
-    subEl(el);
-    function subEl(x){ s.bd.appendChild(x); }
+    grid.appendChild(el);
   });
   return s.card;
 }
@@ -3341,6 +3358,60 @@ function openReassign(sub){
   }}));
   m.appendChild(row);
   modal(m);
+}
+/* メンバー別負荷テーブル（完成イメージ 04。desktop 用） */
+function loadTable(loads, names){
+  var wrap=h("div",{class:"tblwrap"});
+  var t=h("table",{class:"list clienttbl"});
+  var hr=h("tr");
+  ["メンバー","役割","タスク数","負荷率","ステータス","主な担当タスク","期限超過リスク",""]
+    .forEach(function(x){ hr.appendChild(h("th",{text:x})); });
+  t.appendChild(hr);
+  names.forEach(function(n){
+    var o=loads[n];
+    var m=MEMBERS.filter(function(x){return x.name===n})[0]||{role:"スタッフ"};
+    var cap=capacityOf(SEED_SHIFTS,STAFF_MAP[n],MONTH);
+    var tr=h("tr",{class:"pick",tabindex:"0",
+      onclick:function(){ STAFFPICK=n; VIEW="list"; SELECTED=null; FILTER.editor=n;
+        FILTER.status="open"; FILTER.client="__all__"; FILTER.q=""; POP=false; render(); },
+      onkeydown:function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); this.click(); } }});
+    var mc=h("td");
+    var av=h("span",{class:"avatar",text:n.slice(0,1),"aria-hidden":"true"});
+    av.style.cssText="width:34px;height:34px;font-size:13px";
+    av.style.background=tileBg(n);
+    mc.appendChild(h("div",{class:"cli2"},[av,
+      h("div",{class:"lnm"},[h("b",{text:n}), h("span",{text:"今月の出勤 "+cap.days+"日"})])]));
+    tr.appendChild(mc);
+    tr.appendChild(h("td",{},[h("span",{class:"pchip",text:m.role})]));
+    tr.appendChild(h("td",{},[num(o.open), txt(" 件")]));
+    var lc=h("td");
+    lc.appendChild(h("span",{class:"pcv",style:"margin:0 8px 0 0;font-weight:700",text:o.score+"%"}));
+    var bar=h("div",{class:"pbar",style:"width:110px"}); var i=h("i");
+    i.style.width=o.score+"%"; i.style.background="var("+o.band.v+")";
+    bar.appendChild(i); lc.appendChild(bar);
+    tr.appendChild(lc);
+    var sc2=h("td");
+    var bandChip = o.band.k==="hot" ? "mchip late" : o.band.k==="many" ? "mchip warn"
+                 : o.band.k==="fit" ? "mchip" : "mchip ok";
+    sc2.appendChild(h("span",{class:bandChip,text:o.band.t}));
+    tr.appendChild(sc2);
+    /* 主な担当タスク：未完了のうち直近2本 */
+    var mains=rowsOfMonth().filter(function(r){ return r.editor===n && r.status!=="投稿済み"; })
+      .sort(function(a,b){ return a.planned<b.planned?-1:1; }).slice(0,2)
+      .map(function(r){ var c=contractById(r.contractId)||{display:r.client};
+        return r.title||(c.display+" "+r.kind); });
+    var mt=h("td",{class:"maintasks"});
+    if(mains.length) mains.forEach(function(x){ mt.appendChild(h("div",{text:x})); });
+    else mt.appendChild(h("span",{class:"sub",style:"margin:0",text:"—"}));
+    tr.appendChild(mt);
+    var oc=h("td");
+    oc.appendChild(h("b",{class:"num"+(o.overdue?" od2":""),text:o.overdue+" 件"}));
+    tr.appendChild(oc);
+    tr.appendChild(h("td",{},[ic("chevronRight",16)]));
+    t.appendChild(tr);
+  });
+  wrap.appendChild(t);
+  return wrap;
 }
 function staffCard(name, o){
   var m=MEMBERS.filter(function(x){return x.name===name})[0]||{role:"スタッフ"};
@@ -3407,10 +3478,14 @@ function panelLoad(){
   box.appendChild(loadKpiStrip(loads));
 
   var s=sectCard("メンバー別の負荷状況",
-    "カードを押すと、その人の未完了を動画一覧で開きます。数値は工数ではなく、担当件数・遅延・確認待ちから出した目安です");
-  var g=h("div",{class:"staffcards",role:"listbox","aria-label":"メンバー別の負荷"});
-  names.forEach(function(n){ g.appendChild(staffCard(n, loads[n])); });
-  s.bd.appendChild(g);
+    "行を押すと、その人の未完了を動画一覧で開きます。数値は工数ではなく、担当件数・遅延・確認待ちから出した目安です");
+  if(mobile()){
+    var g=h("div",{class:"staffcards",role:"listbox","aria-label":"メンバー別の負荷"});
+    names.forEach(function(n){ g.appendChild(staffCard(n, loads[n])); });
+    s.bd.appendChild(g);
+  } else {
+    s.bd.appendChild(loadTable(loads, names));
+  }
   box.appendChild(s.card);
 
   /* 負荷調整の提案（§26）。必要な時だけ下部に出る */
