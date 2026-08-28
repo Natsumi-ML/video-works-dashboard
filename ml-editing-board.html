@@ -855,6 +855,24 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .mchip.late{background:var(--critical-soft);color:var(--critical)}
 .mchip.warn{background:var(--warning-soft);color:#B45309}
 .mchip.ok{background:var(--success-soft);color:var(--success)}
+.mchip.pur{background:var(--purple-soft);color:var(--purple)}
+/* 淡色KPIカード（クライアント管理 06） */
+.kpil{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:14px 16px 12px;min-width:0;box-shadow:var(--shadow-card)}
+.kpil .top{display:flex;align-items:center;gap:9px}
+.kpil .kic{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;flex:none}
+.kpil.t-blue .kic{background:var(--surface-blue-soft);color:var(--brand-blue)}
+.kpil.t-teal .kic{background:var(--success-soft);color:var(--brand-teal)}
+.kpil.t-purple .kic{background:var(--purple-soft);color:var(--purple)}
+.kpil.t-orange .kic{background:var(--warning-soft);color:var(--warning)}
+.kpil .lab{font-size:13px;font-weight:700;color:var(--text-secondary)}
+.kpil .val{display:flex;align-items:baseline;gap:5px;margin:8px 0 4px}
+.kpil .val .n{font-size:30px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.kpil .val .u{font-size:14px;font-weight:600;color:var(--text-secondary)}
+.kpil .sub{font-size:12px;color:var(--text-secondary)}
+.kpil .prog{height:6px;border-radius:999px;background:var(--neutral-soft);margin-top:8px;overflow:hidden}
+.kpil .prog i{display:block;height:100%;background:var(--brand-teal);border-radius:999px}
 .pbar{width:64px;height:6px;background:var(--neutral-soft);border-radius:999px;
   display:inline-block;overflow:hidden;vertical-align:middle}
 .pbar i{display:block;height:100%;background:var(--brand-blue);border-radius:999px}
@@ -865,16 +883,24 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .drrow .tt{display:flex;flex-direction:column;min-width:0}
 .drrow .tt b{font-size:12.5px}
 .drrow .tt span{font-size:11.5px;color:var(--text-muted)}
-.mstep{display:flex;gap:4px;flex-wrap:wrap;margin:2px 0 8px}
-.ms{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;min-width:66px;background:none;
-  border:1px solid var(--border);border-radius:10px;padding:8px 4px;cursor:pointer;
-  font-size:11px;color:var(--text-secondary);line-height:1.4;text-align:center}
-.ms i{font-style:normal;font-size:13px;color:var(--border-strong)}
-.ms.done{border-color:var(--warning-border);background:var(--warning-soft)}
-.ms.done i{color:var(--warning)}
-.ms.cur{border-color:var(--brand-blue);background:var(--surface-blue-soft);
-  color:var(--text-primary);font-weight:700}
-.ms.cur i{color:var(--brand-blue)}
+/* 資料準備フロー：横型4ステッパー（完成イメージ 06。クリックで段階を変更できる） */
+.mstep{display:flex;gap:0;margin:2px 0 10px}
+.ms{position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;min-width:0;
+  background:none;border:0;padding:2px 2px 0;cursor:pointer;
+  font-size:10.5px;color:var(--text-secondary);line-height:1.4;text-align:center}
+.ms::before{content:"";position:absolute;top:13px;left:-50%;width:100%;height:2px;background:var(--border)}
+.ms:first-child::before{display:none}
+.ms i{font-style:normal;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:12px;background:var(--surface);
+  border:2px solid var(--border-strong);color:var(--border-strong);z-index:1}
+.ms span{max-width:100%;overflow-wrap:anywhere}
+.ms.done::before{background:var(--warning)}
+.ms.done i{border-color:var(--warning);color:var(--warning);background:var(--warning-soft)}
+.ms.done span{color:#B45309}
+.ms.cur::before{background:var(--warning)}
+.ms.cur i{border-color:var(--warning);background:var(--warning);color:#fff;
+  box-shadow:0 0 0 4px rgba(255,138,0,.18)}
+.ms.cur span{color:var(--text-primary);font-weight:700}
 .ms[disabled]{cursor:not-allowed}
 .matnote{display:flex;gap:7px;align-items:flex-start;background:var(--surface-blue-soft);
   border:1px solid var(--border);border-radius:10px;padding:9px 11px;font-size:12px;
@@ -1009,7 +1035,7 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
   .bottomnav button[aria-current="page"]{color:var(--brand-blue)}
   /* モーダルはほぼ全幅 */
   .modal{max-width:calc(100vw - 28px)}
-  .mstep .ms{min-width:calc(50% - 4px)}
+  .mstep .ms{font-size:9.5px}
 }
 </style>
 
@@ -1986,6 +2012,22 @@ function Header(){
 function kpiCard(cls, label, iconName, value, unit, subKids, progress){
   var c=h("div",{class:"kpi "+cls});
   /* 完成イメージ：白半透明の丸バッジに入ったアイコンをラベルの左に置く */
+  c.appendChild(h("div",{class:"top"},[
+    h("span",{class:"kic"},[ic(iconName,16)]),
+    h("div",{class:"lab",text:label})]));
+  c.appendChild(h("div",{class:"val"},[h("span",{class:"n",text:String(value)}), h("span",{class:"u",text:unit})]));
+  var sub=h("div",{class:"sub"});
+  (subKids||[]).forEach(function(k){ sub.appendChild(typeof k==="string"?txt(k):k); });
+  c.appendChild(sub);
+  if(progress!=null){
+    var p=h("div",{class:"prog"}); var i=h("i"); i.style.width=Math.min(100,progress)+"%";
+    p.appendChild(i); c.appendChild(p);
+  }
+  return c;
+}
+/* 淡色KPI（クライアント管理 06：白カード＋色付き丸アイコン。§6.2 の色数制御にも従う） */
+function kpiCardLight(tone, label, iconName, value, unit, subKids, progress){
+  var c=h("div",{class:"kpil t-"+tone});
   c.appendChild(h("div",{class:"top"},[
     h("span",{class:"kic"},[ic(iconName,16)]),
     h("div",{class:"lab",text:label})]));
@@ -3541,8 +3583,13 @@ function panelCalendar(){
   g.appendChild(kpiCard("g-purple","残り","clock", all.length-posted,"本",["未投稿の予定数"]));
   box.appendChild(g);
 
-  /* フィルタ（§27.1） */
+  /* フィルタ（§27.1）。先頭に月セレクタ（完成イメージ） */
   var fb=h("div",{class:"filters calfb"});
+  var msel=h("select",{class:"calsel","aria-label":"対象月",
+    onchange:function(e){ MONTH=e.target.value; CALSEL=null; SELECTED=null; render(); }});
+  monthList().forEach(function(m){ msel.appendChild(h("option",{value:m,text:m.replace("-","年")+"月"})); });
+  msel.value=MONTH;
+  fb.appendChild(msel);
   fb.appendChild(calSelect("クライアント", CALFILTER.client, clientNames(),
     function(v){ CALFILTER.client=v; render(); }));
   fb.appendChild(calSelect("担当者", CALFILTER.editor, Object.keys(STAFF_MAP),
@@ -3651,7 +3698,16 @@ function calDayPanel(){
     top.appendChild(tt);
     card.appendChild(top);
     var kv=h("div",{class:"mini"});
-    kv.appendChild(h("div",{},[txt("担当　"), h("b",{text:r.editor||"未割当"})]));
+    var wrow=h("div",{style:"display:flex;align-items:center;gap:6px"});
+    wrow.appendChild(txt("担当　"));
+    if(r.editor){
+      var wav=h("span",{class:"avatar",text:r.editor.slice(0,1),"aria-hidden":"true"});
+      wav.style.cssText="width:20px;height:20px;font-size:10px";
+      wav.style.background=tileBg(r.editor);
+      wrow.appendChild(wav);
+    }
+    wrow.appendChild(h("b",{text:r.editor||"未割当"}));
+    kv.appendChild(wrow);
     var stw=h("div",{},[txt("ステータス　")]); stw.appendChild(sBadge(r.status));
     kv.appendChild(stw);
     card.appendChild(kv);
@@ -3693,6 +3749,16 @@ function materialLate(cd){
   var st=cd.materialStatus||"未依頼";
   return (st==="未依頼"||st==="分析・ハイライト作成中") && TODAY > MONTH+"-12";
 }
+/* 資料準備状況チップ（完成イメージ 06 の色分け）。遅延時は赤を優先 */
+function matChip(cd){
+  var st=cd.materialStatus||"未依頼";
+  var cls = materialLate(cd) ? "mchip late"
+    : st==="分析・ハイライト作成中" ? "mchip warn"
+    : st==="社員対応待ち" ? "mchip pur"
+    : st==="資料完成" ? "mchip ok"
+    : "pchip";
+  return h("span",{class:cls,text:st});
+}
 function clientAlerts(){
   var out={planLate:[], goalRisk:[], matLate:[]};
   clientNames().forEach(function(n){
@@ -3719,13 +3785,14 @@ function panelClient(){
   });
 
   /* KPI＋注意リスト（§29.2） */
+  /* KPI は淡色カード（完成イメージ 06。グラデにしない） */
   var topg=h("div",{class:"clienttop"});
   var g=h("div",{class:"kpis four"});
-  g.appendChild(kpiCard("g-blue","担当クライアント数","building", names.length,"社",["全社員で全社を閲覧できます"]));
-  g.appendChild(kpiCard("g-teal","今月の投稿数（合計）","check", postedAll,"本",
+  g.appendChild(kpiCardLight("blue","担当クライアント数","building", names.length,"社",["全社員で全社を閲覧できます"]));
+  g.appendChild(kpiCardLight("teal","今月の投稿数（合計）","check", postedAll,"本",
     ["目標 "+goalAll+"本に対して "+pct(postedAll,goalAll)+"%"], pct(postedAll,goalAll)));
-  g.appendChild(kpiCard("g-purple","企画進行中","film", planning,"社",["企画ステータスが進行中"]));
-  g.appendChild(kpiCard("g-orange","資料準備中","clock", matWork,"社",["分析・ハイライト作成中"]));
+  g.appendChild(kpiCardLight("purple","企画進行中","film", planning,"社",["企画ステータスが進行中"]));
+  g.appendChild(kpiCardLight("orange","資料準備中","clock", matWork,"社",["分析・ハイライト作成中"]));
   topg.appendChild(g);
 
   var al=clientAlerts();
@@ -3790,7 +3857,7 @@ function clientTable(aggs){
       tt.appendChild(h("b",{text:a.name}));
       tt.appendChild(h("span",{text:"担当 "+(a.editors.join("・")||"—")}));
       top.appendChild(tt);
-      top.appendChild(h("span",{class:"mchip"+(materialLate(cd)?" late":""),text:cd.materialStatus||"未依頼"}));
+      top.appendChild(matChip(cd));
       card.appendChild(top);
       var meta=h("div",{class:"vmeta"});
       meta.appendChild(h("span",{text:"撮影 "+fmtD(cd.nextShootDate)}));
@@ -3814,7 +3881,7 @@ function clientTable(aggs){
   var wrap=h("div",{class:"tblwrap"});
   var t=h("table",{class:"list clienttbl"});
   var hr=h("tr");
-  ["クライアント","次回撮影日","企画期限","企画","今月","目標","編集進行","担当","定例MTG","資料準備"]
+  ["クライアント","次回撮影日","企画期限","企画ステータス","今月投稿数","投稿目標","編集進行状況","担当スタッフ","定例MTG日","資料準備状況"]
     .forEach(function(x){ hr.appendChild(h("th",{text:x})); });
   t.appendChild(hr);
   list.forEach(function(a){
@@ -3841,8 +3908,7 @@ function clientTable(aggs){
     tr.appendChild(h("td",{text:a.editors.join("・")||"—"}));
     tr.appendChild(h("td",{text:fmtD(cd.nextRegularMeeting)}));
     var mt=h("td");
-    mt.appendChild(h("span",{class:"mchip"+(materialLate(cd)?" late":""),
-      text:cd.materialStatus||"未依頼"}));
+    mt.appendChild(matChip(cd));
     tr.appendChild(mt);
     t.appendChild(tr);
   });
