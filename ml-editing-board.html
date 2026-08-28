@@ -1,0 +1,2904 @@
+<title>編集進行ボード</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+/* =====================================================================
+   デザイントークン（HOME_DASHBOARD_SPEC.md §4.2 準拠）
+   仕様書の見た目に一本化する。ダーク分岐は持たない（§15 MUST NOT：
+   sidebar をライトテーマに変更しない）。body の地は明示的に塗る。
+   ===================================================================== */
+:root{
+  color-scheme:light;
+  --bg-app:#f6f8fb; --bg-panel:#ffffff;
+  --bg-sidebar:#101c2d; --bg-sidebar-elev:#17263a;
+  --bg-dark-card:#16263a; --bg-dark-row:#1b2d43;
+  --text-primary:#0f172a; --text-secondary:#64748b; --text-muted:#94a3b8;
+  --text-on-dark:#f8fafc; --text-on-dark-muted:#b8c3d1;
+  --border-soft:#e5eaf0; --border-dark:rgba(255,255,255,.09);
+
+  /* 工程色。面と枠に使い、文字には -ink を使う（白地で 4.5:1 以上） */
+  --st-todo:#3b82f6;    --st-todo-ink:#1d4ed8;    --st-todo-tint:rgba(59,130,246,.12);
+  --st-editing:#14a3a3; --st-editing-ink:#0f766e; --st-editing-tint:rgba(20,163,163,.14);
+  --st-review:#f59e0b;  --st-review-ink:#b45309;  --st-review-tint:rgba(245,158,11,.16);
+  /* 承認済み：仕様書 §3.2 は緑を指定するが、投稿済（緑）と隣り合うと
+     「承認済み＝完了」に読み違える。§1.1 MUST NOT（ホームと異なる
+     ステータス色を使わない）に従い投稿待ちの赤は動かさず、空いている
+     紫を承認済みに割り当てる */
+  --st-approved:#8b5cf6;--st-approved-ink:#6d28d9;--st-approved-tint:rgba(139,92,246,.14);
+  --st-waiting:#ef4444; --st-waiting-ink:#b91c1c; --st-waiting-tint:rgba(239,68,68,.12);
+  --st-posted:#18a777;  --st-posted-ink:#0a7d59;  --st-posted-tint:rgba(24,167,119,.14);
+
+  --ok:#0a7d59; --warn:#b45309; --late:#dc2626;
+  --accent:#4f46e5; --accent-hover:#4338ca;
+  --track:#2563eb;
+
+  /* KPIカード：虹を同じ「深さ」に揃えた面。文字は全カード白で統一し、
+     いずれも白に対して 4.8:1 以上を確保している（黄は白文字が乗らないので使わない）。
+     割り当ては §2.1／§9.3／§13.2 の指定どおり：投稿待ち＝紫、本日＝橙、遅延＝赤。
+     確認待ちだけ仕様書の琥珀を採らず、青緑にしている（茶に寄って濁るため） */
+  --kpi-planned:linear-gradient(135deg,#1a2f4a,#26527f);   /* 藍：合計・母数 */
+  --kpi-mine:   linear-gradient(135deg,#1e3a8a,#2557c7);   /* 青：自分・残り・未着手 */
+  --kpi-review: linear-gradient(135deg,#0b5c62,#10767d);   /* 青緑：確認待ち */
+  --kpi-posted: linear-gradient(135deg,#06643f,#0a7a52);   /* 緑：完了 */
+  --kpi-waiting:linear-gradient(135deg,#46256e,#5d33a0);   /* 紫：投稿待ち */
+  --kpi-today:  linear-gradient(135deg,#a3350a,#c2410c);   /* 橙：今日・本日期限 */
+  --kpi-risk:   linear-gradient(135deg,#9b1239,#c01c45);   /* 赤：遅延・危険 */
+  --on-kpi-sub:rgba(255,255,255,.93);
+
+  --radius-sm:8px; --radius-md:12px; --radius-lg:16px;
+  --shadow-card:0 6px 18px rgba(15,23,42,.08);
+  --shadow-elev:0 12px 32px rgba(15,23,42,.12);
+
+  --today:#0f172a;
+  --side-w:208px; --detail-w:344px;
+}
+
+*{box-sizing:border-box}
+html,body{max-width:100%}
+body{margin:0;background:var(--bg-app);color:var(--text-primary);
+  font-family:Inter,"Noto Sans JP","Hiragino Sans","Yu Gothic UI","Yu Gothic",Meiryo,sans-serif;
+  font-size:14px;line-height:1.7;-webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+/* 数値だけを包む。和文グリフの無い書体を文全体に当てない */
+.num{font-family:Inter,ui-sans-serif,sans-serif;font-weight:600;font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+svg{flex:none}
+
+/* =====================================================================
+   シェル：左ダーク / 中央ライト / 右ホワイトの3カラム
+   ===================================================================== */
+.shell{display:grid;grid-template-columns:var(--side-w) minmax(0,1fr) var(--detail-w);
+  min-height:100vh;background:var(--bg-app);align-items:start}
+.shell.nodetail{grid-template-columns:var(--side-w) minmax(0,1fr)}
+
+/* ---- サイドバー ---- */
+.side{background:var(--bg-sidebar);color:var(--text-on-dark);
+  position:sticky;top:0;height:100vh;overflow-y:auto;
+  display:flex;flex-direction:column;padding:18px 0 14px;border-right:1px solid var(--border-dark)}
+.brand{display:flex;align-items:center;gap:9px;padding:0 16px 16px}
+.brand .mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#3b82f6,#7c3aed);
+  display:flex;align-items:center;justify-content:center;color:#fff;flex:none}
+.brand b{display:block;font-size:14px;font-weight:700;letter-spacing:.02em;line-height:1.25}
+.brand span{display:block;font-size:12px;color:var(--text-on-dark-muted);line-height:1.3}
+.uprof{display:flex;align-items:center;gap:10px;margin:0 10px 14px;padding:9px 10px;
+  border-radius:var(--radius-md);background:var(--bg-sidebar-elev);border:0;width:calc(100% - 20px);
+  cursor:pointer;text-align:left;color:inherit}
+.uprof:hover{background:#1d2f47}
+.avatar{width:36px;height:36px;border-radius:50%;flex:none;display:flex;align-items:center;
+  justify-content:center;font-weight:700;font-size:14px;color:#fff}
+.uprof .un{flex:1;min-width:0}
+.uprof .un b{display:block;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.uprof .un span{display:block;font-size:12px;color:var(--text-on-dark-muted)}
+.nav{display:flex;flex-direction:column;gap:2px;padding:0 10px}
+/* 行数が増えたので 44→40。3群＋フッターが 900px 前後の高さに収まる寸法 */
+.nav button{display:flex;align-items:center;gap:9px;width:100%;text-align:left;background:none;
+  border:0;padding:0 10px;height:40px;border-radius:var(--radius-sm);cursor:pointer;
+  color:var(--text-on-dark-muted);font-size:13px;font-weight:500}
+/* 伸びるのはラベルだけ。バッジと「準備中」チップは実寸のまま右端に置く */
+.nav button > span:not(.badge):not(.soon){flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nav button:hover{background:rgba(255,255,255,.06);color:var(--text-on-dark)}
+.nav button[aria-current="page"]{background:rgba(255,255,255,.10);color:var(--text-on-dark);font-weight:700}
+.nav .badge{margin-left:auto;background:#ef4444;color:#fff;border-radius:999px;min-width:20px;height:20px;
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;padding:0 6px}
+.nav .badge.dim{background:rgba(255,255,255,.16);color:var(--text-on-dark)}
+/* 将来ルート：空ページへ遷移させない（§14.2）。押せないことを見た目で示す */
+.nav button[disabled]{color:#5f6e82;cursor:not-allowed}
+.nav button[disabled]:hover{background:none;color:#5f6e82}
+.nav .soon{margin-left:auto;flex:none;font-size:11px;font-weight:600;color:#7b8ba0;
+  border:1px solid rgba(255,255,255,.13);border-radius:5px;padding:0 6px;line-height:18px}
+.sidesec{margin:13px 16px 5px;font-size:12px;color:#7b8ba0;letter-spacing:.06em;font-weight:600}
+.sidehr{height:1px;background:var(--border-dark);margin:12px 16px 0}
+.sidefoot{margin-top:auto;padding-top:10px}
+
+/* ---- ヘッダー ---- */
+.main{min-width:0;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:flex-start;gap:18px;flex-wrap:wrap;padding:22px 26px 0}
+.greet h1{margin:0;font-size:24px;font-weight:700;line-height:1.35}
+.greet p{margin:2px 0 0;font-size:13px;color:var(--text-secondary)}
+.topbar .spacer{flex:1}
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-top:4px}
+.tbox{display:flex;align-items:center;gap:8px;background:var(--bg-panel);border:1px solid var(--border-soft);
+  border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;font-weight:500;box-shadow:var(--shadow-card)}
+.mnav{display:flex;align-items:center;gap:2px;background:var(--bg-panel);border:1px solid var(--border-soft);
+  border-radius:var(--radius-sm);padding:3px;box-shadow:var(--shadow-card)}
+.mnav b{font-size:13px;padding:0 8px;font-weight:600}
+.iconbtn{background:none;border:0;border-radius:6px;width:30px;height:30px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;color:var(--text-secondary)}
+.iconbtn:hover:not([disabled]){background:#eef2f7;color:var(--text-primary)}
+.iconbtn[disabled]{opacity:.35;cursor:not-allowed}
+.chipbtn{display:flex;align-items:center;gap:7px;background:var(--bg-panel);
+  border:1px solid var(--border-soft);border-radius:var(--radius-sm);padding:8px 12px;cursor:pointer;
+  font-size:13px;font-weight:500;box-shadow:var(--shadow-card);color:var(--text-secondary)}
+.chipbtn:hover{color:var(--text-primary)}
+.chipbtn.warn{border-color:#fcd9a4;background:#fffaf1;color:var(--warn)}
+.chipbtn .n{background:#eef2f7;border-radius:999px;padding:0 7px;font-size:12px;font-weight:700;color:var(--text-primary)}
+.chipbtn.warn .n{background:#fde9c9;color:var(--warn)}
+.stamp{font-size:12px;color:var(--text-muted);white-space:nowrap;line-height:1.4}
+
+.wrap{padding:16px 26px 20px;display:flex;flex-direction:column;gap:18px;min-width:0}
+.sect{margin:0 0 8px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.sect h2{margin:0;font-size:18px;font-weight:700}
+.sect span{font-size:13px;color:var(--text-secondary)}
+
+/* ---- 全幅バー（同時に最大1本） ---- */
+.bar{display:flex;gap:11px;align-items:center;flex-wrap:wrap;border-radius:var(--radius-md);
+  padding:12px 16px;font-size:13px;border:1px solid;box-shadow:var(--shadow-card)}
+.bar .grow{flex:1;min-width:200px}
+.bar.late{background:#fef2f2;border-color:#f6c4c4;color:#7f1d1d}
+.bar.warn{background:#fffaf1;border-color:#fcd9a4;color:#7c4a03}
+.bar button{background:var(--bg-panel);border:1px solid currentColor;border-radius:var(--radius-sm);
+  padding:5px 12px;cursor:pointer;font-size:12px;font-weight:600}
+
+/* ---- KPIカード ---- */
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
+.kpi{border-radius:14px;padding:14px 16px 12px;color:#fff;min-width:0;
+  box-shadow:var(--shadow-card);transition:transform .12s ease,box-shadow .12s ease}
+.kpi:hover{transform:translateY(-1px);box-shadow:var(--shadow-elev)}
+.kpi.k1{background:var(--kpi-planned)} .kpi.k2{background:var(--kpi-posted)}
+.kpi.k3{background:var(--kpi-waiting)} .kpi.k4{background:var(--kpi-risk)}
+.kpi.k5{background:var(--kpi-today)} .kpi.k6{background:var(--kpi-mine)}
+.kpi.k7{background:var(--kpi-review)}
+/* KPIは4枚の画面もある（§12.2・§13.2） */
+.kpis.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.kpi .top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.kpi .lab{font-size:15px;font-weight:700;line-height:1.4}
+.kpi .val{display:flex;align-items:baseline;gap:6px;margin:6px 0 8px}
+.kpi .val .n{font-size:36px;font-weight:700;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.kpi .val .u{font-size:15px;font-weight:600}
+.kpi .sub{font-size:13px;color:var(--on-kpi-sub);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.kpi .prog{height:6px;border-radius:999px;background:rgba(255,255,255,.26);margin-top:7px;overflow:hidden}
+.kpi .prog i{display:block;height:100%;background:#fff;border-radius:999px}
+
+/* ---- 2カラム ---- */
+.duo{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr);gap:22px;align-items:start}
+.card{background:var(--bg-panel);border:1px solid var(--border-soft);border-radius:var(--radius-md);
+  box-shadow:var(--shadow-card)}
+.card>.hd{display:flex;align-items:center;gap:12px;padding:11px 18px;flex-wrap:wrap}
+.card>.hd h3{margin:0;font-size:15px;font-weight:700}
+.card>.bd{padding:0 18px 16px}
+.card .foot{border-top:1px solid var(--border-soft);padding:10px 18px}
+
+/* ---- My Tasks（ダーク） ---- */
+.dark{background:var(--bg-dark-card);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius-md);
+  color:var(--text-on-dark);box-shadow:var(--shadow-elev);overflow:hidden}
+.dark .hd{display:flex;align-items:center;gap:12px;padding:14px 18px 0;flex-wrap:wrap}
+.dark .hd h3{margin:0;font-size:16px;font-weight:700;flex:1}
+.tabs{display:flex;gap:16px;padding:12px 18px 0;border-bottom:1px solid var(--border-dark);flex-wrap:wrap}
+.tabs button{background:none;border:0;padding:0 0 10px;cursor:pointer;font-size:13px;font-weight:600;
+  color:var(--text-on-dark-muted);border-bottom:2px solid transparent;display:flex;align-items:center;gap:7px}
+.tabs button:hover{color:var(--text-on-dark)}
+.tabs button[aria-selected="true"]{color:#fff;border-bottom-color:#60a5fa}
+.tabs .c{background:rgba(255,255,255,.14);border-radius:999px;padding:0 7px;font-size:12px;font-weight:700;
+  min-width:20px;text-align:center}
+.tabs button[aria-selected="true"] .c{background:#3b82f6;color:#fff}
+.taskscroll{max-height:264px;overflow-y:auto}
+.trow{display:flex;align-items:center;gap:10px;padding:11px 16px;cursor:pointer;
+  border-bottom:1px solid rgba(255,255,255,.05);min-height:62px;width:100%;background:none;
+  border-left:0;border-right:0;border-top:0;text-align:left;color:inherit}
+.trow:hover{background:var(--bg-dark-row)}
+.trow[aria-selected="true"]{background:var(--bg-dark-row);box-shadow:inset 3px 0 0 #60a5fa}
+.tile{border-radius:6px;flex:none;display:flex;align-items:center;justify-content:center;
+  font-weight:700;color:#fff;letter-spacing:.02em;overflow:hidden}
+.trow .mid{flex:1;min-width:0}
+.trow .ttl{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.5}
+.trow .cli{font-size:12px;color:var(--text-on-dark-muted);display:flex;align-items:center;gap:7px;min-width:0}
+.trow .cli > span:not(.sbadge){overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.trow .due{font-size:12px;text-align:right;white-space:nowrap;line-height:1.45;color:var(--text-on-dark-muted)}
+.trow .due b{display:block;font-size:13px;color:var(--text-on-dark)}
+.trow .due.od b{color:#fca5a5}
+.prio{font-size:12px;font-weight:700;border-radius:999px;padding:2px 0;white-space:nowrap;flex:0 0 32px;width:32px;text-align:center}
+.prio.high{background:rgba(239,68,68,.20);color:#fca5a5}
+.prio.med{background:rgba(245,158,11,.20);color:#fcd34d}
+.prio.low{background:rgba(255,255,255,.10);color:var(--text-on-dark-muted)}
+.cta{background:var(--accent);color:#fff;border:0;border-radius:var(--radius-sm);height:35px;min-width:100px;
+  padding:0 13px;cursor:pointer;font-size:13px;font-weight:700;white-space:nowrap;flex:none}
+.cta:hover:not([disabled]){background:var(--accent-hover)}
+.cta[disabled]{background:#33455c;color:#8b9bb0;cursor:not-allowed;font-weight:500}
+.emptybox{padding:34px 18px;text-align:center;font-size:13px;color:var(--text-on-dark-muted)}
+.emptybox b{display:block;color:var(--text-on-dark);font-size:14px;margin-bottom:4px}
+.darkfoot{display:flex;justify-content:space-between;align-items:center;gap:10px;
+  padding:12px 18px;border-top:1px solid var(--border-dark);font-size:12px;color:var(--text-on-dark-muted)}
+.linkbtn{background:rgba(255,255,255,.10);border:0;color:var(--text-on-dark);border-radius:var(--radius-sm);
+  padding:7px 13px;cursor:pointer;font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px}
+.linkbtn:hover{background:rgba(255,255,255,.18)}
+
+/* ---- 工程バッジ ---- */
+.sbadge{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 8px;
+  font-size:12px;font-weight:600;white-space:nowrap;line-height:1.5;flex:none}
+.sbadge.on-dark{background:rgba(255,255,255,.13);color:#fff}
+
+/* ---- 契約別進捗 ---- */
+.cscroll{max-height:264px;overflow-y:auto}
+.crow{display:grid;grid-template-columns:minmax(76px,1fr) 46px minmax(0,2.7fr);gap:10px;align-items:center;
+  padding:8px 18px 8px 15px;border-bottom:1px solid var(--border-soft);border-left:3px solid transparent;
+  cursor:pointer;width:100%;background:none;border-top:0;border-right:0;text-align:left;color:inherit}
+.crow:hover{background:#f8fafc}
+.crow.late{border-left-color:var(--late)}
+.crow.warn{border-left-color:var(--warn)}
+.crow[aria-selected="true"]{background:#eff6ff}
+.crow .nm{min-width:0}
+.crow .nm b{display:block;font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.crow .nm span{display:block;font-size:12px;color:var(--text-secondary)}
+.gauge{position:relative;width:44px;height:44px;flex:none}
+.gauge svg{width:44px;height:44px}
+.gauge .pc{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.cnums{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;text-align:center}
+.cnums div{min-width:0}
+.cnums .k{display:block;font-size:12px;font-weight:600;color:var(--text-secondary);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cnums .v{display:block;font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.5}
+.cnums .v u{text-decoration:none;font-size:12px;font-weight:600;margin-left:1px}
+.v-need{color:var(--text-primary)} .v-post{color:var(--ok)}
+.v-wait{color:var(--warn)} .v-late{color:var(--late)} .v-zero{color:var(--text-muted)}
+.crow.total .gauge,.crow.total .gauge svg{width:42px;height:42px}
+.crow.total{background:#f8fafc;border-bottom:0;cursor:default;border-left-color:transparent;padding:7px 18px 7px 15px}
+.crow.total:hover{background:#f8fafc}
+.legend{display:flex;gap:14px;justify-content:flex-start;flex-wrap:wrap;font-size:12px;color:var(--text-secondary)}
+.legend i{width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:6px;vertical-align:-1px}
+
+/* ---- 工程カンバン ---- */
+.kan{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+.kcol{border:1px solid var(--border-soft);border-radius:var(--radius-md);background:var(--bg-panel);
+  overflow:visible;position:relative;min-width:0}
+.kcol .kh{padding:9px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;
+  border-radius:var(--radius-md) var(--radius-md) 0 0}
+.kcol .kb{padding:10px 14px 12px}
+.kcol .kn{font-size:24px;font-weight:700;line-height:1.15;font-variant-numeric:tabular-nums}
+.kcol .kn u{text-decoration:none;font-size:13px;font-weight:600;margin-left:3px;color:var(--text-secondary)}
+.ktiles{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+.knote{display:flex;align-items:center;gap:5px;margin-top:9px;font-size:12px;font-weight:600;color:var(--warn);line-height:1.4}
+.kmore{border-radius:6px;background:#eef2f7;color:var(--text-secondary);font-size:12px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;flex:none}
+.kcol.hot{border:2px solid var(--st-waiting);box-shadow:0 0 0 4px rgba(239,68,68,.10)}
+.kflag{position:absolute;top:-11px;right:10px;background:var(--st-waiting);color:#fff;font-size:12px;
+  font-weight:700;border-radius:6px;padding:2px 9px;box-shadow:var(--shadow-card)}
+
+/* =====================================================================
+   右パネル（動画詳細）
+   ===================================================================== */
+.detail{background:var(--bg-panel);border-left:1px solid var(--border-soft);
+  position:sticky;top:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column}
+.detail .dh{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--border-soft);
+  position:sticky;top:0;background:var(--bg-panel);z-index:2}
+.detail .dh h3{margin:0;font-size:15px;font-weight:700;flex:1}
+.dsec{padding:16px 18px;border-bottom:1px solid var(--border-soft)}
+.dsec h4{margin:0 0 11px;font-size:13px;font-weight:700}
+.dprev{position:relative;border-radius:10px;overflow:hidden;aspect-ratio:16/9;display:flex;
+  align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:26px}
+.dprev .sbadge{position:absolute;top:8px;right:8px;background:rgba(15,23,42,.72);color:#fff}
+.dttl{margin:12px 0 2px;font-size:15px;font-weight:700;line-height:1.5}
+.dcli{font-size:13px;color:var(--text-secondary)}
+.kv{display:grid;grid-template-columns:84px minmax(0,1fr);gap:9px 12px;font-size:13px;align-items:center;margin-top:13px}
+.kv .k{color:var(--text-secondary);font-size:12px}
+.kv .v{min-width:0;overflow-wrap:anywhere}
+.kv .v.od{color:var(--late);font-weight:700}
+.drive{display:flex;align-items:center;gap:10px;width:100%;height:44px;padding:0 13px;cursor:pointer;
+  border-radius:10px;border:1px solid #c7d7f5;background:var(--bg-panel);color:var(--accent);
+  font-size:13px;font-weight:700}
+.drive:hover:not([disabled]){background:#f2f6fe}
+.drive[disabled]{border-color:var(--border-soft);color:var(--text-muted);cursor:not-allowed;background:#f8fafc}
+.drive .grow{flex:1;text-align:left}
+.helper{font-size:12px;color:var(--text-muted);margin:7px 0 0}
+.dtabs{display:flex;gap:14px;padding:0 18px;border-bottom:1px solid var(--border-soft);flex-wrap:wrap}
+.dtabs button{background:none;border:0;padding:12px 0;cursor:pointer;font-size:13px;font-weight:600;
+  color:var(--text-secondary);border-bottom:2px solid transparent}
+.dtabs button:hover{color:var(--text-primary)}
+.dtabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+.tl{list-style:none;margin:0;padding:0}
+.tl li{display:grid;grid-template-columns:16px minmax(0,1fr);gap:11px;padding-bottom:15px;position:relative}
+.tl li:last-child{padding-bottom:0}
+.tl li:not(:last-child)::before{content:"";position:absolute;left:7px;top:17px;bottom:0;width:2px;background:var(--border-soft)}
+.tl .dot{width:15px;height:15px;border-radius:50%;border:2px solid var(--border-soft);background:var(--bg-panel);margin-top:3px;z-index:1}
+.tl li.done .dot{background:var(--ok);border-color:var(--ok)}
+.tl li.cur .dot{background:var(--bg-panel);border-color:var(--st-review);box-shadow:0 0 0 3px var(--st-review-tint)}
+.tl .lb{font-size:13px;font-weight:600;line-height:1.5}
+.tl li.todo .lb{color:var(--text-muted);font-weight:500}
+.tl .mt{font-size:12px;color:var(--text-secondary);font-variant-numeric:tabular-nums}
+.dfoot{margin-top:auto;position:sticky;bottom:0;background:var(--bg-panel);
+  border-top:1px solid var(--border-soft);padding:13px 18px;display:flex;gap:9px;flex-wrap:wrap}
+.dfoot .cta{flex:1}
+.ghostbtn{background:var(--bg-panel);border:1px solid var(--border-soft);border-radius:var(--radius-sm);
+  padding:8px 13px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-secondary)}
+.ghostbtn:hover:not([disabled]){background:#f1f5f9;color:var(--text-primary)}
+.ghostbtn[disabled]{opacity:.5;cursor:not-allowed}
+.field{display:block;margin-bottom:12px}
+.field span{display:block;font-size:12px;color:var(--text-secondary);margin-bottom:5px}
+input[type=text],input[type=url],select,textarea{width:100%;background:var(--bg-panel);
+  border:1px solid var(--border-soft);border-radius:var(--radius-sm);padding:8px 10px;font-size:13px}
+input:disabled,select:disabled,textarea:disabled{background:#f8fafc;color:var(--text-muted)}
+textarea{line-height:1.6;resize:vertical}
+
+/* =====================================================================
+   既存ビュー（動画一覧 / 今日 / 負荷 / 進行トラック）
+   ===================================================================== */
+ul.plain{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--text-secondary)}
+ul.plain li{margin-bottom:4px}
+.sub{color:var(--text-secondary);font-size:13px;margin:0 0 14px}
+.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border-soft);border-radius:999px;
+  padding:3px 11px;font-size:12px;font-weight:600;white-space:nowrap;color:var(--text-secondary);background:var(--bg-panel)}
+.filters{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.filters select,.filters input[type=text]{width:auto;min-width:150px}
+.listwrap{overflow-x:auto}
+table.list{width:100%;border-collapse:collapse;min-width:820px}
+table.list th{text-align:left;font-size:12px;color:var(--text-secondary);font-weight:600;
+  height:42px;padding:0 12px 10px 0;border-bottom:1px solid var(--border-soft);white-space:nowrap}
+table.list td{height:68px;padding:8px 12px 8px 0;border-bottom:1px solid var(--border-soft);
+  vertical-align:middle;font-size:13px}
+table.list tr.done td{color:var(--text-muted)}
+/* 行そのものが詳細パネルを開く。CTA は stopPropagation で二重発火を止める（§9.7） */
+table.list tr.pick{cursor:pointer}
+table.list tr.pick:hover td{background:#f8fafc}
+table.list tr.pick[aria-selected="true"] td{background:#eff6ff}
+table.list tr.pick[aria-selected="true"] td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+table.list tr.pick:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.cli2{display:flex;align-items:center;gap:9px;min-width:0}
+.cli2 span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.titlebtn{background:none;border:0;padding:0;cursor:pointer;font-size:13px;font-weight:600;
+  color:var(--accent);text-align:left}
+.titlebtn:hover{text-decoration:underline}
+.kindsub{font-size:12px;color:var(--text-secondary);margin-top:2px}
+.syncing{font-size:12px;color:var(--text-muted);white-space:nowrap}
+.dnum{font-variant-numeric:tabular-nums}
+.dnum.od{color:var(--late);font-weight:700}
+.dnum.tdy{color:var(--warn);font-weight:700}
+
+/* ---- 優先対応カード（§9.4） ---- */
+.pcards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:6px}
+.pcard{background:var(--bg-panel);border:1px solid var(--border-soft);border-left:4px solid var(--text-muted);
+  border-radius:var(--radius-md);box-shadow:var(--shadow-card);padding:13px 15px;
+  display:flex;flex-direction:column;gap:9px;min-width:0;cursor:pointer;text-align:left;color:inherit}
+.pcard:hover{box-shadow:var(--shadow-elev)}
+.pcard[aria-selected="true"]{background:#f7faff;border-color:#c7d7f5}
+.pcard.lv-late{border-left-color:var(--late)}
+.pcard.lv-today{border-left-color:var(--st-review)}
+.pcard.lv-wait{border-left-color:var(--st-waiting)}
+.pcard.lv-info{border-left-color:var(--accent)}
+.pcard .ph{display:flex;align-items:center;gap:9px;min-width:0}
+.pcard .ph .nm{flex:1;min-width:0;font-size:12px;color:var(--text-secondary);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pcard .pt{font-size:14px;font-weight:700;line-height:1.5;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pcard .why{font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;line-height:1.45}
+.pcard .why.late{color:var(--late)} .pcard .why.warn{color:var(--warn)}
+.pcard .why.info{color:var(--text-secondary)}
+.pcard .pkv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 10px;font-size:12px;
+  color:var(--text-secondary)}
+.pcard .pkv b{color:var(--text-primary);font-weight:600;font-variant-numeric:tabular-nums}
+.pcard .cta{width:100%;min-width:0}
+.daygroup{margin-top:16px}
+.daygroup h4{font-size:13px;color:var(--text-secondary);font-weight:600;margin:0 0 6px}
+.narrowrow{display:flex;justify-content:space-between;gap:12px;padding:11px 0;
+  border-top:1px solid var(--border-soft);font-size:13px;align-items:center;flex-wrap:wrap}
+.narrowrow.pick{cursor:pointer;padding:11px 10px;border-radius:var(--radius-sm)}
+.narrowrow.pick:hover{background:#f8fafc}
+.narrowrow.pick[aria-selected="true"]{background:#eff6ff;box-shadow:inset 3px 0 0 var(--accent)}
+/* ---- ⑥ 今日：作業キュー（§10.4）。My Tasks より明るく大きい面 ---- */
+.tsec{margin-top:6px}
+.tsec>h4{display:flex;align-items:center;gap:9px;margin:0 0 8px;font-size:14px;font-weight:700}
+.tsec>h4 .c{background:#eef2f7;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:700;
+  color:var(--text-secondary);font-variant-numeric:tabular-nums}
+.tsec>h4 .lead{font-size:12px;font-weight:500;color:var(--text-secondary)}
+.trow2{display:grid;grid-template-columns:44px minmax(0,1fr) auto auto;gap:14px;align-items:center;
+  background:var(--bg-panel);border:1px solid var(--border-soft);border-radius:var(--radius-md);
+  padding:12px 14px;margin-bottom:9px;cursor:pointer;box-shadow:var(--shadow-card)}
+.trow2:hover{border-color:#c7d7f5}
+.trow2[aria-selected="true"]{border-color:var(--accent);background:#f7faff;box-shadow:inset 3px 0 0 var(--accent)}
+.trow2 .mid{min-width:0}
+.trow2 .ttl{font-size:14px;font-weight:700;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trow2 .cli{font-size:12px;color:var(--text-secondary);display:flex;align-items:center;gap:8px;
+  flex-wrap:wrap;margin-top:2px}
+.trow2 .when{font-size:12px;color:var(--text-secondary);text-align:right;white-space:nowrap;line-height:1.5}
+.trow2 .when b{font-variant-numeric:tabular-nums;color:var(--text-primary)}
+.trow2 .when .od{color:var(--late);font-weight:700}
+.trow2.done{opacity:.72;box-shadow:none}
+/* 完了の手ざわり（§10.6）。派手にはしない。
+   投稿済 → 右へ抜けて「完了済み」へ移る／途中の工程 → その場で一瞬光る */
+@keyframes rowfinish{
+  0%  {opacity:1;transform:none;background:var(--bg-panel)}
+  30% {background:#e9f9f0;border-color:var(--ok)}
+  100%{opacity:0;transform:translateX(22px) scale(.985);background:#e9f9f0}
+}
+@keyframes rowstep{
+  0%  {background:var(--bg-panel)}
+  30% {background:#eff6ff;border-color:#93b4f5}
+  100%{background:var(--bg-panel)}
+}
+.trow2.finish{animation:rowfinish .3s ease forwards;pointer-events:none}
+.trow2.step{animation:rowstep .34s ease;pointer-events:none}
+.tdone{background:none;border:1px solid var(--border-soft);border-radius:var(--radius-sm);
+  padding:7px 12px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-secondary);
+  display:flex;align-items:center;gap:8px}
+.tdone:hover{background:#f1f5f9;color:var(--text-primary)}
+.emptystate{text-align:center;padding:38px 18px}
+.emptystate b{display:block;font-size:16px;font-weight:700;margin-bottom:5px}
+.emptystate p{margin:0 0 16px;font-size:13px;color:var(--text-secondary)}
+
+/* ---- ④ チーム負荷：スタッフカード（§12.3） ---- */
+.staffcards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.scard{background:var(--bg-panel);border:1px solid var(--border-soft);border-radius:var(--radius-md);
+  box-shadow:var(--shadow-card);padding:15px 16px;display:flex;flex-direction:column;gap:12px;
+  min-width:0;cursor:pointer;text-align:left;color:inherit}
+.scard:hover{box-shadow:var(--shadow-elev)}
+.scard .sh{display:flex;align-items:center;gap:11px;min-width:0}
+.scard .sh .nm{min-width:0}
+.scard .sh .nm b{display:block;font-size:15px;font-weight:700;line-height:1.4}
+.scard .sh .nm span{display:block;font-size:12px;color:var(--text-secondary)}
+.scard .snums{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;text-align:center}
+.scard .snums .k{display:block;font-size:12px;color:var(--text-secondary)}
+.scard .snums .v{display:block;font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.4}
+.loadbar{height:9px;border-radius:999px;background:#eef2f7;overflow:hidden}
+.loadbar i{display:block;height:100%;border-radius:999px}
+.scard .lv{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:13px;font-weight:700}
+.scard .lv span{font-size:12px;font-weight:600;color:var(--text-secondary);font-variant-numeric:tabular-nums}
+.lv-easy{color:var(--st-todo-ink)} .lv-fit{color:var(--ok)}
+.lv-many{color:var(--warn)} .lv-hot{color:var(--late)}
+
+/* ---- ⑨ 投稿待ち：カード縦リスト（§13.3） ---- */
+.wcards{display:flex;flex-direction:column;gap:12px}
+.wcard{background:var(--bg-panel);border:1px solid var(--border-soft);border-left:4px solid var(--st-waiting);
+  border-radius:var(--radius-md);box-shadow:var(--shadow-card);padding:14px 16px;
+  display:grid;grid-template-columns:44px minmax(0,1.3fr) minmax(0,1fr) auto;gap:16px;align-items:center;
+  cursor:pointer;min-width:0}
+.wcard:hover{box-shadow:var(--shadow-elev)}
+.wcard[aria-selected="true"]{background:#f7faff;border-color:#c7d7f5;border-left-color:var(--st-waiting)}
+.wcard.h24{border-left-color:var(--warn)}
+.wcard.h48{border-left-color:var(--late)}
+.wcard.ap{border-left-color:var(--st-approved)}
+.wcard .mid{min-width:0}
+.wcard .ttl{font-size:15px;font-weight:700;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wcard .cli{font-size:12px;color:var(--text-secondary);margin-top:2px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.wcard .meta{font-size:12px;color:var(--text-secondary);line-height:1.7;min-width:0}
+.wcard .meta b{color:var(--text-primary);font-weight:600;font-variant-numeric:tabular-nums}
+.wcard .meta .el{font-weight:700}
+.wcard .meta .el.warn{color:var(--warn)} .wcard .meta .el.late{color:var(--late)}
+.wcard .act{display:flex;flex-direction:column;gap:8px;align-items:stretch;flex:none}
+.wcard .act .drive{height:35px;font-size:12px;padding:0 11px}
+
+.bars{display:flex;flex-direction:column;gap:8px}
+.barrow{display:grid;grid-template-columns:132px minmax(0,1fr) 62px;gap:11px;align-items:center;font-size:13px}
+.bartrack{background:#eef2f7;border-radius:5px;height:15px;overflow:hidden}
+.barfill{height:100%;background:var(--track);border-radius:5px}
+.barnum{text-align:right;color:var(--text-secondary);font-weight:600}
+.daywrap{position:relative;overflow-x:auto}
+/* 詳細パネルが無い画面では横に伸びすぎて、0本の日が消えて1枚の塊に見える。
+   棒と目盛りは同じ箱の中で一緒に縮める */
+.daywrap.wk{max-width:760px}
+.daywrap.wk .daybar .seg{min-height:3px}
+.daybars{display:flex;align-items:flex-end;gap:5px;height:104px;position:relative;min-width:520px}
+.daybar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;min-width:9px}
+.daybar .seg{border-radius:3px 3px 0 0}
+.daybar .s-posted{background:var(--track)}
+.daybar .s-open{background:rgba(37,99,235,.13);border:1px solid var(--track);border-bottom:0}
+.avgline{position:absolute;left:0;right:0;border-top:1px dashed var(--text-muted);pointer-events:none}
+
+/* ---- ③ 進行トラック：セルを実寸で判別できる大きさにする ---- */
+.trackwrap{overflow-x:auto;padding-top:28px}
+.tracktable{width:100%;border-collapse:collapse;min-width:840px}
+.tracktable td{padding:3px 0;border-top:1px solid var(--border-soft);vertical-align:middle}
+.tracktable tr:first-child td{border-top:0}
+/* 契約名は横スクロール時も残す（§11.9） */
+.tname{width:132px;padding-right:12px!important;font-size:13px;font-weight:600;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;position:sticky;left:0;background:var(--bg-panel);z-index:2}
+.tright{width:214px;padding-left:14px!important;text-align:right;font-size:13px;
+  color:var(--text-secondary);white-space:nowrap}
+.tright .muted{color:var(--text-muted)}
+.lane{position:relative;height:40px}
+.lane-bg{position:absolute;left:0;right:0;top:19px;border-top:1px dashed var(--border-soft)}
+.cell{position:absolute;top:6px;height:26px;border:0;padding:0;cursor:pointer;background:transparent}
+.cell i{display:block;width:100%;height:100%;border-radius:5px;box-sizing:border-box}
+.c-posted i{background:var(--track)}
+.c-ready i{border:2px solid var(--track);
+  background:linear-gradient(to bottom,transparent 0 50%,var(--track) 50% 100%)}
+.c-todo i{border:2px dashed var(--text-muted);background:transparent}
+.cell:hover i{filter:brightness(1.12)}
+.hatch{position:absolute;bottom:2px;height:5px;border-radius:2px}
+.todayline{position:absolute;top:0;bottom:0;width:3px;background:var(--today);border-radius:2px}
+.todaycap{position:absolute;top:-5px;left:-3.5px;width:0;height:0;border-left:5px solid transparent;
+  border-right:5px solid transparent;border-top:6px solid var(--today)}
+.todaychip{position:absolute;top:-24px;left:50%;transform:translateX(-50%);background:var(--today);
+  color:#fff;font-size:12px;font-weight:600;padding:2px 9px;border-radius:6px;white-space:nowrap}
+.axis{position:relative;height:17px}
+.axis span{position:absolute;font-size:12px;line-height:1.35;color:var(--text-muted);transform:translateX(-50%)}/* 行送りを詰めないと 12px*1.7=20.4px で .daywrap をサブピクセル溢れし縦スクロールバーが出る */
+.axis i{position:absolute;top:0;width:1px;height:4px;background:var(--border-soft)}
+.axisnote{font-size:12px;color:var(--text-muted);text-align:right;margin-top:4px}
+tr.rowfocus{cursor:pointer}
+tr.rowfocus:hover td{background:#f8fafc}
+tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+
+/* =====================================================================
+   モーダル / トースト / ポップオーバー
+   ===================================================================== */
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#0f172a;color:#fff;
+  padding:12px 16px;border-radius:10px;display:flex;gap:14px;align-items:center;font-size:13px;
+  z-index:80;box-shadow:var(--shadow-elev);max-width:calc(100vw - 32px)}
+.toast button{background:none;border:1px solid rgba(255,255,255,.5);border-radius:6px;padding:4px 11px;
+  cursor:pointer;font-size:12px;font-weight:600;color:#fff;white-space:nowrap}
+.toast button:hover{background:rgba(255,255,255,.14)}
+.modalbg{position:fixed;inset:0;background:rgba(15,23,42,.46);display:flex;align-items:center;
+  justify-content:center;padding:20px;z-index:70}
+.modal{background:var(--bg-panel);border-radius:var(--radius-lg);padding:24px;max-width:620px;width:100%;
+  max-height:86vh;overflow:auto;box-shadow:var(--shadow-elev)}
+.modal h3{margin:0 0 6px;font-size:17px;font-weight:700}
+.modal p.sub{margin:0 0 14px}
+.picks{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}
+.picks button{border:1px solid var(--border-soft);background:var(--bg-panel);border-radius:10px;
+  padding:10px 16px;cursor:pointer;font-size:13px;font-weight:600;display:flex;align-items:center;gap:9px}
+.picks button:hover{border-color:var(--accent);background:#f2f6fe}
+.right{display:flex;justify-content:flex-end;gap:9px;margin-top:18px;flex-wrap:wrap}
+.rel{position:relative}
+.pop{position:absolute;top:calc(100% + 8px);right:0;width:400px;max-width:calc(100vw - 32px);
+  background:var(--bg-panel);border:1px solid var(--border-soft);border-radius:var(--radius-md);
+  box-shadow:var(--shadow-elev);z-index:60;padding:6px;text-align:left;max-height:70vh;overflow:auto}
+.pop .it{display:flex;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);font-size:13px;
+  align-items:flex-start;color:var(--text-primary);line-height:1.6}
+.pop .it+.it{border-top:1px solid var(--border-soft)}
+.pop .it .grow{flex:1;min-width:0}
+.pop .it.warn{color:var(--warn)}
+.pop .it.late{color:var(--late)}
+.pop .mini{background:var(--bg-panel);border:1px solid var(--border-soft);border-radius:6px;padding:4px 10px;
+  cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;color:var(--text-primary);flex:none}
+.pop .mini:hover{background:#f1f5f9}
+.backdrop{position:fixed;inset:0;z-index:39;background:rgba(15,23,42,.30)}
+
+/* =====================================================================
+   レスポンシブ（Phase 1 は 1440〜1920px が最重要。1280px でドロワー）
+   ===================================================================== */
+@media (max-width:1535px){
+  :root{--side-w:192px;--detail-w:312px}
+  .kpis{gap:13px}
+  .kpi{padding:15px 14px 13px}
+  .kpi .val .n{font-size:34px}
+  .kpi .lab{font-size:14px}
+  .duo{gap:16px}
+  .kan{gap:10px}
+  .wrap{padding:18px 20px 30px;gap:18px}
+  .topbar{padding:18px 20px 0}
+}
+@media (max-width:1279px){
+  .shell,.shell.nodetail{grid-template-columns:var(--side-w) minmax(0,1fr)}
+  .detail{position:fixed;top:0;right:0;bottom:0;width:340px;max-width:88vw;z-index:40;
+    box-shadow:var(--shadow-elev);transform:translateX(102%);transition:transform .16s ease}
+  .detail.open{transform:none}
+  .kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .duo{grid-template-columns:minmax(0,1fr)}
+  .kan{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .pcards{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpis.four{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .staffcards{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .wcard{grid-template-columns:44px minmax(0,1fr) auto}
+  .wcard .meta{grid-column:2/4}
+}
+</style>
+
+<script id="state" type="application/json">{"version":1,"seeded":true,"rows":[{"id":"r-2026-08-NCN-0","contractId":"ncn-v","client":"NCN","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-03","due":"2026-07-23","postedAt":"2026-08-03","trans":{"投稿済":1785715200000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-柿本商会-22","contractId":"kaki-v","client":"柿本商会","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済","planned":"2026-08-04","due":"2026-07-24","postedAt":"2026-08-04","trans":{"投稿済":1785801600000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-SBSネクサード-6","contractId":"sbs-v","client":"SBSネクサード","kind":"動画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済","planned":"2026-08-05","due":"2026-07-27","postedAt":"2026-08-05","trans":{"投稿済":1785888000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-木下テーブルテニスクラブ-12","contractId":"kino-v","client":"木下テーブルテニスクラブ","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-05","due":"2026-07-27","postedAt":"2026-08-05","trans":{"投稿済":1785888000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-茨城交通-28","contractId":"ibako-v","client":"茨城交通","kind":"動画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済","planned":"2026-08-05","due":"2026-07-27","postedAt":"2026-08-05","trans":{"投稿済":1785888000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-NCN-1","contractId":"ncn-v","client":"NCN","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-06","due":"2026-07-28","postedAt":"2026-08-06","trans":{"投稿済":1785974400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-アシストタクシー-34","contractId":"assist-v","client":"アシストタクシー","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"確認中","planned":"2026-08-06","due":"2026-08-03","postedAt":null,"trans":{"確認中":1785628800000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-ヒロダクト工業-38","contractId":"hiro-v","client":"ヒロダクト工業","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済","planned":"2026-08-06","due":"2026-08-03","postedAt":"2026-08-06","trans":{"投稿済":1785974400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-メトロ自動車-42","contractId":"metro-v","client":"メトロ自動車","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-06","due":"2026-08-03","postedAt":"2026-08-06","trans":{"投稿済":1785974400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-なの花交通バス-46","contractId":"nano-v","client":"なの花交通バス","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-06","due":"2026-08-03","postedAt":"2026-08-06","trans":{"投稿済":1785974400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-グレースホールディングス-18","contractId":"grace-v","client":"グレースホールディングス","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済","planned":"2026-08-07","due":"2026-07-29","postedAt":"2026-08-07","trans":{"投稿済":1786060800000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-柿本商会-23","contractId":"kaki-s","client":"柿本商会","kind":"静止画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済","planned":"2026-08-07","due":"2026-07-29","postedAt":"2026-08-07","trans":{"投稿済":1786060800000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-SBSネクサード-7","contractId":"sbs-v","client":"SBSネクサード","kind":"動画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済","planned":"2026-08-10","due":"2026-07-30","postedAt":"2026-08-10","trans":{"投稿済":1786320000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-木下テーブルテニスクラブ-13","contractId":"kino-v","client":"木下テーブルテニスクラブ","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-10","due":"2026-07-30","postedAt":"2026-08-10","trans":{"投稿済":1786320000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-アシストタクシー-35","contractId":"assist-v","client":"アシストタクシー","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-10","due":"2026-08-05","postedAt":"2026-08-10","trans":{"投稿済":1786320000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-茨城交通-29","contractId":"ibako-s","client":"茨城交通","kind":"静止画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済","planned":"2026-08-12","due":"2026-07-31","postedAt":"2026-08-12","trans":{"投稿済":1786492800000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-NCN-2","contractId":"ncn-v","client":"NCN","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-13","due":"2026-08-03","postedAt":"2026-08-13","trans":{"投稿済":1786579200000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-柿本商会-24","contractId":"kaki-v","client":"柿本商会","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済","planned":"2026-08-13","due":"2026-08-03","postedAt":"2026-08-13","trans":{"投稿済":1786579200000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-ヒロダクト工業-39","contractId":"hiro-v","client":"ヒロダクト工業","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿待ち","planned":"2026-08-13","due":"2026-08-07","postedAt":null,"trans":{"投稿待ち":1786492800000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-メトロ自動車-43","contractId":"metro-v","client":"メトロ自動車","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-13","due":"2026-08-07","postedAt":"2026-08-13","trans":{"投稿済":1786579200000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-SBSネクサード-8","contractId":"sbs-v","client":"SBSネクサード","kind":"動画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済","planned":"2026-08-14","due":"2026-08-04","postedAt":"2026-08-14","trans":{"投稿済":1786665600000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-木下テーブルテニスクラブ-14","contractId":"kino-s","client":"木下テーブルテニスクラブ","kind":"静止画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-14","due":"2026-08-04","postedAt":"2026-08-14","trans":{"投稿済":1786665600000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-グレースホールディングス-19","contractId":"grace-v","client":"グレースホールディングス","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済","planned":"2026-08-17","due":"2026-08-05","postedAt":"2026-08-17","trans":{"投稿済":1786924800000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-茨城交通-30","contractId":"ibako-v","client":"茨城交通","kind":"動画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済","planned":"2026-08-17","due":"2026-08-05","postedAt":"2026-08-17","trans":{"投稿済":1786924800000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-なの花交通バス-47","contractId":"nano-v","client":"なの花交通バス","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-17","due":"2026-08-12","postedAt":"2026-08-17","trans":{"投稿済":1786924800000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-NCN-3","contractId":"ncn-v","client":"NCN","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-18","due":"2026-08-06","postedAt":"2026-08-18","trans":{"投稿済":1787011200000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-アシストタクシー-36","contractId":"assist-v","client":"アシストタクシー","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-18","due":"2026-08-13","postedAt":"2026-08-18","trans":{"投稿済":1787011200000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-柿本商会-25","contractId":"kaki-s","client":"柿本商会","kind":"静止画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済","planned":"2026-08-19","due":"2026-08-07","postedAt":"2026-08-19","trans":{"投稿済":1787097600000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-ヒロダクト工業-40","contractId":"hiro-v","client":"ヒロダクト工業","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済","planned":"2026-08-19","due":"2026-08-14","postedAt":"2026-08-19","trans":{"投稿済":1787097600000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-SBSネクサード-9","contractId":"sbs-v","client":"SBSネクサード","kind":"動画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済","planned":"2026-08-20","due":"2026-08-10","postedAt":"2026-08-20","trans":{"投稿済":1787184000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-木下テーブルテニスクラブ-15","contractId":"kino-v","client":"木下テーブルテニスクラブ","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-20","due":"2026-08-10","postedAt":"2026-08-20","trans":{"投稿済":1787184000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-茨城交通-31","contractId":"ibako-s","client":"茨城交通","kind":"静止画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済","planned":"2026-08-20","due":"2026-08-10","postedAt":"2026-08-20","trans":{"投稿済":1787184000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-メトロ自動車-44","contractId":"metro-v","client":"メトロ自動車","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-20","due":"2026-08-17","postedAt":"2026-08-20","trans":{"投稿済":1787184000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-なの花交通バス-48","contractId":"nano-v","client":"なの花交通バス","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"確認中","planned":"2026-08-20","due":"2026-08-17","postedAt":null,"trans":{"確認中":1786838400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-NCN-4","contractId":"ncn-v","client":"NCN","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"未着手","planned":"2026-08-21","due":"2026-08-12","postedAt":null,"trans":{"投稿済":1787270400000,"投稿待ち":1787745140152,"確認中":1787745163662,"編集中":1787745165113,"未着手":1787745170740},"actor":"なつみ","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-グレースホールディングス-20","contractId":"grace-v","client":"グレースホールディングス","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済","planned":"2026-08-24","due":"2026-08-13","postedAt":"2026-08-24","trans":{"投稿済":1787529600000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-柿本商会-26","contractId":"kaki-v","client":"柿本商会","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済","planned":"2026-08-24","due":"2026-08-13","postedAt":"2026-08-24","trans":{"投稿済":1787529600000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-SBSネクサード-10","contractId":"sbs-v","client":"SBSネクサード","kind":"動画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済","planned":"2026-08-25","due":"2026-08-14","postedAt":"2026-08-25","trans":{"投稿済":1787616000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-木下テーブルテニスクラブ-16","contractId":"kino-v","client":"木下テーブルテニスクラブ","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿待ち","planned":"2026-08-25","due":"2026-08-14","postedAt":null,"trans":{"投稿待ち":1787745043484,"投稿済":1787745039412},"actor":"なつみ","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-アシストタクシー-37","contractId":"assist-v","client":"アシストタクシー","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-25","due":"2026-08-20","postedAt":"2026-08-25","trans":{"投稿済":1787616000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-茨城交通-32","contractId":"ibako-v","client":"茨城交通","kind":"動画","month":"2026-08","title":"","editor":"つかさ","status":"確認中","planned":"2026-08-26","due":"2026-08-17","postedAt":null,"trans":{"確認中":1787785426947,"投稿待ち":1787785424997},"actor":"なつみ","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-ヒロダクト工業-41","contractId":"hiro-v","client":"ヒロダクト工業","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿待ち","planned":"2026-08-26","due":"2026-08-21","postedAt":null,"trans":{"投稿待ち":1787529600000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-NCN-5","contractId":"ncn-v","client":"NCN","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"編集中","planned":"2026-08-27","due":"2026-08-18","postedAt":null,"trans":{"編集中":1787702400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-柿本商会-27","contractId":"kaki-s","client":"柿本商会","kind":"静止画","month":"2026-08","title":"","editor":"ゆかり","status":"未着手","planned":"2026-08-27","due":"2026-08-18","postedAt":null,"trans":{},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-メトロ自動車-45","contractId":"metro-v","client":"メトロ自動車","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"編集中","planned":"2026-08-27","due":"2026-08-24","postedAt":null,"trans":{"編集中":1787745117947},"actor":"なつみ","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-SBSネクサード-11","contractId":"sbs-v","client":"SBSネクサード","kind":"動画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済","planned":"2026-08-28","due":"2026-08-19","postedAt":"2026-08-26","trans":{"編集中":1787702400000,"確認中":1787745018813,"投稿待ち":1787745052155,"投稿済":1787745056845},"actor":"なつみ","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-木下テーブルテニスクラブ-17","contractId":"kino-s","client":"木下テーブルテニスクラブ","kind":"静止画","month":"2026-08","title":"","editor":"りりか","status":"編集中","planned":"2026-08-28","due":"2026-08-19","postedAt":null,"trans":{"編集中":1787702400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-なの花交通バス-49","contractId":"nano-v","client":"なの花交通バス","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"確認中","planned":"2026-08-28","due":"2026-08-25","postedAt":null,"trans":{"確認中":1787702400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-グレースホールディングス-21","contractId":"grace-v","client":"グレースホールディングス","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"編集中","planned":"2026-08-31","due":"2026-08-20","postedAt":null,"trans":{"編集中":1787702400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-茨城交通-33","contractId":"ibako-s","client":"茨城交通","kind":"静止画","month":"2026-08","title":"","editor":"つかさ","status":"確認中","planned":"2026-08-31","due":"2026-08-20","postedAt":null,"trans":{"確認中":1787702400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}}],"months":{},"maintenance":false,"lastUpdated":"2026-08-26T23:03:47.835Z"}</script>
+
+<div id="root"></div>
+
+<script>
+/* =====================================================================
+   Layer A — 純粋ロジック（外部呼び出しを一切含まない）
+   フェーズ3で Apps Script へそのまま移植できる層
+   ===================================================================== */
+"use strict";
+var PRISTINE = "<!doctype html>\n" + document.documentElement.outerHTML;
+
+/* 工程は6段階（§17.1）。承認済み＝内容OK・まだ投稿していない状態で、
+   「確認OK」と「投稿した」の間に入る。承認済み≠完了（§3.2） */
+var STATUSES = ["未着手","編集中","確認中","承認済み","投稿待ち","投稿済"];
+var ACTION_LABEL = {"未着手":"着手する","編集中":"編集完了","確認中":"確認OK",
+                    "承認済み":"投稿待ちへ","投稿待ち":"投稿した"};
+var TODAY = null; // 実行時に決定
+
+function p2(n){return (n<10?"0":"")+n}
+function ymd(y,m,d){return y+"-"+p2(m)+"-"+p2(d)}
+function toUTC(s){var a=s.split("-");return Date.UTC(+a[0],+a[1]-1,+a[2])}
+function fromUTC(t){var d=new Date(t);return ymd(d.getUTCFullYear(),d.getUTCMonth()+1,d.getUTCDate())}
+function addDays(s,n){return fromUTC(toUTC(s)+n*86400000)}
+function dow(s){return new Date(toUTC(s)).getUTCDay()}
+function monthOf(s){return s.slice(0,7)}
+function daysInMonth(ym){var a=ym.split("-");return new Date(Date.UTC(+a[0],+a[1],0)).getUTCDate()}
+function jpDate(s){var a=s.split("-");return (+a[1])+"/"+(+a[2])}
+
+/* --- 祝日テーブル（2026〜2028）。春分・秋分のみ固定値、他は算出 --- */
+var EQUINOX = {2026:["2026-03-20","2026-09-23"],2027:["2027-03-21","2027-09-23"],2028:["2028-03-20","2028-09-22"]};
+var HOLIDAY_VALID_THROUGH = 2028;
+var _holCache = {};
+function nthMonday(y,m,n){
+  var d=1; while(new Date(Date.UTC(y,m-1,d)).getUTCDay()!==1) d++;
+  return ymd(y,m,d+7*(n-1));
+}
+function holidays(y){
+  if(_holCache[y]) return _holCache[y];
+  if(!EQUINOX[y]){ _holCache[y]=null; return null; }
+  var s={}, add=function(x){s[x]=1};
+  add(ymd(y,1,1)); add(nthMonday(y,1,2)); add(ymd(y,2,11)); add(ymd(y,2,23));
+  add(EQUINOX[y][0]); add(ymd(y,4,29)); add(ymd(y,5,3)); add(ymd(y,5,4)); add(ymd(y,5,5));
+  add(nthMonday(y,7,3)); add(ymd(y,8,11)); add(nthMonday(y,9,3)); add(EQUINOX[y][1]);
+  add(nthMonday(y,10,2)); add(ymd(y,11,3)); add(ymd(y,11,23));
+  // 国民の休日（祝日に挟まれた平日）
+  Object.keys(s).slice().forEach(function(h){
+    var mid=addDays(h,1), nx=addDays(h,2);
+    if(s[nx] && !s[mid] && dow(mid)!==0) s[mid]=1;
+  });
+  // 振替休日（日曜の祝日 → 次の非祝日）
+  Object.keys(s).slice().sort().forEach(function(h){
+    if(dow(h)===0){ var c=addDays(h,1); while(s[c]) c=addDays(c,1); s[c]=1; }
+  });
+  _holCache[y]=s; return s;
+}
+function isHoliday(d){
+  var h=holidays(+d.slice(0,4));
+  if(!h) return false;      // テーブル範囲外は土日のみで判定（警告を別途出す）
+  return !!h[d];
+}
+function isBiz(d){ var w=dow(d); return w!==0 && w!==6 && !isHoliday(d); }
+
+/** 指定月の営業日（暦ベース）。extra.closed で「全員休みの平日」を除外できる */
+function bizDays(ym, closed){
+  var n=daysInMonth(ym), out=[], a=ym.split("-");
+  for(var i=1;i<=n;i++){
+    var d=ymd(+a[0],+a[1],i);
+    if(!isBiz(d)) continue;
+    if(closed && closed[d]) continue;
+    out.push(d);
+  }
+  return out;
+}
+/** 前後にまたがる営業日の連続リスト（リードタイム計算用） */
+function bizRange(fromYm, months){
+  var out=[], a=fromYm.split("-"), y=+a[0], m=+a[1];
+  for(var i=0;i<months;i++){
+    out = out.concat(bizDays(ymd(y,m,1).slice(0,7)));
+    m++; if(m>12){m=1;y++;}
+  }
+  return out;
+}
+/** date から k 営業日前（リスト外なら最も近い位置から数える） */
+function subBiz(list, date, k){
+  var i = list.indexOf(date);
+  if(i<0){ i=0; while(i<list.length && list[i]<date) i++; if(i>=list.length) i=list.length-1; }
+  return list[Math.max(0, i-k)];
+}
+function addBiz(list, date, k){
+  var i = list.indexOf(date);
+  if(i<0){ i=0; while(i<list.length && list[i]<date) i++; }
+  return list[Math.min(list.length-1, i+k)];
+}
+
+/** 社IDから位相 φ ∈ [-0.4, +0.4] を決める（スロット内の小数であること） */
+function phaseOf(key){
+  var h=0; for(var i=0;i<key.length;i++){ h=(h*31 + key.charCodeAt(i))>>>0; }
+  return ((h%81)-40)/100;
+}
+/** n 本を営業日 D 個に均等配置。重複は前後の空きへ寄せる */
+function distribute(bd, n, phase){
+  var D=bd.length, used={}, out=[];
+  if(D===0) return [];
+  for(var i=0;i<n;i++){
+    var idx=Math.floor(D*(i+0.5+phase)/n);
+    if(idx<0) idx=0; if(idx>D-1) idx=D-1;
+    if(used[idx] && Object.keys(used).length < D){
+      var up=idx+1, dn=idx-1, found=-1;
+      while(up<D || dn>=0){
+        if(up<D && !used[up]){found=up;break}
+        if(dn>=0 && !used[dn]){found=dn;break}
+        up++; dn--;
+      }
+      if(found>=0) idx=found;
+    }
+    used[idx]=1; out.push(bd[idx]);
+  }
+  return out.sort();
+}
+/** 動画 a 本・静止画 b 本を比率に応じてインターリーブ */
+function interleave(a,b){
+  var out=[], ca=0, cb=0, n=a+b;
+  for(var i=0;i<n;i++){
+    if(ca>=a){ out.push("静止画"); cb++; continue; }
+    if(cb>=b){ out.push("動画"); ca++; continue; }
+    var na=(ca+1)/a, nb=(cb+1)/b;
+    if(na<=nb){ out.push("動画"); ca++; } else { out.push("静止画"); cb++; }
+  }
+  return out;
+}
+
+/* --- 判定：件数ベース。当日締切は遅延に含めない --- */
+function judge(rows, today){
+  var late=0, dueToday=0, done=0, ready=0;
+  rows.forEach(function(r){
+    if(r.status==="投稿済"){ done++; return; }
+    if(r.status==="投稿待ち") ready++;
+    if(r.planned < today) late++;
+    else if(r.planned === today) dueToday++;
+  });
+  return {late:late, dueToday:dueToday, done:done, ready:ready, total:rows.length,
+          level: late===0 ? "ok" : (late===1 ? "warn" : "late")};
+}
+
+/* --- 稼働時間 → 消化可能本数（1時間1本・6時間以上は休憩1時間控除） --- */
+function shiftHours(h){ return h>=6 ? h-1 : h; }
+function capacityOf(shifts, staffRomaji, ym){
+  var m=(shifts&&shifts[ym])||{}, list=m[staffRomaji]||[], sum=0;
+  list.forEach(function(s){ sum += shiftHours(s.h); });
+  return {days:list.length, hours:sum, cap:Math.floor(sum)};
+}
+function workingDays(shifts, staffRomaji, ym){
+  var m=(shifts&&shifts[ym])||{}, list=m[staffRomaji]||[], set={};
+  list.forEach(function(s){ set[s.d]=1; });
+  return set;
+}
+
+/* --- 生成：契約 → 行 --- */
+function generate(cfg){
+  // cfg: {contracts, ym, genDate, shifts, staff, editorPlan}
+  var closed = closedDays(cfg.shifts, cfg.ym, cfg.staff);
+  var bd = bizDays(cfg.ym, closed);
+  var range = bizRange(monthMinus(cfg.ym,1), 3);
+  var rows = [], seq = 0;
+  var byClient = {};
+  cfg.contracts.forEach(function(c){ (byClient[c.client]=byClient[c.client]||[]).push(c); });
+
+  Object.keys(byClient).forEach(function(client){
+    var cs = byClient[client];
+    var v = cs.filter(function(c){return c.kind==="動画"})[0];
+    var s = cs.filter(function(c){return c.kind==="静止画"})[0];
+    var nv = v?v.count:0, ns = s?s.count:0;
+    var kinds = interleave(nv, ns);
+    var dates = distribute(bd, nv+ns, phaseOf(client));
+    var poster = (v||s).poster;
+    var postDays = cfg.staff[poster] ? workingDays(cfg.shifts, cfg.staff[poster], cfg.ym) : null;
+
+    for(var i=0;i<kinds.length;i++){
+      var kind = kinds[i];
+      var con = kind==="動画" ? v : s;
+      var planned = dates[i];
+      if(!planned) continue;
+      // 補正2：投稿担当者の非稼働日から前後の空き営業日へ寄せる
+      if(postDays && Object.keys(postDays).length && !postDays[planned]){
+        planned = nearestWorking(bd, postDays, planned, dates);
+      }
+      var lead = con.steps===4 ? 7 : 3;
+      var due = subBiz(range, planned, lead);
+      var floor = addBiz(range, cfg.genDate, 1);
+      var squeezed = false;
+      if(due < floor){ due = floor; squeezed = true; }
+      rows.push({
+        id: "r-"+cfg.ym+"-"+client+"-"+(seq++),
+        contractId: con.id, client: client, kind: kind, month: cfg.ym,
+        title: "", editor: con.editor || "", status: "未着手",
+        planned: planned, due: due, postedAt: null,
+        trans: {}, actor: "", dateLocked: false, squeezed: squeezed,
+        url: "", note: "", updatedAt: {}
+      });
+    }
+  });
+  rows.sort(function(a,b){ return a.planned<b.planned?-1:a.planned>b.planned?1:0; });
+  return rows;
+}
+function monthMinus(ym,k){ var a=ym.split("-"), y=+a[0], m=+a[1]-k; while(m<1){m+=12;y--;} return ymd(y,m,1).slice(0,7); }
+/**
+ * 補正1：臨時休業・年末年始を非営業日として除外する。
+ * 単純に「編集スタッフ全員が休みの平日」を除外すると、社員（シフト管理外）が
+ * 出勤している普通の平日まで消える（2026年8月なら 8/5・8/12・8/14・8/21 の
+ * 4日が誤って除外される）。会社ごと閉まっている状態は連続するので、
+ * 「シフトが1件もない平日が3日以上連続した区間」だけを休業とみなす。
+ */
+function closedDays(shifts, ym, staffMap){
+  var m=(shifts&&shifts[ym]); if(!m) return null;
+  var open={};
+  Object.keys(m).forEach(function(r){ m[r].forEach(function(s){ open[s.d]=1; }); });
+  if(!Object.keys(open).length) return null;
+  var bd=bizDays(ym,null), closed={}, run=[];
+  var flush=function(){ if(run.length>=3) run.forEach(function(d){ closed[d]=1; }); run=[]; };
+  bd.forEach(function(d){ if(open[d]) flush(); else run.push(d); });
+  flush();
+  return closed;
+}
+/** クライアントを稼働能力に比例して編集者へ割り当てる（初期値・手で変更可） */
+function assignEditors(rows, caps){
+  var names=Object.keys(caps); if(!names.length) return rows;
+  var byClient={};
+  rows.forEach(function(r){ (byClient[r.client]=byClient[r.client]||[]).push(r); });
+  var clients=Object.keys(byClient).sort(function(a,b){ return byClient[b].length-byClient[a].length; });
+  var load={}; names.forEach(function(n){ load[n]=0; });
+  clients.forEach(function(c){
+    var best=names[0], bestScore=-Infinity;
+    names.forEach(function(n){
+      var cap=caps[n]||1;
+      var score=(cap-load[n])/cap;
+      if(score>bestScore){ bestScore=score; best=n; }
+    });
+    load[best]+=byClient[c].length;
+    byClient[c].forEach(function(r){ r.editor=best; });
+  });
+  return rows;
+}
+function nearestWorking(bd, workSet, from, taken){
+  var takenSet={}; (taken||[]).forEach(function(d){takenSet[d]=1});
+  var i = bd.indexOf(from); if(i<0) i=0;
+  for(var k=1;k<bd.length;k++){
+    var a=bd[i+k], b=bd[i-k];
+    if(a && workSet[a] && !takenSet[a]) return a;
+    if(b && workSet[b] && !takenSet[b]) return b;
+  }
+  for(var k2=1;k2<bd.length;k2++){
+    var a2=bd[i+k2], b2=bd[i-k2];
+    if(a2 && workSet[a2]) return a2;
+    if(b2 && workSet[b2]) return b2;
+  }
+  return from;
+}
+
+/* --- 操作の適用（op journal の再適用にも使う） --- */
+function applyOp(st, op){
+  var r=null;
+  for(var i=0;i<st.rows.length;i++){ if(st.rows[i].id===op.target){ r=st.rows[i]; break; } }
+  if(!r) return "gone";
+  if(op.type==="status"){
+    if(r.status !== op.payload.from) return "conflict";
+    r.status = op.payload.to;
+    r.trans = r.trans || {};
+    r.trans[op.payload.to] = op.at;
+    r.actor = op.payload.actor || r.actor;
+    r.postedAt = op.payload.to==="投稿済" ? (op.payload.on || fromUTC(op.at)) : null;
+    return "ok";
+  }
+  // 状態遷移以外は last-write-wins
+  var f = op.payload.field;
+  r.updatedAt = r.updatedAt || {};
+  if((r.updatedAt[f]||0) > op.at) return "stale";
+  r[f] = op.payload.value;
+  r.updatedAt[f] = op.at;
+  return "ok";
+}
+
+/* ---------------- シード（Notion DB_案件 / スタッフカレンダー 2026-08-26 取得） -------------- */
+var SEED_CONTRACTS = [
+ {id:"ncn-v",   client:"NCN",                    display:"NCN",      kind:"動画",  count:6, steps:4, poster:"なつみ"},
+ {id:"sbs-v",   client:"SBSネクサード",          display:"SBS",      kind:"動画",  count:6, steps:4, poster:"なつみ"},
+ {id:"kino-v",  client:"木下テーブルテニスクラブ",display:"木下TTC",  kind:"動画",  count:4, steps:4, poster:"なつみ"},
+ {id:"kino-s",  client:"木下テーブルテニスクラブ",display:"木下TTC",  kind:"静止画",count:2, steps:4, poster:"なつみ"},
+ {id:"grace-v", client:"グレースホールディングス",display:"グレース", kind:"動画",  count:4, steps:4, poster:"なつみ"},
+ {id:"kaki-v",  client:"柿本商会",               display:"柿本商会", kind:"動画",  count:3, steps:4, poster:"なつみ"},
+ {id:"kaki-s",  client:"柿本商会",               display:"柿本商会", kind:"静止画",count:3, steps:4, poster:"なつみ"},
+ {id:"ibako-v", client:"茨城交通",               display:"茨城交通", kind:"動画",  count:3, steps:4, poster:"なつみ"},
+ {id:"ibako-s", client:"茨城交通",               display:"茨城交通", kind:"静止画",count:3, steps:4, poster:"なつみ"},
+ {id:"assist-v",client:"アシストタクシー",       display:"アシスト", kind:"動画",  count:4, steps:2, poster:"りりか"},
+ {id:"hiro-v",  client:"ヒロダクト工業",         display:"ヒロダクト",kind:"動画", count:4, steps:2, poster:"りりか"},
+ {id:"metro-v", client:"メトロ自動車",           display:"メトロ",   kind:"動画",  count:4, steps:2, poster:"りりか"},
+ {id:"nano-v",  client:"なの花交通バス",         display:"なの花",   kind:"動画",  count:4, steps:2, poster:"りりか"}
+];
+var STAFF_MAP = {"りりか":"Ririka","ゆかり":"Yukari","つかさ":"Tukasa"};
+var MEMBERS = [
+ {name:"なつみ", role:"社員"},{name:"友美", role:"社員"},{name:"翔平", role:"社長"},
+ {name:"りりか", role:"スタッフ"},{name:"ゆかり", role:"スタッフ"},{name:"つかさ", role:"スタッフ"}
+];
+var SEED_SHIFTS = {"2026-08":{
+ "Ririka":[{d:"2026-08-06",h:9},{d:"2026-08-10",h:9},{d:"2026-08-13",h:9},{d:"2026-08-17",h:8},{d:"2026-08-18",h:7},{d:"2026-08-19",h:8},{d:"2026-08-20",h:9},{d:"2026-08-25",h:9},{d:"2026-08-26",h:9},{d:"2026-08-27",h:7},{d:"2026-08-28",h:9}],
+ "Yukari":[{d:"2026-08-03",h:4},{d:"2026-08-04",h:4},{d:"2026-08-06",h:4},{d:"2026-08-07",h:4},{d:"2026-08-24",h:4},{d:"2026-08-25",h:4},{d:"2026-08-27",h:4},{d:"2026-08-28",h:4},{d:"2026-08-31",h:4}],
+ "Tukasa":[{d:"2026-08-04",h:8},{d:"2026-08-17",h:8},{d:"2026-08-18",h:8},{d:"2026-08-24",h:8},{d:"2026-08-25",h:8},{d:"2026-08-31",h:8}]
+}};
+var SHIFT_UNMATCHED = ["Mariko","Yoshino","Nanami","Hisami","Kanon","Kimiko","Rika"];
+var SNAP = {contracts:"2026-08-26", shifts:"2026-08-26"};
+
+/* =====================================================================
+   Layer B — アダプタ（保存・外部取得）。フェーズ3ではここだけ差し替える
+   ===================================================================== */
+var STATE = null, ME = null, ARTIFACT = null, CAN_WRITE = true;
+var PENDING = {conflict:0, expired:0, stale:0};
+var LAST_TOAST = null;
+
+var LS = {
+  get:function(k,d){ try{ var v=localStorage.getItem(k); return v==null?d:JSON.parse(v); }catch(e){ return d; } },
+  set:function(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+};
+var OPS = {
+  KEY:"mlboard.ops.v1",
+  all:function(){ return LS.get(this.KEY,[]) || []; },
+  save:function(a){ LS.set(this.KEY,a); },
+  add:function(op){ var a=this.all(); a.push(op); this.save(a); },
+  drop:function(id){ this.save(this.all().filter(function(o){return o.opId!==id})); },
+  prune:function(){
+    var cut=Date.now()-72*3600*1000, a=this.all();
+    var keep=a.filter(function(o){ return o.at>cut; });
+    var n=a.length-keep.length; if(n) this.save(keep);
+    return n;
+  }
+};
+var DRAFT = {
+  key:function(id,f){ return "mlboard.draft."+id+"."+f; },
+  get:function(id,f){ return LS.get(this.key(id,f),null); },
+  set:function(id,f,v){ LS.set(this.key(id,f),v); },
+  clear:function(id,f){ try{ localStorage.removeItem(this.key(id,f)); }catch(e){} }
+};
+
+function readState(){
+  var el=document.getElementById("state");
+  try{ return JSON.parse(el.textContent); }catch(e){ return {version:1,seeded:false,rows:[],months:{},maintenance:false}; }
+}
+/** state を埋め込んだ完全なドキュメントを作る。DOM のシリアライズはしない */
+function buildDoc(st){
+  var json = JSON.stringify(st).replace(/</g, String.fromCharCode(92)+"u003c");
+  return PRISTINE.replace(/(<script id="state" type="application\/json">)[\s\S]*?(<\/script>)/,
+    function(m,a,b){ return a+json+b; });
+}
+function persist(){
+  if(!ARTIFACT) return Promise.resolve("nocap");
+  STATE.lastUpdated = new Date().toISOString();
+  return ARTIFACT.publish(buildDoc(STATE)).then(function(){ return "ok"; })
+    .catch(function(e){
+      var c = e && (e.code || e.name) || "";
+      if(String(c).indexOf("conflict")>=0) return "conflict";
+      if(String(c).indexOf("not_")>=0){ CAN_WRITE=false; return "readonly"; }
+      return "error";
+    });
+}
+function commit(op){
+  OPS.add(op);
+  applyOp(STATE, op);
+  render();
+  persist().then(function(r){
+    if(r==="ok") OPS.drop(op.opId);
+    render();
+  });
+}
+function replayPending(){
+  var ops=OPS.all(), applied=0;
+  PENDING={conflict:0,expired:0,stale:0};
+  PENDING.expired = OPS.prune();
+  ops = OPS.all();
+  ops.forEach(function(op){
+    var r = applyOp(STATE, op);
+    if(r==="ok") applied++;
+    else if(r==="conflict") PENDING.conflict++;
+    else if(r==="stale") PENDING.stale++;
+  });
+  if(applied){
+    persist().then(function(res){
+      if(res==="ok") OPS.save([]);   // 反映が確定した時点で未確定分を消す
+      render();
+    });
+  }
+}
+function newOp(type,target,payload){
+  return {opId:"op-"+Date.now()+"-"+Math.random().toString(36).slice(2,8), type:type, target:target, payload:payload, at:Date.now()};
+}
+
+/* =====================================================================
+   Layer C — 描画
+   HOME_DASHBOARD_SPEC.md のビジュアル体系で組み直した層。
+   Layer A（純粋ロジック）と Layer B（アダプタ）は呼ぶだけで変更しない。
+   ===================================================================== */
+var VIEW = "home", MONTH = null, SELECTED = null, SELECTEDC = null;
+var DETAIL_VIEWS = {home:1, list:1, today:1, track:1, pending:1};
+var TODAY_DONE_OPEN = false;   /* 今日：完了済みセクションの開閉 */
+var STAFFPICK = null;          /* チーム負荷：選択中のスタッフ */
+/* 負荷目安の重み（§12.4）。工数ではない。ここだけ触れば体感を調整できる。
+   full は「これで100点」の生スコア。未完了4本・遅延1本・確認待ち2本
+   （平常時の1人ぶん）が 51 ＝「適正」に落ちる値にしてある */
+var LOAD_CFG = {today:8, week:2, overdue:15, review:4, full:120};
+var FILTER = {editor:"__me__", status:"open", client:"__all__", q:"", sort:"planned"};
+var TASKTAB = "all", DETAILTAB = "detail", POP = false, DRAWER = false;
+var SVGNS = "http://www.w3.org/2000/svg";
+
+/* ---------------------------------------------------------------
+   DOM ヘルパ
+   --------------------------------------------------------------- */
+function h(tag, attrs, kids){
+  var e=document.createElement(tag);
+  if(attrs) Object.keys(attrs).forEach(function(k){
+    if(k==="class") e.className=attrs[k];
+    else if(k==="html") e.innerHTML=attrs[k];
+    else if(k==="text") e.textContent=attrs[k];
+    else if(k.slice(0,2)==="on") e.addEventListener(k.slice(2), attrs[k]);
+    else if(attrs[k]!=null && attrs[k]!==false) e.setAttribute(k, attrs[k]);
+  });
+  (kids||[]).forEach(function(c){ if(c) e.appendChild(typeof c==="string"?document.createTextNode(c):c); });
+  return e;
+}
+function svgEl(tag, attrs){
+  var e=document.createElementNS(SVGNS, tag);
+  if(attrs) Object.keys(attrs).forEach(function(k){ e.setAttribute(k, attrs[k]); });
+  return e;
+}
+function txt(s){ return document.createTextNode(s); }
+function num(v){ return h("b",{class:"num",text:String(v)}); }
+function pct(a,b){ return b>0 ? Math.round(a/b*100) : 0; }   /* 必要本数0の月で NaN を出さない */
+
+/* ---------------------------------------------------------------
+   アイコン（lucide の形をインラインSVGで写す。1セットに統一）
+   --------------------------------------------------------------- */
+var ICON = {
+  dashboard:'<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
+  film:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 3v18M17 3v18M3 7.5h4M17 7.5h4M3 12h18M3 16.5h4M17 16.5h4"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>',
+  activity:'<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+  gauge:'<path d="M12 14 20 6"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/>',
+  chevronDown:'<path d="m6 9 6 6 6-6"/>',
+  chevronLeft:'<path d="m15 18-6-6 6-6"/>',
+  chevronRight:'<path d="m9 18 6-6-6-6"/>',
+  calendar:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/>',
+  info:'<circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/>',
+  alert:'<path d="M10.3 3.9 1.9 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/>',
+  alertCircle:'<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/>',
+  check:'<circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-4.5"/>',
+  externalLink:'<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+  x:'<path d="M18 6 6 18M6 6l12 12"/>',
+  arrowRight:'<path d="M5 12h14M13 6l6 6-6 6"/>',
+  upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 9 5-5 5 5"/><path d="M12 4v12"/>',
+  save:'<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.8-2.5 2.4-2.5 2.4"/><path d="M12 17h.01"/>',
+  folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  inbox:'<path d="M3 12h5l1.5 2.5h5L16 12h5"/><path d="M5.5 5h13l2.5 7v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6z"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/>',
+  sort:'<path d="M4 7h13M4 12h9M4 17h5"/><path d="m17 14 3 3 3-3"/>'
+};
+function ic(name, size){
+  var s=svgEl("svg",{viewBox:"0 0 24 24",width:String(size||18),height:String(size||18),
+    fill:"none",stroke:"currentColor","stroke-width":"2","stroke-linecap":"round",
+    "stroke-linejoin":"round","aria-hidden":"true"});
+  s.innerHTML = ICON[name]||"";
+  return s;
+}
+/* Google ドライブのマーク（リンク先の製品を示すラベルとして使う） */
+function driveMark(size){
+  var s=svgEl("svg",{viewBox:"0 0 87.3 78",width:String(size||20),height:String(Math.round((size||20)*78/87.3)),"aria-hidden":"true"});
+  s.innerHTML =
+   '<path fill="#0066da" d="M6.6 66.85 10.45 73.5c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z"/>'+
+   '<path fill="#00ac47" d="M43.65 25 29.9 1.2c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44A9.06 9.06 0 0 0 0 53h27.5z"/>'+
+   '<path fill="#ea4335" d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.798l5.852 11.5z"/>'+
+   '<path fill="#00832d" d="M43.65 25 57.4 1.2C56.05.4 54.5 0 52.9 0H34.4c-1.6 0-3.15.45-4.5 1.2z"/>'+
+   '<path fill="#2684fc" d="M59.8 53H27.5L13.75 76.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z"/>'+
+   '<path fill="#ffba00" d="M73.4 26.5 60.7 4.5c-.8-1.4-1.95-2.5-3.3-3.3L43.65 25l16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z"/>';
+  return s;
+}
+/* 判定記号。色だけで意味を運ばせないため必ずラベルを伴わせる */
+function icon(level){
+  var tok = level==="ok" ? "--ok" : level==="warn" ? "--warn" : "--late";
+  var s=svgEl("svg",{viewBox:"0 0 10 10",width:"10",height:"10","aria-hidden":"true"});
+  s.innerHTML = level==="ok" ? '<circle cx="5" cy="5" r="4.5"/>'
+              : level==="warn" ? '<path d="M5 0.5 9.8 9.2 0.2 9.2Z"/>'
+              : '<rect x="0.5" y="0.5" width="9" height="9" rx="1"/>';
+  s.style.fill = "var("+tok+")";
+  return s;
+}
+function statusPill(level){
+  var label = level==="ok" ? "順調" : level==="warn" ? "注意" : "遅延";
+  return h("span",{class:"pill"},[icon(level), label]);
+}
+
+/* ---------------------------------------------------------------
+   工程 → 見た目のマップ。色は各所でハードコードせずここだけを見る
+   （工程は6段階。表示名も現行のまま）
+   --------------------------------------------------------------- */
+var SV = {
+  "未着手":  {v:"--st-todo",    ink:"--st-todo-ink",    tint:"--st-todo-tint"},
+  "編集中":  {v:"--st-editing", ink:"--st-editing-ink", tint:"--st-editing-tint"},
+  "確認中":  {v:"--st-review",  ink:"--st-review-ink",  tint:"--st-review-tint"},
+  "承認済み":{v:"--st-approved",ink:"--st-approved-ink",tint:"--st-approved-tint"},
+  "投稿待ち":{v:"--st-waiting", ink:"--st-waiting-ink", tint:"--st-waiting-tint"},
+  "投稿済":  {v:"--st-posted",  ink:"--st-posted-ink",  tint:"--st-posted-tint"}
+};
+function sv(st){ return SV[st] || SV["未着手"]; }
+function dot(tok, px){
+  var i=h("i"); i.style.cssText="flex:none;border-radius:50%;width:"+px+"px;height:"+px+"px";
+  i.style.background="var("+tok+")"; return i;
+}
+function sBadge(st, onDark){
+  var m=sv(st);
+  var b=h("span",{class:"sbadge"+(onDark?" on-dark":"")});
+  b.appendChild(dot(m.v,7));
+  b.appendChild(txt(st));
+  if(!onDark){ b.style.background="var("+m.tint+")"; b.style.color="var("+m.ink+")"; }
+  return b;
+}
+
+/* ---------------------------------------------------------------
+   サムネイル代用のタイル
+   実画像に到達できないため、クライアントごとに決まる色＋頭文字で表す
+   （同じ契約は毎回同じ色になる）
+   --------------------------------------------------------------- */
+function hashStr(s){ var x=0; for(var i=0;i<String(s).length;i++){ x=(x*31+String(s).charCodeAt(i))>>>0; } return x; }
+function tileBg(key){
+  var hu=hashStr(key)%360;
+  return "linear-gradient(135deg,hsl("+hu+" 44% 32%),hsl("+((hu+26)%360)+" 50% 45%))";
+}
+function tile(key, label, w, ht, fs){
+  var d=h("div",{class:"tile",text:label,"aria-hidden":"true"});
+  d.style.width=w+"px"; d.style.height=ht+"px"; d.style.fontSize=(fs||12)+"px";
+  d.style.background=tileBg(key);
+  return d;
+}
+function shortName(c){ return (c.display||c.client||"？").slice(0,2); }
+
+/* ---------------------------------------------------------------
+   セレクタ
+   --------------------------------------------------------------- */
+function myRole(){ var m=MEMBERS.filter(function(x){return x.name===ME})[0]; return m?m.role:"社員"; }
+function visibleViews(){
+  var r=myRole();
+  if(r==="社長")   return [["home","ホーム","dashboard"]];
+  /* 投稿待ちはスタッフにも見せる（投稿漏れは全員で防ぐ）。チーム負荷は社員だけ */
+  if(r==="スタッフ") return [["home","ホーム","dashboard"],["list","動画一覧","film"],
+          ["today","今日","clock"],["pending","投稿待ち","upload"]];
+  return [["home","ホーム","dashboard"],["list","動画一覧","film"],["today","今日","clock"],
+          ["track","進行トラック","activity"],["load","チーム負荷","gauge"],
+          ["pending","投稿待ち","upload"]];
+}
+function hasView(k){ return visibleViews().some(function(v){ return v[0]===k; }); }
+function contractsOf(){ return SEED_CONTRACTS; }
+function contractById(id){ return SEED_CONTRACTS.filter(function(c){return c.id===id})[0]; }
+function rowsOfMonth(){ return STATE.rows.filter(function(r){ return r.month===MONTH; }); }
+function rowsByContract(cid){ return rowsOfMonth().filter(function(r){ return r.contractId===cid; }); }
+function monthList(){
+  var s={}; STATE.rows.forEach(function(r){ s[r.month]=1; }); s[MONTH]=1;
+  return Object.keys(s).sort();
+}
+function isPast(){ return MONTH < monthOf(TODAY); }
+function writable(){ return CAN_WRITE && !STATE.maintenance && !isPast(); }
+function daysSince(d){ return Math.floor((toUTC(TODAY)-toUTC(d))/86400000); }
+function narrow(){ try{ return window.matchMedia("(max-width:1279px)").matches; }catch(e){ return false; } }
+var WD=["日","月","火","水","木","金","土"];
+function jpFull(s){ var a=s.split("-"); return (+a[0])+"年"+(+a[1])+"月"+(+a[2])+"日（"+WD[dow(s)]+"）"; }
+function fmtStamp(v){
+  try{ var d=new Date(v); return (d.getMonth()+1)+"/"+d.getDate()+" "+p2(d.getHours())+":"+p2(d.getMinutes()); }
+  catch(e){ return "—"; }
+}
+
+/* 優先度は手入力させない。実データ（投稿予定日）から導出する */
+function prioOf(r){ return r.planned<TODAY ? "high" : r.planned===TODAY ? "med" : "low"; }
+function prioLabel(p){ return p==="high" ? "高" : p==="med" ? "中" : "低"; }
+function prioRank(r){ var p=prioOf(r); return p==="high"?0:p==="med"?1:2; }
+
+function myTasks(tab){
+  var rows=rowsOfMonth().filter(function(r){ return r.status!=="投稿済"; });
+  if(STAFF_MAP[ME]) rows=rows.filter(function(r){
+    return r.editor===ME || (contractById(r.contractId)||{}).poster===ME; });
+  if(tab==="today")       rows=rows.filter(function(r){ return r.planned<=TODAY || r.due<=TODAY; });
+  else if(tab==="urgent") rows=rows.filter(function(r){ return r.due>TODAY && r.due<=addDays(TODAY,3); });
+  return rows.sort(function(a,b){
+    var d=prioRank(a)-prioRank(b); if(d) return d;
+    return a.planned<b.planned?-1:a.planned>b.planned?1:0;
+  });
+}
+
+function summary(){
+  var rows=rowsOfMonth(), cs=contractsOf();
+  var target=0; cs.forEach(function(c){ target+=c.count; });
+  var posted=0, waiting=0, dueToday=0;
+  rows.forEach(function(r){
+    if(r.status==="投稿済"){ posted++; return; }
+    if(r.status==="投稿待ち"){ waiting++; if(r.planned===TODAY) dueToday++; }
+  });
+  var risk=0, warnC=0;
+  cs.forEach(function(c){
+    var j=judge(rowsByContract(c.id), TODAY);
+    if(j.level==="late") risk++; else if(j.level==="warn") warnC++;
+  });
+  return {planned:rows.length, target:target, posted:posted, waiting:waiting,
+          dueToday:dueToday, risk:risk, warnC:warnC, contracts:cs.length,
+          today:myTasks("today").length};
+}
+
+/* ---------------------------------------------------------------
+   お知らせの解体
+   全幅バーは同時に最大1本。残りはヘッダーのチップに畳む
+   --------------------------------------------------------------- */
+function blockers(){
+  var out=[];
+  if(!CAN_WRITE) out.push({lv:"late", t:"このアカウントには編集権限がありません。閲覧のみで、工程の更新はできません。"});
+  if(PENDING.conflict) out.push({lv:"late", t:"競合により保留："+PENDING.conflict+"件。他の人が先に工程を進めたため、あなたの操作は適用していません。"});
+  if(STATE.maintenance) out.push({lv:"warn", t:"メンテナンス中です。更新は一時的に止まっています。"});
+  var p=OPS.all().length;
+  if(p) out.push({lv:"warn", t:"未同期 "+p+"件。反映が終わるまでこの画面を閉じないでください。", act:"resend"});
+  return out.sort(function(a,b){ return (a.lv==="late"?0:1)-(b.lv==="late"?0:1); });
+}
+function notices(){
+  var out=[], stale=daysSince(SNAP.contracts)>=14;
+  out.push({lv:stale?"warn":"ok",
+    t:"契約データ："+SNAP.contracts+" 取得　／　シフト："+SNAP.shifts+" 取得"+(stale?"　— 再取り込みが必要です":"")});
+  if(STATE.seeded) out.push({lv:"warn",
+    t:"表示中の "+monthOf(TODAY)+" 分の進捗ステータスと投稿完了日はサンプルです。契約本数とシフトは実データです。",
+    act:"unseed"});
+  if(PENDING.expired) out.push({lv:"ok", t:"期限切れ "+PENDING.expired+"件（72時間を過ぎた未同期の操作を破棄しました）"});
+  if(isPast()) out.push({lv:"ok", t:"過去月を表示しています（読み取り専用）"});
+  var y=+TODAY.slice(0,4);
+  if(y>HOLIDAY_VALID_THROUGH) out.push({lv:"late",
+    t:"祝日テーブルの有効期限（"+HOLIDAY_VALID_THROUGH+"年）を過ぎています。営業日の判定が土日のみに劣化しています。テーブルを更新してください。"});
+  else if(y>=HOLIDAY_VALID_THROUGH-0) out.push({lv:"warn",
+    t:"祝日テーブルの有効期限は "+HOLIDAY_VALID_THROUGH+"年 です。更新の準備をしてください。"});
+  if(SHIFT_UNMATCHED.length) out.push({lv:"ok",
+    t:"編集スタッフ以外として除外したシフト名："+SHIFT_UNMATCHED.length+"名（"+SHIFT_UNMATCHED.join("・")+"）"});
+  /* 全幅バーに出しきれなかった blocker もここへ積む（無音にしない） */
+  blockers().slice(1).forEach(function(b){ out.push(b); });
+  return out;
+}
+function noticeAction(kind){
+  if(kind==="resend") return h("button",{class:"mini",text:"再送",onclick:function(e){
+    e.stopPropagation();
+    persist().then(function(r){ if(r==="ok") OPS.save([]); render(); });
+  }});
+  if(kind==="unseed") return h("button",{class:"mini",text:"サンプルを削除",onclick:function(e){
+    e.stopPropagation();
+    STATE.rows=STATE.rows.filter(function(r){ return r.month!==monthOf(TODAY); });
+    STATE.seeded=false; SELECTED=null; POP=false;
+    render(); persist().then(render);
+  }});
+  return null;
+}
+function topBar(b){
+  var bar=h("div",{class:"bar "+(b.lv==="late"?"late":"warn"),role:"status"});
+  bar.appendChild(ic(b.lv==="late"?"alertCircle":"alert",18));
+  bar.appendChild(h("span",{class:"grow",text:b.t}));
+  var a=noticeAction(b.act); if(a) bar.appendChild(a);
+  return bar;
+}
+function noticePop(ns){
+  var p=h("div",{class:"pop",role:"dialog","aria-label":"お知らせ",
+    onclick:function(e){ e.stopPropagation(); }});
+  ns.forEach(function(n){
+    var it=h("div",{class:"it "+(n.lv==="ok"?"":n.lv)});
+    it.appendChild(ic(n.lv==="late"?"alertCircle":n.lv==="warn"?"alert":"info",16));
+    it.appendChild(h("span",{class:"grow",text:n.t}));
+    var a=noticeAction(n.act); if(a) it.appendChild(a);
+    p.appendChild(it);
+  });
+  return p;
+}
+
+/* ---------------------------------------------------------------
+   サイドバー
+   --------------------------------------------------------------- */
+function Sidebar(){
+  var side=h("div",{class:"side"});
+
+  var mark=h("div",{class:"mark"});
+  var pl=svgEl("svg",{viewBox:"0 0 24 24",width:"15",height:"15","aria-hidden":"true"});
+  pl.innerHTML='<path d="M7 4.5 19 12 7 19.5Z" fill="currentColor"/>';
+  mark.appendChild(pl);
+  side.appendChild(h("div",{class:"brand"},[mark,
+    h("div",{},[h("b",{text:"編集進行ボード"}), h("span",{text:"メイクリード"})])]));
+
+  var av=h("div",{class:"avatar",text:(ME||"？").slice(0,1),"aria-hidden":"true"});
+  av.style.background=tileBg(ME||"?");
+  side.appendChild(h("button",{class:"uprof","aria-label":"利用者を切り替える",onclick:openWho},[
+    av,
+    h("div",{class:"un"},[h("b",{text:ME||"未選択"}), h("span",{text:myRole()})]),
+    ic("chevronDown",16)]));
+
+  /* ---- ナビゲーション（§14）。ルートは3群に分ける ----
+     制作＝毎日開く画面 / 管理＝社員だけの画面 / 要対応＝件数から入る導線。
+     未実装ルートは disabled＋「準備中」で置き、空ページへは遷移させない */
+  /* 画面を移ったら選択も解除する。その画面に出ていない本が右パネルに
+     残っていると、どれを操作しているのか分からなくなる */
+  function goto(v){ return function(){
+    if(VIEW!==v) SELECTED=null;
+    VIEW=v; POP=false; DRAWER=false; render(); }; }
+  /* plain=true は「要対応」側の導線。同じ行き先でも現在地の強調は
+     ルート側（制作・管理）だけに出す。二重に光ると現在地が読めない */
+  function navBtn(label, iconName, view, badge, plain){
+    var b=h("button",{"aria-current":(!plain&&VIEW===view)?"page":null,onclick:goto(view)},
+      [ic(iconName,18), h("span",{text:label})]);
+    if(badge!=null) b.appendChild(h("span",{class:"badge"+(badge?"":" dim"),text:String(badge)}));
+    return b;
+  }
+  function soonBtn(label, iconName){
+    var b=h("button",{disabled:true,title:label+"：準備中（この画面はまだありません）"},
+      [ic(iconName,18), h("span",{text:label})]);
+    b.appendChild(h("span",{class:"soon",text:"準備中"}));
+    return b;
+  }
+  function group(title, kids){
+    var ks=kids.filter(function(k){ return !!k; });
+    if(!ks.length) return;
+    side.appendChild(h("div",{class:"sidesec",text:title}));
+    var g=h("div",{class:"nav"});
+    ks.forEach(function(k){ g.appendChild(k); });
+    side.appendChild(g);
+  }
+
+  var top=h("div",{class:"nav"});
+  top.appendChild(navBtn("ホーム","dashboard","home"));
+  side.appendChild(top);
+
+  var s=summary();
+  group("制作", [
+    hasView("today") ? navBtn("今日","clock","today") : null,
+    hasView("list")  ? navBtn("動画一覧","film","list") : null,
+    hasView("track") ? navBtn("進行トラック","activity","track") : null
+  ]);
+  group("管理", [
+    hasView("load") ? navBtn("チーム負荷","gauge","load") : null,
+    /* 将来ルートは §14.2 の候補のうち2つだけ置く。
+       サイドバーの縦を食う割に押せないため、要望の多い2画面に絞った */
+    myRole()==="社員" ? soonBtn("契約","folder") : null,
+    myRole()==="社員" ? soonBtn("カレンダー","calendar") : null
+  ]);
+  /* 要対応：実データで数え、押すと実際にその画面へ移動する */
+  group("要対応", [
+    hasView("today") ? navBtn("処理待ち","inbox","today", s.today, true) : null,
+    /* 投稿待ちは専用画面（§13）。他に入口が無いので現在地の強調はこちらに出す */
+    hasView("pending") ? navBtn("投稿待ち","upload","pending", s.waiting) : null,
+    hasView("track") ? navBtn("リスク","alert","track", s.risk, true) : null
+  ]);
+
+  var foot=h("div",{class:"sidefoot"});
+  foot.appendChild(h("div",{class:"sidehr"}));
+  var fn=h("div",{class:"nav",style:"margin-top:8px"});
+  if(myRole()==="社員") fn.appendChild(h("button",{onclick:openGenerate},[ic("plus",18), h("span",{text:"翌月を生成"})]));
+  fn.appendChild(h("button",{onclick:openBackup},[ic("save",18), h("span",{text:"退避（コピー用）"})]));
+  fn.appendChild(h("button",{onclick:function(){ showToast("困ったときは なつみさん・友美さんへ。"); }},
+    [ic("help",18), h("span",{text:"ヘルプ"})]));
+  foot.appendChild(fn);
+  side.appendChild(foot);
+  return side;
+}
+
+/* ---------------------------------------------------------------
+   ヘッダー
+   --------------------------------------------------------------- */
+function Header(){
+  var top=h("div",{class:"topbar"});
+  /* 挨拶はホームだけ。他ビューでは各カードのH3が見出しになる */
+  if(VIEW==="home"){
+    top.appendChild(h("div",{class:"greet"},[
+      h("h1",{text:(ME ? ME+"さん" : "みなさん")+"、こんにちは！"}),
+      h("p",{text:"今日も素晴らしい作品を届けましょう。"})]));
+  }
+  top.appendChild(h("div",{class:"spacer"}));
+
+  var tb=h("div",{class:"toolbar"});
+  tb.appendChild(h("div",{class:"tbox"},[ic("calendar",16), h("span",{text:jpFull(TODAY)})]));
+
+  var months=monthList(), mi=months.indexOf(MONTH);
+  var mn=h("div",{class:"mnav"});
+  mn.appendChild(h("button",{class:"iconbtn","aria-label":"前の月",disabled:mi<=0,
+    onclick:function(){ MONTH=months[mi-1]; SELECTED=null; SELECTEDC=null; render(); }},[ic("chevronLeft",16)]));
+  mn.appendChild(h("b",{text:MONTH.replace("-","年")+"月"}));
+  mn.appendChild(h("button",{class:"iconbtn","aria-label":"次の月",disabled:mi>=months.length-1,
+    onclick:function(){ MONTH=months[mi+1]; SELECTED=null; SELECTEDC=null; render(); }},[ic("chevronRight",16)]));
+  tb.appendChild(mn);
+
+  var ns=notices(), bad=ns.filter(function(x){ return x.lv!=="ok"; }).length;
+  var rel=h("div",{class:"rel"});
+  rel.appendChild(h("button",{class:"chipbtn"+(bad?" warn":""),"aria-expanded":POP?"true":"false",
+    "aria-label":"お知らせ "+ns.length+"件",
+    onclick:function(e){ e.stopPropagation(); POP=!POP; render(); }},
+    [ic(bad?"alert":"info",16), h("span",{text:"お知らせ"}), h("span",{class:"n",text:String(ns.length)})]));
+  if(POP) rel.appendChild(noticePop(ns));
+  tb.appendChild(rel);
+
+
+  /* 最終更新と未同期は必ず並記する（片方だけだと「保存された」と誤読される） */
+  var stamp=h("div",{class:"stamp"});
+  stamp.appendChild(h("div",{text:"最終更新 "+(STATE.lastUpdated?fmtStamp(STATE.lastUpdated):"—")}));
+  stamp.appendChild(h("div",{text:"未同期 "+OPS.all().length+"件"}));
+  tb.appendChild(stamp);
+
+  top.appendChild(tb);
+  return top;
+}
+
+/* ---------------------------------------------------------------
+   全社サマリー KPI
+   --------------------------------------------------------------- */
+function kpiCard(cls, label, iconName, value, unit, subKids, progress){
+  var c=h("div",{class:"kpi "+cls});
+  c.appendChild(h("div",{class:"top"},[h("div",{class:"lab",text:label}), ic(iconName,20)]));
+  c.appendChild(h("div",{class:"val"},[h("span",{class:"n",text:String(value)}), h("span",{class:"u",text:unit})]));
+  var sub=h("div",{class:"sub"});
+  (subKids||[]).forEach(function(k){ sub.appendChild(typeof k==="string"?txt(k):k); });
+  c.appendChild(sub);
+  if(progress!=null){
+    var p=h("div",{class:"prog"}); var i=h("i"); i.style.width=Math.min(100,progress)+"%";
+    p.appendChild(i); c.appendChild(p);
+  }
+  return c;
+}
+function SummaryGrid(){
+  var s=summary();
+  var box=h("div");
+  box.appendChild(h("div",{class:"sect"},[
+    h("h2",{text:"全社サマリー"}),
+    h("span",{text:"（"+MONTH.replace("-","年")+"月・"+s.contracts+"契約）"})]));
+  var g=h("div",{class:"kpis"});
+  g.appendChild(kpiCard("k1","今月の投稿予定","calendar", s.planned,"本",
+    ["目標 "+s.target+"本・消化 "+pct(s.posted,s.target)+"%"], pct(s.posted,s.target)));
+  g.appendChild(kpiCard("k2","投稿済み","check", s.posted,"本",
+    ["未投稿 "+(s.planned-s.posted)+"本"]));
+  g.appendChild(kpiCard("k3","投稿待ち","upload", s.waiting,"本",
+    [ic("alert",15), "うち本日期限 "+s.dueToday+"本"]));
+  g.appendChild(kpiCard("k4","遅延","alertCircle", s.risk,"契約",
+    ["注意 "+s.warnC+"契約・全"+s.contracts+"契約"]));
+  g.appendChild(kpiCard("k5","本日の処理待ち","clock", s.today,"件",
+    ["確認・対応が必要です"]));
+  box.appendChild(g);
+  return box;
+}
+
+/* ---------------------------------------------------------------
+   My Tasks（ダークカード）
+   --------------------------------------------------------------- */
+function nextStatus(s){ var i=STATUSES.indexOf(s); return i<0||i>=STATUSES.length-1 ? null : STATUSES[i+1]; }
+function advance(r){
+  // commit() は applyOp で r.status を同期的に書き換えるため、
+  // 取り消し用の遷移元は「進める前」にここで確定させておく。
+  var from = r.status;
+  var to = nextStatus(from); if(!to) return;
+  var c = contractById(r.contractId) || {display:r.client};
+  var name = r.title || (c.display+" "+r.kind);
+  commit(newOp("status", r.id, {from:from, to:to, actor:ME, on:TODAY}));
+  showToast("「"+name+"」を"+to+"にしました", function(){
+    commit(newOp("status", r.id, {from:to, to:from, actor:ME}));
+  });
+}
+/* 全ビュー共通の選択。focusField を渡すと詳細パネルの該当入力へ寄せる（§9.6） */
+function selectRow(id, focusField){
+  SELECTED=id; DETAILTAB="detail"; POP=false;
+  if(narrow()) DRAWER=true;
+  render();
+  if(focusField){
+    var el=document.querySelector('.detail [data-f="'+focusField+'"]');
+    if(el){ el.focus(); if(el.select) el.select(); }
+  }
+}
+function taskRow(r){
+  var c=contractById(r.contractId)||{display:r.client,steps:4};
+  var sel=(SELECTED===r.id);
+  var row=h("div",{class:"trow",role:"option",tabindex:"0","aria-selected":sel?"true":"false",
+    onclick:function(){ selectRow(r.id); },
+    onkeydown:function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); selectRow(r.id); } }});
+  row.appendChild(tile(r.contractId, shortName(c), 56, 34, 12));
+  var mid=h("div",{class:"mid"});
+  mid.appendChild(h("div",{class:"ttl",text:r.title||"（タイトル未定）"}));
+  var sub=h("div",{class:"cli"});
+  sub.appendChild(sBadge(r.status, true));
+  sub.appendChild(h("span",{text:c.display+"・"+r.kind+"・"+(r.editor||"未割当")}));
+  mid.appendChild(sub);
+  row.appendChild(mid);
+
+  var od=(r.planned<TODAY);
+  var due=h("div",{class:"due"+(od?" od":"")});
+  due.appendChild(h("b",{text:(r.planned===TODAY?"今日 ":"")+jpDate(r.planned)}));
+  due.appendChild(h("span",{text:"投稿予定"}));
+  row.appendChild(due);
+
+  var p=prioOf(r);
+  row.appendChild(h("span",{class:"prio "+p, text:prioLabel(p), title:"優先度 "+prioLabel(p)}));
+
+  var nx=nextStatus(r.status), pend={}; OPS.all().forEach(function(o){ pend[o.target]=1; });
+  if(nx){
+    row.appendChild(h("button",{class:"cta",disabled:!writable(),text:ACTION_LABEL[r.status],
+      onclick:function(e){ e.stopPropagation(); advance(r); }}));
+  } else {
+    var sp=h("span"); sp.style.cssText="width:114px;flex:none"; row.appendChild(sp);
+  }
+  if(pend[r.id]) row.appendChild(h("span",{class:"syncing",text:"同期中"}));
+  return row;
+}
+function MyTasksCard(){
+  var card=h("div",{class:"dark"});
+  card.appendChild(h("div",{class:"hd"},[
+    h("h3",{text:"My Tasks"}),
+    hasView("list") ? h("button",{class:"linkbtn",onclick:function(){ VIEW="list"; render(); }},
+      [h("span",{text:"タスク一覧へ"}), ic("arrowRight",14)]) : null]));
+
+  var tabs=h("div",{class:"tabs",role:"tablist"});
+  [["all","すべて"],["today","今日やること"],["urgent","期限間近"]].forEach(function(t){
+    var n=myTasks(t[0]).length;
+    tabs.appendChild(h("button",{role:"tab","aria-selected":TASKTAB===t[0]?"true":"false",
+      onclick:function(){ TASKTAB=t[0]; render(); }},
+      [h("span",{text:t[1]}), h("span",{class:"c",text:String(n)})]));
+  });
+  card.appendChild(tabs);
+
+  var rows=myTasks(TASKTAB);
+  if(!rows.length){
+    card.appendChild(h("div",{class:"emptybox"},[
+      h("b",{text:TASKTAB==="all"?"未完了のタスクはありません":"該当するタスクはありません"}),
+      h("span",{text:"すべて順調です。"})]));
+  } else {
+    var sc=h("div",{class:"taskscroll",role:"listbox","aria-label":"自分のタスク"});
+    rows.forEach(function(r){ sc.appendChild(taskRow(r)); });
+    card.appendChild(sc);
+  }
+  card.appendChild(h("div",{class:"darkfoot"},[
+    h("span",{text:"表示 "+rows.length+"本　／　今月の未完了 "+myTasks("all").length+"本"}),
+    h("span",{text:writable()?"":"更新できません"})]));
+  return card;
+}
+
+/* ---------------------------------------------------------------
+   契約別 進捗サマリー
+   --------------------------------------------------------------- */
+function gauge(p, tok){
+  var box=h("div",{class:"gauge"});
+  var C=2*Math.PI*22;
+  var s=svgEl("svg",{viewBox:"0 0 52 52",width:"52",height:"52","aria-hidden":"true"});
+  var bg=svgEl("circle",{cx:"26",cy:"26",r:"22",fill:"none","stroke-width":"5"});
+  bg.style.stroke="#eef2f7";
+  var fg=svgEl("circle",{cx:"26",cy:"26",r:"22",fill:"none","stroke-width":"5","stroke-linecap":"round",
+    "stroke-dasharray":C.toFixed(1),
+    "stroke-dashoffset":(C*(1-Math.max(0,Math.min(1,p/100)))).toFixed(1),
+    transform:"rotate(-90 26 26)"});
+  fg.style.stroke="var("+tok+")";
+  s.appendChild(bg); s.appendChild(fg);
+  box.appendChild(s);
+  box.appendChild(h("div",{class:"pc",text:p+"%"}));
+  return box;
+}
+function cnums(need, post, wait, late){
+  var g=h("div",{class:"cnums"});
+  function cell(k, v, cls){
+    var d=h("div");
+    d.appendChild(h("span",{class:"k",text:k}));
+    var s=h("span",{class:"v "+(v===0&&cls!=="v-need"?"v-zero":cls)});
+    s.appendChild(txt(String(v))); s.appendChild(h("u",{text:"本"}));
+    d.appendChild(s); g.appendChild(d);
+  }
+  cell("必要本数",need,"v-need"); cell("投稿済み",post,"v-post");
+  cell("投稿待ち",wait,"v-wait"); cell("遅延",late,"v-late");
+  return g;
+}
+function contractRow(c){
+  var rs=rowsByContract(c.id), j=judge(rs,TODAY), p=pct(j.done,c.count);
+  var tok = j.level==="late" ? "--late" : j.level==="warn" ? "--warn" : "--ok";
+  var row=h("button",{class:"crow"+(j.level==="ok"?"":" "+j.level),
+    "aria-selected":SELECTEDC===c.id?"true":"false",
+    title:c.client+" "+c.kind,
+    "aria-label":c.client+" "+c.kind+"：必要"+c.count+"本、投稿済"+j.done+"本、投稿待ち"+j.ready+"本、遅延"+j.late+"本",
+    onclick:function(){
+      SELECTEDC=c.id; POP=false;
+      var cand=rs.filter(function(r){ return r.status!=="投稿済"; })
+                 .sort(function(a,b){ return a.planned<b.planned?-1:1; })[0];
+      if(cand){ SELECTED=cand.id; DETAILTAB="detail"; if(narrow()) DRAWER=true; }
+      render();
+    }});
+  row.appendChild(h("div",{class:"nm"},[
+    h("b",{text:c.display}),
+    h("span",{text:(+MONTH.slice(5,7))+"月・"+c.kind})]));
+  row.appendChild(gauge(p, tok));
+  row.appendChild(cnums(c.count, j.done, j.ready, j.late));
+  return row;
+}
+function ContractPanel(){
+  var card=h("div",{class:"card"});
+  var hd=h("div",{class:"hd"});
+  hd.appendChild(h("h3",{text:"契約別 進捗状況"}));
+  var sp=h("div"); sp.style.flex="1"; hd.appendChild(sp);
+  if(hasView("track")) hd.appendChild(h("button",{class:"ghostbtn",
+    onclick:function(){ VIEW="track"; render(); },text:"進行トラックへ"}));
+  card.appendChild(hd);
+
+  var sc=h("div",{class:"cscroll"});
+  var T={need:0,post:0,wait:0,late:0};
+  contractsOf().forEach(function(c){
+    var j=judge(rowsByContract(c.id),TODAY);
+    T.need+=c.count; T.post+=j.done; T.wait+=j.ready; T.late+=j.late;
+    sc.appendChild(contractRow(c));
+  });
+  card.appendChild(sc);
+
+  var tot=h("div",{class:"crow total"});
+  tot.appendChild(h("div",{class:"nm"},[h("b",{text:"合計 / 平均"}), h("span",{text:contractsOf().length+"契約"})]));
+  tot.appendChild(gauge(pct(T.post,T.need),"--ok"));
+  tot.appendChild(cnums(T.need,T.post,T.wait,T.late));
+  card.appendChild(tot);
+
+  return card;
+}
+
+/* ---------------------------------------------------------------
+   工程カンバン（6列。投稿待ちだけ強く出す）
+   --------------------------------------------------------------- */
+function bizBetween(list,a,b){
+  if(!a||!b||a>=b) return 0;
+  var i=list.indexOf(a), j=list.indexOf(b);
+  if(i<0){ i=0; while(i<list.length && list[i]<a) i++; }
+  if(j<0){ j=0; while(j<list.length && list[j]<b) j++; }
+  return Math.max(0, j-i);
+}
+function stallAlerts(){
+  var range=bizRange(monthMinus(MONTH,1),3), alerts=[];
+  rowsOfMonth().forEach(function(r){
+    if(r.status!=="確認中") return;
+    var c=contractById(r.contractId); if(!c) return;
+    var th = c.steps===4 ? 5 : 2;
+    var since = r.trans && r.trans["確認中"] ? fromUTC(r.trans["確認中"]) : r.due;
+    var d = bizBetween(range, since, TODAY);
+    if(d>=th) alerts.push({r:r,c:c,d:d,th:th});
+  });
+  return alerts.sort(function(a,b){ return b.d-a.d; });
+}
+function Kanban(){
+  var box=h("div");
+  box.appendChild(h("div",{class:"sect"},[h("h2",{text:"工程カンバン"}),h("span",{text:"（全体・全契約の合算）"})]));
+  var rows=rowsOfMonth(), by={};
+  STATUSES.forEach(function(s){ by[s]=[]; });
+  rows.forEach(function(r){ (by[r.status]=by[r.status]||[]).push(r); });
+
+  var kan=h("div",{class:"kan"});
+  STATUSES.forEach(function(st){
+    var list=by[st]||[], m=sv(st), hot=(st==="投稿待ち" && list.length>0);
+    var col=h("div",{class:"kcol"+(hot?" hot":"")});
+    if(hot) col.appendChild(h("div",{class:"kflag",text:"要対応！"}));
+    var kh=h("div",{class:"kh"});
+    kh.style.background="var("+m.tint+")"; kh.style.color="var("+m.ink+")";
+    kh.appendChild(dot(m.v,8)); kh.appendChild(h("span",{text:st}));
+    col.appendChild(kh);
+    var kb=h("div",{class:"kb"});
+    var n=h("div",{class:"kn"}); n.appendChild(txt(String(list.length))); n.appendChild(h("u",{text:"本"}));
+    kb.appendChild(n);
+    /* 6列になった分だけタイルを小さく・少なくする。
+       1440px でも折り返しが2段までに収まる寸法（3枚＋残数） */
+    var tiles=h("div",{class:"ktiles"});
+    list.slice(0,3).forEach(function(r){
+      var c=contractById(r.contractId)||{display:r.client};
+      tiles.appendChild(tile(r.contractId, shortName(c), 30, 22, 11));
+    });
+    if(list.length>3){
+      var mo=h("div",{class:"kmore",text:"+"+(list.length-3)});
+      mo.style.width="30px"; mo.style.height="22px"; tiles.appendChild(mo);
+    }
+    kb.appendChild(tiles);
+    if(st==="確認中"){
+      var al=stallAlerts();
+      if(al.length){
+        var note=h("div",{class:"knote"});
+        note.appendChild(ic("alert",13));
+        note.appendChild(h("span",{text:"閾値超 "+al.length+"本（最長"+al[0].d+"営業日）",
+          title:al.slice(0,6).map(function(a){ return a.c.display+" "+a.d+"営業日"; }).join("・")}));
+        kb.appendChild(note);
+      }
+    }
+    col.appendChild(kb);
+    kan.appendChild(col);
+  });
+  box.appendChild(kan);
+
+  return box;
+}
+
+/* ---------------------------------------------------------------
+   右パネル（動画詳細）
+   --------------------------------------------------------------- */
+function currentRow(){
+  var rs=rowsOfMonth();
+  var r = SELECTED ? rs.filter(function(x){ return x.id===SELECTED; })[0] : null;
+  /* ホームは My Tasks の先頭を既定選択にする。他ビューは選ぶまで空のまま
+     （見えていない行が勝手に選ばれていると、どこを操作しているか分からない） */
+  if(!r && VIEW==="home"){ r = myTasks(TASKTAB)[0] || myTasks("all")[0] || null; if(r) SELECTED=r.id; }
+  return r;
+}
+function field(r, label, f, type, ph){
+  var w=h("label",{class:"field"});
+  w.appendChild(h("span",{text:label}));
+  var draft=DRAFT.get(r.id,f);
+  var v = (draft!=null ? draft : (r[f]||""));
+  var el=h(type==="area"?"textarea":"input",{placeholder:ph||"",
+    oninput:function(e){ DRAFT.set(r.id,f,e.target.value); },
+    onchange:function(e){
+      DRAFT.clear(r.id,f);
+      commit(newOp("field", r.id, {field:f, value:e.target.value}));
+    }});
+  if(type!=="area") el.type="text";
+  if(type==="area") el.rows=3;
+  el.setAttribute("data-f", f);
+  el.value=v;                                   /* textarea は value 属性では入らない */
+  if(!writable()) el.disabled=true;
+  w.appendChild(el);
+  return w;
+}
+function timeline(r){
+  var ul=h("ul",{class:"tl"});
+  var cur=STATUSES.indexOf(r.status);
+  STATUSES.forEach(function(st,i){
+    var t = r.trans && r.trans[st];
+    var cls = st===r.status ? "cur" : (t || i<cur) ? "done" : "todo";
+    var li=h("li",{class:cls});
+    li.appendChild(h("div",{class:"dot"}));
+    var b=h("div");
+    b.appendChild(h("div",{class:"lb",text:st}));
+    b.appendChild(h("div",{class:"mt",
+      text: t ? (fmtStamp(t) + (st===r.status && r.actor ? "　"+r.actor : "")) : "—"}));
+    li.appendChild(b);
+    ul.appendChild(li);
+  });
+  return ul;
+}
+function DetailPanel(){
+  var d=h("div",{class:"detail"+(DRAWER?" open":""),"aria-label":"動画詳細"});
+  var dh=h("div",{class:"dh"});
+  dh.appendChild(h("h3",{text:"動画詳細"}));
+  dh.appendChild(h("button",{class:"iconbtn","aria-label":"詳細を閉じる",
+    onclick:function(){ DRAWER=false; SELECTED=null; render(); }},[ic("x",18)]));
+  d.appendChild(dh);
+
+  var r=currentRow();
+  if(!r){
+    d.appendChild(h("div",{class:"dsec"},[
+      h("p",{class:"sub",text:"一覧の行・カード・トラックのマスを選ぶと、ここに詳細と操作が出ます。"})]));
+    return d;
+  }
+  var c=contractById(r.contractId)||{display:r.client,steps:4,poster:"-"};
+
+  /* プレビュー・基本情報 */
+  var s1=h("div",{class:"dsec"});
+  var pv=h("div",{class:"dprev",text:shortName(c)});
+  pv.style.background=tileBg(r.contractId);
+  pv.appendChild(sBadge(r.status, true));
+  s1.appendChild(pv);
+  s1.appendChild(h("div",{class:"dttl",text:r.title||"（タイトル未定）"}));
+  s1.appendChild(h("div",{class:"dcli",text:c.display+"　/　"+r.kind}));
+  var kv=h("div",{class:"kv"});
+  function kvrow(k,v,cls){ kv.appendChild(h("div",{class:"k",text:k})); kv.appendChild(h("div",{class:"v "+(cls||""),text:v})); }
+  kvrow("行ID", r.id);
+  kvrow("担当", r.editor||"未割当");
+  kvrow("投稿予定", jpDate(r.planned)+(r.dateLocked?"（固定）":""), r.planned<TODAY&&r.status!=="投稿済"?"od":"");
+  kvrow("編集完了希望", jpDate(r.due)+(r.squeezed?"（圧縮）":""));
+  kvrow("工程", c.steps===4?"4ステップ（先方確認あり）":"2ステップ（先方確認なし）");
+  kvrow("投稿担当", c.poster||"-");
+  s1.appendChild(kv);
+  d.appendChild(s1);
+
+  /* Google Drive */
+  var s2=h("div",{class:"dsec"});
+  var url=String(r.drive||"").trim();
+  var ok = /^https?:\/\//i.test(url);
+  if(ok){
+    var a=h("a",{class:"drive",href:url,target:"_blank",rel:"noopener noreferrer"});
+    a.appendChild(driveMark(20));
+    a.appendChild(h("span",{class:"grow",text:"Google Drive フォルダを開く"}));
+    a.appendChild(ic("externalLink",16));
+    s2.appendChild(a);
+  } else {
+    var b=h("button",{class:"drive",disabled:true});
+    b.appendChild(driveMark(20));
+    b.appendChild(h("span",{class:"grow",text:"Google Drive フォルダを開く"}));
+    s2.appendChild(b);
+    s2.appendChild(h("p",{class:"helper",text:"Google Drive フォルダが未設定です。「詳細」タブのURL欄に貼り付けてください。"}));
+  }
+  d.appendChild(s2);
+
+  /* タブ */
+  var tabs=h("div",{class:"dtabs",role:"tablist"});
+  [["detail","詳細"],["history","工程履歴"],["post","投稿記録"]].forEach(function(t){
+    tabs.appendChild(h("button",{role:"tab","aria-selected":DETAILTAB===t[0]?"true":"false",
+      text:t[1], onclick:function(){ DETAILTAB=t[0]; render(); }}));
+  });
+  d.appendChild(tabs);
+
+  var body=h("div",{class:"dsec"});
+  if(DETAILTAB==="detail"){
+    body.appendChild(field(r,"タイトル","title","text","台本から生成 / 手入力"));
+    var lb=h("label",{class:"field"});
+    lb.appendChild(h("span",{text:"担当編集者"}));
+    var sel=h("select",{disabled:!writable(),
+      onchange:function(e){ commit(newOp("field",r.id,{field:"editor",value:e.target.value})); }});
+    [""].concat(Object.keys(STAFF_MAP)).forEach(function(n){
+      sel.appendChild(h("option",{value:n,text:n||"未割当",selected:r.editor===n?"selected":null}));
+    });
+    sel.value=r.editor||"";
+    lb.appendChild(sel); body.appendChild(lb);
+    body.appendChild(field(r,"Google Drive フォルダURL","drive","text","https://drive.google.com/..."));
+    body.appendChild(field(r,"参考動画URL","url","text",""));
+    body.appendChild(field(r,"備考／ブロッカー","note","area",""));
+  } else if(DETAILTAB==="history"){
+    body.appendChild(timeline(r));
+  } else {
+    var kv2=h("div",{class:"kv"}); kv2.style.marginTop="0";
+    function k2(k,v){ kv2.appendChild(h("div",{class:"k",text:k})); kv2.appendChild(h("div",{class:"v",text:v})); }
+    k2("投稿完了日", r.postedAt ? jpDate(r.postedAt) : "未投稿");
+    k2("投稿予定日", jpDate(r.planned));
+    k2("編集完了希望", jpDate(r.due));
+    k2("対象月", r.month);
+    k2("最終操作者", r.actor||"—");
+    k2("日付固定", r.dateLocked?"あり":"なし");
+    k2("圧縮フラグ", r.squeezed?"あり（リードタイム未確保）":"なし");
+    body.appendChild(kv2);
+  }
+  d.appendChild(body);
+
+  /* 操作 */
+  var foot=h("div",{class:"dfoot"});
+  var prev=STATUSES[STATUSES.indexOf(r.status)-1];
+  var cur=r.status;
+  if(prev) foot.appendChild(h("button",{class:"ghostbtn",disabled:!writable(),text:"1段戻す",
+    title:"1段戻す（"+prev+"）",
+    onclick:function(){ commit(newOp("status",r.id,{from:cur,to:prev,actor:ME})); }}));
+  var nx=nextStatus(r.status);
+  if(nx) foot.appendChild(h("button",{class:"cta",disabled:!writable(),text:ACTION_LABEL[r.status],
+    onclick:function(){ advance(r); }}));
+  else foot.appendChild(h("div",{class:"helper",text:"この動画は投稿済みです。"}));
+  d.appendChild(foot);
+  return d;
+}
+
+/* =====================================================================
+   既存ビュー（動画一覧 / 今日 / 進行トラック / 負荷）
+   ===================================================================== */
+function sectCard(title, sub){
+  var card=h("div",{class:"card"});
+  card.appendChild(h("div",{class:"hd"},[h("h3",{text:title})]));
+  var bd=h("div",{class:"bd"});
+  if(sub) bd.appendChild(h("p",{class:"sub",text:sub}));
+  card.appendChild(bd);
+  return {card:card, bd:bd};
+}
+
+/* ---- ⑦ 動画一覧（§9：状況把握 → 優先対応 → 検索 → 全件） ---- */
+
+/** 自分に関係する行。編集スタッフは自分の担当と投稿担当だけを見る */
+function scopeRows(){
+  var rows=rowsOfMonth();
+  if(STAFF_MAP[ME]) rows=rows.filter(function(r){
+    return r.editor===ME || (contractById(r.contractId)||{}).poster===ME; });
+  return rows;
+}
+
+/* KPI はフィルタではなく月全体から数える（絞り込むと状況把握が壊れる） */
+function listKpiStrip(){
+  var rows=rowsOfMonth();
+  var all=rows.length, posted=0, dueToday=0, waiting=0, late=0;
+  rows.forEach(function(r){
+    if(r.status==="投稿済"){ posted++; return; }
+    if(r.status==="投稿待ち") waiting++;
+    if(r.planned<TODAY) late++;
+    else if(r.planned===TODAY) dueToday++;
+  });
+  var mine=scopeRows().filter(function(r){ return r.status!=="投稿済"; }).length;
+  var staff=!!STAFF_MAP[ME];
+  var g=h("div",{class:"kpis"});
+  g.appendChild(kpiCard("k1","全動画","film", all,"本",
+    ["投稿済 "+posted+"本・残り "+(all-posted)+"本"], pct(posted,all)));
+  g.appendChild(kpiCard("k6", staff?"自分の未完了":"チームの未完了","clock", mine,"本",
+    [staff?"自分の担当分のみ":"編集スタッフ全員の未完了"]));
+  g.appendChild(kpiCard("k5","本日締切","calendar", dueToday,"本",
+    ["投稿予定日が今日の未投稿"]));
+  g.appendChild(kpiCard("k3","投稿待ち","upload", waiting,"本",
+    [ic("alert",15),"投稿すれば完了します"]));
+  g.appendChild(kpiCard("k4","遅延","alertCircle", late,"本",
+    ["投稿予定日を過ぎた未投稿"]));
+  return g;
+}
+
+/* 優先対応の選抜（§9.4）。理由を必ず1行添える。遅延→本日締切→投稿待ちの滞留→未入力 */
+function priorityPicks(){
+  var out=[], now=Date.now();
+  scopeRows().forEach(function(r){
+    if(r.status==="投稿済") return;
+    if(r.planned<TODAY){
+      out.push({r:r, lv:"late", tone:"late", rank:0, k:daysSince(r.planned),
+        why:"投稿予定 "+jpDate(r.planned)+" を "+daysSince(r.planned)+"日超過"});
+      return;
+    }
+    if(r.planned===TODAY){
+      out.push({r:r, lv:"today", tone:"warn", rank:1, k:0, why:"今日が投稿予定日"});
+      return;
+    }
+    if(r.status==="投稿待ち"){
+      var t=r.trans && r.trans["投稿待ち"];
+      var hrs=t ? Math.floor((now-t)/3600000) : 0;
+      if(hrs>=48){
+        out.push({r:r, lv:"wait", tone:"late", rank:2, k:hrs,
+          why:"投稿待ちのまま "+Math.floor(hrs/24)+"日"});
+        return;
+      }
+    }
+    if(!r.title && r.due<=addDays(TODAY,3)){
+      out.push({r:r, lv:"info", tone:"info", rank:3, k:0,
+        why:"タイトル未入力（編集完了希望 "+jpDate(r.due)+"）"});
+    }
+  });
+  out.sort(function(a,b){ return (a.rank-b.rank) || (b.k-a.k); });
+  return out.slice(0,3);
+}
+function priorityCard(p){
+  var r=p.r, c=contractById(r.contractId)||{display:r.client,poster:"-"};
+  var sel=(SELECTED===r.id);
+  var card=h("div",{class:"pcard lv-"+p.lv,role:"option",tabindex:"0","aria-selected":sel?"true":"false",
+    onclick:function(){ selectRow(r.id); },
+    onkeydown:function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); selectRow(r.id); } }});
+  var ph=h("div",{class:"ph"});
+  ph.appendChild(tile(r.contractId, shortName(c), 32, 24, 11));
+  ph.appendChild(h("span",{class:"nm",text:c.display+"　"+r.kind}));
+  ph.appendChild(sBadge(r.status));
+  card.appendChild(ph);
+  card.appendChild(h("div",{class:"pt",text:r.title||"（タイトル未定）"}));
+  var why=h("div",{class:"why "+p.tone});
+  why.appendChild(ic(p.tone==="info"?"info":"alert",14));
+  why.appendChild(h("span",{text:p.why}));
+  card.appendChild(why);
+  var kv=h("div",{class:"pkv"});
+  [["投稿予定",jpDate(r.planned)],["編集完了希望",jpDate(r.due)],
+   ["担当",r.editor||"未割当"],["投稿担当",c.poster||"-"]].forEach(function(x){
+    kv.appendChild(h("div",{},[x[0]+" ", h("b",{text:x[1]})]));
+  });
+  card.appendChild(kv);
+  if(nextStatus(r.status)){
+    card.appendChild(h("button",{class:"cta",disabled:!writable(),text:ACTION_LABEL[r.status],
+      onclick:function(e){ e.stopPropagation(); advance(r); }}));
+  }
+  return card;
+}
+function PriorityVideos(){
+  var box=h("div");
+  box.appendChild(h("div",{class:"sect"},[
+    h("h2",{text:"優先対応"}), h("span",{text:"（今すぐ確認したい動画）"})]));
+  var ps=priorityPicks();
+  if(!ps.length){
+    var card=h("div",{class:"card"});
+    card.appendChild(h("div",{class:"bd",style:"padding:16px 18px"},[
+      h("p",{class:"sub",style:"margin:0",
+        text:"いま優先対応が必要な動画はありません。遅延・本日締切・投稿待ちの滞留が出ると、ここに最大3本まで並びます。"})]));
+    box.appendChild(card);
+    return box;
+  }
+  var g=h("div",{class:"pcards",role:"listbox","aria-label":"優先対応の動画"});
+  ps.forEach(function(p){ g.appendChild(priorityCard(p)); });
+  box.appendChild(g);
+  return box;
+}
+
+/* フィルタ（§9.5）。順番は 担当 → ステータス → クライアント → 検索 → 並び替え */
+function listFilterBar(){
+  var f=h("div",{class:"filters"});
+  var selE=h("select",{"aria-label":"担当",onchange:function(e){ FILTER.editor=e.target.value; render(); }});
+  [["__me__","自分の担当"],["__all__","全員"]].concat(Object.keys(STAFF_MAP).map(function(n){return [n,n]}))
+    .forEach(function(o){ selE.appendChild(h("option",{value:o[0],text:o[1]})); });
+  selE.value=FILTER.editor;
+  var selS=h("select",{"aria-label":"ステータス",onchange:function(e){ FILTER.status=e.target.value; render(); }});
+  [["open","未完了"],["all","すべて"]].concat(STATUSES.map(function(x){return [x,x]}))
+    .forEach(function(o){ selS.appendChild(h("option",{value:o[0],text:o[1]})); });
+  selS.value=FILTER.status;
+  var selC=h("select",{"aria-label":"クライアント",onchange:function(e){ FILTER.client=e.target.value; render(); }});
+  selC.appendChild(h("option",{value:"__all__",text:"全クライアント"}));
+  var seen={};
+  rowsOfMonth().forEach(function(r){
+    if(seen[r.contractId]) return; seen[r.contractId]=1;
+    var c=contractById(r.contractId)||{display:r.client};
+    selC.appendChild(h("option",{value:r.contractId,text:c.display+"（"+r.kind+"）"}));
+  });
+  selC.value=FILTER.client;
+  var q=h("input",{type:"text","aria-label":"検索",placeholder:"クライアント・タイトル・担当",
+    oninput:function(e){ FILTER.q=e.target.value; renderListOnly(); }});
+  q.value=FILTER.q;
+  var selO=h("select",{"aria-label":"並び替え",onchange:function(e){ FILTER.sort=e.target.value; render(); }});
+  [["planned","投稿予定が近い順"],["delay","遅延が大きい順"],["due","編集完了希望が近い順"],["client","クライアント順"]]
+    .forEach(function(o){ selO.appendChild(h("option",{value:o[0],text:o[1]})); });
+  selO.value=FILTER.sort;
+  f.appendChild(selE); f.appendChild(selS); f.appendChild(selC); f.appendChild(q); f.appendChild(selO);
+  return f;
+}
+function panelList(){
+  var box=h("div");
+  box.appendChild(h("div",{class:"sect"},[
+    h("h2",{text:"動画一覧"}),
+    h("span",{text:"（"+MONTH.replace("-","年")+"月・1行＝動画1本。行を押すと右に詳細と操作が出ます）"})]));
+  box.appendChild(listKpiStrip());
+  box.appendChild(PriorityVideos());
+  var s=sectCard("全動画リスト");
+  s.bd.appendChild(listFilterBar());
+  var wrap=h("div",{class:"listwrap",id:"listwrap"});
+  wrap.appendChild(listTable());
+  s.bd.appendChild(wrap);
+  box.appendChild(s.card);
+  return box;
+}
+function filteredRows(){
+  var rows=rowsOfMonth().slice();
+  if(FILTER.editor==="__me__" && STAFF_MAP[ME]) rows=rows.filter(function(r){return r.editor===ME});
+  else if(FILTER.editor!=="__me__" && FILTER.editor!=="__all__") rows=rows.filter(function(r){return r.editor===FILTER.editor});
+  if(FILTER.status==="open") rows=rows.filter(function(r){return r.status!=="投稿済"});
+  else if(FILTER.status!=="all") rows=rows.filter(function(r){return r.status===FILTER.status});
+  if(FILTER.client!=="__all__") rows=rows.filter(function(r){ return r.contractId===FILTER.client; });
+  if(FILTER.q){
+    var qq=FILTER.q;
+    rows=rows.filter(function(r){ var c=contractById(r.contractId);
+      return (c&&(c.display.indexOf(qq)>=0||c.client.indexOf(qq)>=0))
+          || (r.title||"").indexOf(qq)>=0 || (r.editor||"").indexOf(qq)>=0; });
+  }
+  var byPlanned=function(a,b){ return a.planned<b.planned?-1:a.planned>b.planned?1:(a.client<b.client?-1:1); };
+  if(FILTER.sort==="due") rows.sort(function(a,b){ return a.due<b.due?-1:a.due>b.due?1:byPlanned(a,b); });
+  else if(FILTER.sort==="client") rows.sort(function(a,b){
+    var ca=(contractById(a.contractId)||{}).display||a.client, cb=(contractById(b.contractId)||{}).display||b.client;
+    return ca<cb?-1:ca>cb?1:byPlanned(a,b); });
+  else if(FILTER.sort==="delay") rows.sort(function(a,b){
+    var la=(a.status!=="投稿済"&&a.planned<TODAY)?daysSince(a.planned):-1;
+    var lb=(b.status!=="投稿済"&&b.planned<TODAY)?daysSince(b.planned):-1;
+    return (lb-la) || byPlanned(a,b); });
+  else rows.sort(byPlanned);
+  return rows;
+}
+function listTable(){
+  var rows=filteredRows();
+  var t=h("table",{class:"list"});
+  var hr=h("tr");
+  ["クライアント","タイトル／種別","担当","投稿予定","編集完了希望","状態",""].forEach(function(x){ hr.appendChild(h("th",{text:x})); });
+  t.appendChild(hr);
+  var pend={}; OPS.all().forEach(function(o){ pend[o.target]=1; });
+  rows.forEach(function(r){
+    var c=contractById(r.contractId)||{display:r.client};
+    var sel=(SELECTED===r.id), open=(r.status!=="投稿済");
+    var tr=h("tr",{class:"pick"+(open?"":" done"),tabindex:"0","aria-selected":sel?"true":"false",
+      onclick:function(){ selectRow(r.id); },
+      onkeydown:function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); selectRow(r.id); } }});
+    tr.appendChild(h("td",{},[h("div",{class:"cli2"},[
+      tile(r.contractId, shortName(c), 30, 22, 11), h("span",{text:c.display})])]));
+    var tc=h("td");
+    if(r.title) tc.appendChild(h("div",{style:"font-weight:600",text:r.title}));
+    /* 未入力はここから直せるようにする（§9.6）。行クリックと二重に動かさない */
+    else tc.appendChild(h("button",{class:"titlebtn",text:"（タイトル未定）",
+      onclick:function(e){ e.stopPropagation(); selectRow(r.id,"title"); }}));
+    tc.appendChild(h("div",{class:"kindsub",text:r.kind}));
+    tr.appendChild(tc);
+    tr.appendChild(h("td",{text:r.editor||"未割当"}));
+    var pd=h("td");
+    var late=(open && r.planned<TODAY), tdy=(open && r.planned===TODAY);
+    if(late||tdy){ pd.appendChild(icon(late?"late":"warn")); pd.appendChild(txt(" ")); }
+    pd.appendChild(h("span",{class:"dnum"+(late?" od":tdy?" tdy":""),text:jpDate(r.planned)}));
+    if(late) pd.appendChild(h("div",{class:"kindsub",text:daysSince(r.planned)+"日超過"}));
+    tr.appendChild(pd);
+    var dd=h("td");
+    dd.appendChild(h("span",{class:"dnum",text:jpDate(r.due)}));
+    if(r.squeezed) dd.appendChild(h("span",{class:"pill",text:"圧縮",style:"margin-left:6px"}));
+    tr.appendChild(dd);
+    tr.appendChild(h("td",{},[sBadge(r.status)]));
+    var ad=h("td");
+    if(nextStatus(r.status)){
+      ad.appendChild(h("button",{class:"cta",disabled:!writable(),text:ACTION_LABEL[r.status],
+        onclick:function(e){ e.stopPropagation(); advance(r); }}));
+    }
+    if(pend[r.id]) ad.appendChild(h("div",{class:"syncing",text:"同期中"}));
+    tr.appendChild(ad);
+    t.appendChild(tr);
+  });
+  if(!rows.length){
+    var e=h("tr");
+    e.appendChild(h("td",{colspan:"7",text:"該当する動画はありません。絞り込みを緩めてください。",
+      style:"color:var(--text-muted)"}));
+    t.appendChild(e);
+  }
+  return t;
+}
+function renderListOnly(){
+  var w=document.getElementById("listwrap");
+  if(!w) return render();
+  w.innerHTML=""; w.appendChild(listTable());
+}
+
+/* ---- ⑥ 今日（§10：今日の作業キュー。カレンダーではない） ---- */
+
+/* 時刻データが無いので §10.3 の代替（今日の優先／今日中／期限なし）を使う。
+   午前・午後は捏造しない。期限なしは現データでは常に空だが、
+   投稿予定・編集完了希望が未設定の行が来たら拾えるように残す */
+function todayBuckets(){
+  var rows=scopeRows();
+  var b={over:[], now:[], nodate:[], done:[]};
+  rows.forEach(function(r){
+    if(r.status==="投稿済"){
+      if(r.postedAt===TODAY) b.done.push(r);
+      return;
+    }
+    if(!r.planned || !r.due){ b.nodate.push(r); return; }
+    if(r.planned<TODAY || r.due<TODAY){ b.over.push(r); return; }
+    if(r.planned===TODAY || r.due===TODAY){ b.now.push(r); return; }
+  });
+  /* §10.5 の並び：超過が先、同カテゴリ内は締切の早い順 */
+  var byDue=function(a,b2){ return a.due<b2.due?-1:a.due>b2.due?1:(a.planned<b2.planned?-1:1); };
+  b.over.sort(byDue); b.now.sort(byDue); b.nodate.sort(byDue);
+  return b;
+}
+function todayKpiStrip(){
+  var rows=scopeRows(), b=todayBuckets();
+  var over=0, review=0, waiting=0, todo=0;
+  rows.forEach(function(r){
+    if(r.status==="投稿済") return;
+    if(r.planned<TODAY || r.due<TODAY) over++;
+    if(r.status==="確認中") review++;
+    else if(r.status==="投稿待ち") waiting++;
+    else if(r.status==="未着手") todo++;
+  });
+  var g=h("div",{class:"kpis"});
+  g.appendChild(kpiCard("k5","今日やること","clock", b.over.length+b.now.length,"件",
+    ["超過 "+b.over.length+"件・本日 "+b.now.length+"件"]));
+  g.appendChild(kpiCard("k4","遅延","alertCircle", over,"件",
+    ["投稿予定日か編集完了希望を過ぎた動画"]));
+  g.appendChild(kpiCard("k7","確認待ち","alert", review,"件",["確認中で止まっている動画"]));
+  g.appendChild(kpiCard("k3","投稿待ち","upload", waiting,"件",["投稿すれば完了します"]));
+  g.appendChild(kpiCard("k6","未着手","film", todo,"件",["まだ編集を始めていない動画"]));
+  return g;
+}
+/* CTAを押した行に一手間だけ動きを付けてから工程を進める（§10.6）。
+   render() が DOM を作り直すので、アニメが終わってから advance する。
+   動きを止めている環境（prefers-reduced-motion）では待たずに進める */
+function todayAdvance(r, rowEl){
+  if(!writable()) return;
+  var last=(nextStatus(r.status)==="投稿済");
+  var reduce=false;
+  try{ reduce=window.matchMedia("(prefers-reduced-motion:reduce)").matches; }catch(e){}
+  if(reduce || !rowEl){ if(last) TODAY_DONE_OPEN=true; advance(r); return; }
+  rowEl.classList.add(last?"finish":"step");
+  setTimeout(function(){
+    if(last) TODAY_DONE_OPEN=true;   /* どこへ移ったのか見えるように開く */
+    advance(r);
+  }, last?300:340);
+}
+
+/* §10.4 の行。時刻列は持たない（データに無い）。代わりに締切を左寄せで見せる */
+function todayRow(r, done){
+  var c=contractById(r.contractId)||{display:r.client,poster:"-"};
+  var sel=(SELECTED===r.id);
+  var row=h("div",{class:"trow2"+(done?" done":""),role:"option",tabindex:"0",
+    "aria-selected":sel?"true":"false",
+    onclick:function(){ selectRow(r.id); },
+    onkeydown:function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); selectRow(r.id); } }});
+  row.appendChild(tile(r.contractId, shortName(c), 44, 32, 13));
+  var mid=h("div",{class:"mid"});
+  mid.appendChild(h("div",{class:"ttl",text:r.title||"（タイトル未定）"}));
+  var cli=h("div",{class:"cli"});
+  cli.appendChild(sBadge(r.status));
+  cli.appendChild(h("span",{text:c.display+"・"+r.kind+"　担当 "+(r.editor||"未割当")+"　投稿担当 "+(c.poster||"-")}));
+  mid.appendChild(cli);
+  row.appendChild(mid);
+  var when=h("div",{class:"when"});
+  var lateP=(!done && r.planned<TODAY), lateD=(!done && r.due<TODAY);
+  when.appendChild(h("div",{},["投稿予定 ", h("b",{class:lateP?"od":"",text:jpDate(r.planned)})]));
+  when.appendChild(h("div",{},["編集完了希望 ", h("b",{class:lateD?"od":"",text:jpDate(r.due)})]));
+  row.appendChild(when);
+  if(done){
+    row.appendChild(h("div",{class:"pill",text:"投稿済 "+jpDate(r.postedAt)}));
+  } else if(nextStatus(r.status)){
+    row.appendChild(h("button",{class:"cta",disabled:!writable(),text:ACTION_LABEL[r.status],
+      onclick:function(e){ e.stopPropagation(); todayAdvance(r, row); }}));
+  } else {
+    row.appendChild(h("div",{class:"pill",text:"完了"}));
+  }
+  return row;
+}
+function todaySection(title, lead, rows){
+  if(!rows.length) return null;
+  var box=h("div",{class:"tsec"});
+  var hd=h("h4",{},[title, h("span",{class:"c",text:String(rows.length)+"件"})]);
+  if(lead) hd.appendChild(h("span",{class:"lead",text:lead}));
+  box.appendChild(hd);
+  rows.forEach(function(r){ box.appendChild(todayRow(r)); });
+  return box;
+}
+function panelToday(){
+  var box=h("div");
+  var staff=!!STAFF_MAP[ME];
+  box.appendChild(h("div",{class:"sect"},[
+    h("h2",{text:"今日"}),
+    h("span",{text:"（"+jpFull(TODAY)+"・"+(staff?"自分の担当分":"編集スタッフ全員")+"）"})]));
+  box.appendChild(todayKpiStrip());
+
+  var b=todayBuckets();
+  var s=sectCard("今日の作業キュー");
+  if(!b.over.length && !b.now.length && !b.nodate.length){
+    /* §10.7 空状態。黙って今週を出すと「今日やることが無い」ことが伝わらない */
+    var e=h("div",{class:"emptystate"});
+    e.appendChild(h("b",{text:"今日の作業はありません"}));
+    e.appendChild(h("p",{text:"予定どおり進んでいます。"}));
+    e.appendChild(h("button",{class:"ghostbtn",text:"未完了の動画を見る",onclick:function(){
+      VIEW="list"; FILTER.status="open"; POP=false; render(); }}));
+    s.bd.appendChild(e);
+  } else {
+    [todaySection("今日の優先","締切を過ぎています。ここから片付けます", b.over),
+     todaySection("今日中","今日が投稿予定日または編集完了希望日", b.now),
+     todaySection("期限なし","投稿予定日か編集完了希望が入っていません", b.nodate)
+    ].forEach(function(x){ if(x) s.bd.appendChild(x); });
+  }
+  /* 完了済みは折りたたみ。押した本が消えたように見えないための置き場 */
+  if(b.done.length){
+    var t=h("div",{class:"tsec"});
+    t.appendChild(h("button",{class:"tdone","aria-expanded":TODAY_DONE_OPEN?"true":"false",
+      onclick:function(){ TODAY_DONE_OPEN=!TODAY_DONE_OPEN; render(); }},
+      [ic(TODAY_DONE_OPEN?"chevronDown":"chevronRight",16),
+       h("span",{text:"今日投稿した動画　"+b.done.length+"件"})]));
+    if(TODAY_DONE_OPEN){
+      var inner=h("div",{style:"margin-top:9px"});
+      b.done.forEach(function(r){ inner.appendChild(todayRow(r,true)); });
+      t.appendChild(inner);
+    }
+    s.bd.appendChild(t);
+  }
+  box.appendChild(s.card);
+  return box;
+}
+
+/* ---- ③ 進行トラック（軸・レーン） ---- */
+function axisDays(){ return bizDays(MONTH, closedDays(SEED_SHIFTS, MONTH, STAFF_MAP)); }
+function axisPos(days, d){
+  var i=days.indexOf(d);
+  if(i<0){ i=0; while(i<days.length && days[i]<d) i++; }
+  return (i+0.5)/days.length*100;
+}
+function todayPos(days){
+  if(monthOf(TODAY)!==MONTH) return TODAY<MONTH+"-01" ? -1 : 101;
+  var i=0; while(i<days.length && days[i]<TODAY) i++;
+  return i/days.length*100;
+}
+function laneFor(rows, days){
+  var lane=h("div",{class:"lane"},[h("div",{class:"lane-bg"})]);
+  var w=100/days.length;
+  rows.filter(function(r){ return r.planned<TODAY && r.status!=="投稿済"; }).forEach(function(r){
+    var x=axisPos(days,r.planned);
+    var band=h("div",{class:"hatch"});
+    band.style.left=(x-w/2)+"%"; band.style.width=w+"%";
+    band.style.backgroundImage="repeating-linear-gradient(45deg,var(--late) 0 1px,transparent 1px 3px)";
+    lane.appendChild(band);
+  });
+  rows.forEach(function(r){
+    var x=axisPos(days,r.planned);
+    var cls = r.status==="投稿済" ? "c-posted"
+            : (r.status==="投稿待ち"||r.status==="承認済み"||r.status==="確認中") ? "c-ready" : "c-todo";
+    var b=h("button",{class:"cell "+cls, tabindex:"-1",
+      title:(r.title||"（タイトル未定）")+" / "+jpDate(r.planned)+" / "+r.status,
+      "aria-label":r.client+" "+r.kind+" "+jpDate(r.planned)+" "+r.status,
+      onclick:function(ev){ ev.stopPropagation(); selectRow(r.id); }},[h("i")]);
+    b.style.left=(x-w/2+w*0.10)+"%"; b.style.width=(w*0.80)+"%";
+    lane.appendChild(b);
+  });
+  var tp=todayPos(days);
+  if(tp>=0 && tp<=100){
+    var tl=h("div",{class:"todayline"},[h("div",{class:"todaycap"})]);
+    tl.style.left=tp+"%"; lane.appendChild(tl);
+  }
+  return lane;
+}
+function axisFor(days){
+  var ax=h("div",{class:"axis"});
+  days.forEach(function(d,i){
+    var x=(i+0.5)/days.length*100;
+    var t=h("i"); t.style.left=x+"%"; ax.appendChild(t);
+    if(dow(d)===1 || i===0){ var s=h("span",{text:jpDate(d)}); s.style.left=x+"%"; ax.appendChild(s); }
+  });
+  return ax;
+}
+/* §11.2 の5枚。数字はすべて当月の行から算出する */
+function trackKpiStrip(){
+  var rows=rowsOfMonth(), cs=contractsOf();
+  var target=0; cs.forEach(function(c){ target+=c.count; });
+  var posted=0, waiting=0;
+  rows.forEach(function(r){
+    if(r.status==="投稿済") posted++;
+    else if(r.status==="投稿待ち") waiting++;
+  });
+  var risk=0; cs.forEach(function(c){ if(judge(rowsByContract(c.id),TODAY).level==="late") risk++; });
+  var g=h("div",{class:"kpis"});
+  g.appendChild(kpiCard("k1","今月必要","calendar", target,"本",
+    ["生成済み "+rows.length+"本"], pct(posted,target)));
+  g.appendChild(kpiCard("k2","投稿済み","check", posted,"本",["消化 "+pct(posted,target)+"%"]));
+  g.appendChild(kpiCard("k6","残り","film", Math.max(0,target-posted),"本",["今月分の未投稿"]));
+  g.appendChild(kpiCard("k3","投稿待ち","upload", waiting,"本",["投稿すれば完了します"]));
+  g.appendChild(kpiCard("k4","危険契約","alertCircle", risk,"契約",
+    ["遅延2本以上・全"+cs.length+"契約"]));
+  return g;
+}
+function panelTrack(){
+  var s=sectCard("クライアント別トラック","1マス＝動画1本。投稿予定日の位置に置く。縦線より左の未投稿が遅延。マスを押すと右に詳細が出ます");
+  var days=axisDays();
+  if(!days.length){ s.bd.appendChild(h("p",{class:"sub",text:"この月の営業日が取得できません。"})); return s.card; }
+
+  var wrap=h("div",{class:"trackwrap"});
+  var tbl=h("table",{class:"tracktable"});
+  var chipDone=false;
+  contractsOf().forEach(function(c){
+    var rs=rowsByContract(c.id), j=judge(rs,TODAY);
+    var tr=h("tr",{class:"rowfocus",tabindex:"0",
+      onkeydown:function(ev){ if(ev.key==="Enter"){ ev.preventDefault(); FILTER.q=c.display; VIEW="list"; render(); } },
+      onclick:function(){ FILTER.q=c.display; VIEW="list"; render(); }});
+    tr.appendChild(h("td",{class:"tname",title:c.client+" "+c.kind,
+      text:c.display+" "+(c.kind==="静止画"?"静":"動")}));
+    var laneCell=h("td");
+    var lane=laneFor(rs,days);
+    if(!chipDone){
+      var tp=todayPos(days);
+      if(tp>=0&&tp<=100){
+        var chip=h("div",{class:"todaychip",text:"今日 "+jpDate(TODAY)});
+        chip.style.left=tp+"%"; lane.appendChild(chip); chipDone=true;
+      }
+    }
+    laneCell.appendChild(lane); tr.appendChild(laneCell);
+
+    var right=h("td",{class:"tright"});
+    right.appendChild(txt("残り")); right.appendChild(num(c.count-j.done)); right.appendChild(txt("本 ・ "));
+    var lateSpan=h("span",{class:j.late?"":"muted"});
+    lateSpan.appendChild(txt("遅れ"));
+    var ln=num(j.late); if(j.late) ln.style.color="var(--late)";
+    lateSpan.appendChild(ln); lateSpan.appendChild(txt("本"));
+    right.appendChild(lateSpan); right.appendChild(txt(" "));
+    right.appendChild(statusPill(j.level));
+    tr.appendChild(right);
+    tbl.appendChild(tr);
+  });
+  var axRow=h("tr");
+  axRow.appendChild(h("td",{class:"tname"}));
+  var axCell=h("td"); axCell.appendChild(axisFor(days)); axRow.appendChild(axCell);
+  axRow.appendChild(h("td",{class:"tright"}));
+  tbl.appendChild(axRow);
+  wrap.appendChild(tbl);
+  s.bd.appendChild(wrap);
+  s.bd.appendChild(h("div",{class:"axisnote",text:"横軸は営業日（土日祝を除く）　■ベタ＝投稿済　■枠＋下半分＝編集済・未投稿　□破線＝未着手"}));
+  return s.card;
+}
+
+/* ---- ⑧ 止まっている契約 ---- */
+function panelStuck(){
+  var s=sectCard("止まっている契約","遅延している契約と、その動画がどの工程で何営業日止まっているか（自動生成）");
+  var range=bizRange(monthMinus(MONTH,1),3), items=[];
+  contractsOf().forEach(function(c){
+    var rs=rowsByContract(c.id), j=judge(rs,TODAY);
+    if(j.level==="ok") return;
+    var by={};
+    rs.filter(function(r){ return r.planned<TODAY && r.status!=="投稿済"; }).forEach(function(r){
+      var since = r.trans && r.trans[r.status] ? fromUTC(r.trans[r.status]) : r.planned;
+      var d = bizBetween(range, since, TODAY);
+      by[r.status]=by[r.status]||{n:0,max:0};
+      by[r.status].n++; by[r.status].max=Math.max(by[r.status].max,d);
+    });
+    Object.keys(by).forEach(function(st){
+      var label = st==="確認中" ? (c.steps===4 ? "確認中（先方含む）" : "確認中（社内）") : st;
+      items.push(c.display+" "+c.kind+"："+by[st].n+"本が"+label+" "+by[st].max+"営業日");
+    });
+  });
+  if(!items.length){ s.bd.appendChild(h("p",{class:"sub",text:"止まっている契約はありません。"})); return s.card; }
+  var ul=h("ul",{class:"plain"});
+  items.forEach(function(t){ ul.appendChild(h("li",{text:t})); });
+  s.bd.appendChild(ul);
+  return s.card;
+}
+
+/* ---- ② 日別サマリ ---- */
+function panelDaily(){
+  var s=sectCard("日別サマリ","全契約の合算。塗り＝投稿済／枠＝未投稿");
+  var days=axisDays(), rows=rowsOfMonth();
+  var byDay={}; days.forEach(function(d){ byDay[d]={p:0,o:0}; });
+  rows.forEach(function(r){ var b=byDay[r.planned]; if(!b) return; if(r.status==="投稿済") b.p++; else b.o++; });
+  var max=1; days.forEach(function(d){ max=Math.max(max, byDay[d].p+byDay[d].o); });
+  var wrap=h("div",{class:"daywrap"}), bars=h("div",{class:"daybars"});
+  days.forEach(function(d){
+    var b=byDay[d], col=h("div",{class:"daybar",title:jpDate(d)+"：投稿済 "+b.p+" / 未投稿 "+b.o});
+    if(b.o){ var s1=h("div",{class:"seg s-open"}); s1.style.height=(b.o/max*92)+"px"; col.appendChild(s1); }
+    if(b.p){ var s2=h("div",{class:"seg s-posted"}); s2.style.height=(b.p/max*92)+"px"; col.appendChild(s2); }
+    bars.appendChild(col);
+  });
+  var tp=todayPos(days);
+  if(tp>=0&&tp<=100){ var tl=h("div",{class:"todayline"}); tl.style.left=tp+"%"; bars.appendChild(tl); }
+  wrap.appendChild(bars); wrap.appendChild(axisFor(days));
+  s.bd.appendChild(wrap);
+  return s.card;
+}
+
+/* ---- ④ 工程別の滞留 ---- */
+function panelStages(){
+  var s=sectCard("工程別の滞留","確認中の閾値は案件のステップ数で分ける（社内のみ2営業日／先方を含む5営業日）");
+  var rows=rowsOfMonth(), counts={}, max=1;
+  STATUSES.forEach(function(x){ counts[x]=0; });
+  rows.forEach(function(r){ counts[r.status]=(counts[r.status]||0)+1; });
+  STATUSES.forEach(function(x){ max=Math.max(max,counts[x]); });
+  var bars=h("div",{class:"bars"});
+  STATUSES.forEach(function(x){
+    var row=h("div",{class:"barrow"});
+    row.appendChild(h("div",{},[sBadge(x)]));
+    var tr=h("div",{class:"bartrack"}), fl=h("div",{class:"barfill"});
+    fl.style.width=(counts[x]/max*100)+"%";
+    fl.style.background="var("+sv(x).v+")";
+    tr.appendChild(fl); row.appendChild(tr);
+    var n=h("div",{class:"barnum"}); n.appendChild(num(counts[x])); n.appendChild(txt("本"));
+    row.appendChild(n); bars.appendChild(row);
+  });
+  s.bd.appendChild(bars);
+  return s.card;
+}
+
+/* ---- ⑤ チーム負荷（§12：工数入力なしで偏りだけを見る） ---- */
+
+/* 「負荷目安」。工数ではない。重みは LOAD_CFG に出してある（§12.4） */
+function loadOf(name){
+  var rows=rowsOfMonth(), weekEnd=addDays(TODAY,7);
+  var o={today:0, week:0, overdue:0, review:0, open:0, waiting:0, todo:0};
+  rows.forEach(function(r){
+    if(r.editor!==name || r.status==="投稿済") return;
+    o.open++;
+    /* 「今日やる分」は超過ぶんも含む。1本を二重に数えない */
+    if(r.planned<=TODAY || r.due<=TODAY) o.today++;
+    if(r.planned<TODAY || r.due<TODAY) o.overdue++;
+    if(r.due>TODAY && r.due<=weekEnd) o.week++;
+    if(r.status==="確認中") o.review++;
+    else if(r.status==="投稿待ち") o.waiting++;
+    else if(r.status==="未着手") o.todo++;
+  });
+  var raw = o.today*LOAD_CFG.today + o.week*LOAD_CFG.week
+          + o.overdue*LOAD_CFG.overdue + o.review*LOAD_CFG.review;
+  o.score = Math.min(100, Math.round(raw/LOAD_CFG.full*100));
+  o.band = o.score<50 ? {k:"easy", t:"余裕あり", v:"--st-todo"}
+         : o.score<70 ? {k:"fit",  t:"適正",    v:"--st-posted"}
+         : o.score<85 ? {k:"many", t:"やや多い", v:"--st-review"}
+         :              {k:"hot",  t:"高負荷",  v:"--st-waiting"};
+  return o;
+}
+function loadKpiStrip(loads){
+  var names=Object.keys(loads), today=0, hot=0, review=0, over=0;
+  names.forEach(function(n){
+    today+=loads[n].today; review+=loads[n].review; over+=loads[n].overdue;
+    if(loads[n].score>=85) hot++;
+  });
+  var g=h("div",{class:"kpis four"});
+  g.appendChild(kpiCard("k5","本日のタスク","clock", today,"件",["超過分を含む"]));
+  g.appendChild(kpiCard("k4","高負荷スタッフ","alert", hot,"人",["負荷目安 85以上・全"+names.length+"人"]));
+  g.appendChild(kpiCard("k7","確認待ち","alert", review,"件",["確認中で止まっている動画"]));
+  /* 遅延は全画面で赤に揃える。高負荷と2枚赤になるが、どちらも警報なので薄めない */
+  g.appendChild(kpiCard("k4","遅延","alertCircle", over,"件",["期限を過ぎた未投稿"]));
+  return g;
+}
+function staffCard(name, o){
+  var m=MEMBERS.filter(function(x){return x.name===name})[0]||{role:"スタッフ"};
+  var sel=(STAFFPICK===name);
+  var card=h("div",{class:"scard",role:"option",tabindex:"0","aria-selected":sel?"true":"false",
+    title:name+"の未完了を動画一覧で開く",
+    onclick:function(){ STAFFPICK=name; VIEW="list"; SELECTED=null; FILTER.editor=name;
+      FILTER.status="open"; FILTER.client="__all__"; FILTER.q=""; POP=false; render(); },
+    onkeydown:function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); this.click(); } }});
+  var av=h("div",{class:"avatar",text:name.slice(0,1),"aria-hidden":"true"});
+  av.style.background=tileBg(name);
+  var cap=capacityOf(SEED_SHIFTS,STAFF_MAP[name],MONTH);
+  card.appendChild(h("div",{class:"sh"},[av,
+    h("div",{class:"nm"},[h("b",{text:name}), h("span",{text:m.role+"・今月の出勤 "+cap.days+"日"})])]));
+  var nums=h("div",{class:"snums"});
+  [["今日",o.today,""],["今週",o.week,""],["遅延",o.overdue,o.overdue?"v-late":"v-zero"]]
+    .forEach(function(x){
+      var d=h("div");
+      d.appendChild(h("span",{class:"k",text:x[0]}));
+      d.appendChild(h("span",{class:"v "+x[2],text:String(x[1])}));
+      nums.appendChild(d);
+    });
+  card.appendChild(nums);
+  var bar=h("div",{class:"loadbar"}), fi=h("i");
+  fi.style.width=o.score+"%"; fi.style.background="var("+o.band.v+")";
+  bar.appendChild(fi);
+  card.appendChild(bar);
+  card.appendChild(h("div",{class:"lv"},[
+    h("span",{class:"lv-"+o.band.k,style:"font-size:13px;font-weight:700",text:o.band.t}),
+    h("span",{text:"負荷目安 "+o.score+" / 100"})]));
+  return card;
+}
+function weekBars(){
+  var days=axisDays(), i=0; while(i<days.length && days[i]<TODAY) i++;
+  var start=Math.max(0,i-2), week=days.slice(start,start+7);
+  if(!week.length) week=days.slice(0,7);
+  var rows=rowsOfMonth(), byDay={};
+  week.forEach(function(d){ byDay[d]=0; });
+  rows.forEach(function(r){ if(byDay[r.due]!=null && r.status!=="投稿済") byDay[r.due]++; });
+  var vals=week.map(function(d){return byDay[d]}), max=Math.max(1,Math.max.apply(null,vals));
+  var avg=vals.reduce(function(a,b){return a+b},0)/(week.length||1);
+  var wrap=h("div",{class:"daywrap wk"}), bars=h("div",{class:"daybars"});
+  /* 棒1本あたりの幅を決め打ちして箱ごと縮める。目盛りは同じ箱の中なのでずれない */
+  wrap.style.maxWidth=(week.length*96)+"px";
+  week.forEach(function(d){
+    var col=h("div",{class:"daybar",title:jpDate(d)+"：編集完了希望 "+byDay[d]+"本"});
+    var sg=h("div",{class:"seg s-posted"}); sg.style.height=(byDay[d]/max*92)+"px"; col.appendChild(sg);
+    bars.appendChild(col);
+  });
+  var al=h("div",{class:"avgline"}); al.style.bottom=(avg/max*92)+"px"; bars.appendChild(al);
+  wrap.appendChild(bars);
+  var ax=h("div",{class:"axis"});
+  week.forEach(function(d,k){ var sp=h("span",{text:jpDate(d)}); sp.style.left=((k+0.5)/week.length*100)+"%"; ax.appendChild(sp); });
+  wrap.appendChild(ax);
+  return wrap;
+}
+function panelLoad(){
+  var box=h("div");
+  box.appendChild(h("div",{class:"sect"},[
+    h("h2",{text:"チーム負荷"}),
+    h("span",{text:"（"+MONTH.replace("-","年")+"月・工数入力なしの目安）"})]));
+  var loads={}, names=Object.keys(STAFF_MAP);
+  names.forEach(function(n){ loads[n]=loadOf(n); });
+  box.appendChild(loadKpiStrip(loads));
+
+  var s=sectCard("スタッフ別の負荷目安",
+    "カードを押すと、その人の未完了を動画一覧で開きます。数値は工数ではなく、担当件数・遅延・確認待ちから出した目安です");
+  var g=h("div",{class:"staffcards",role:"listbox","aria-label":"スタッフ別の負荷"});
+  names.forEach(function(n){ g.appendChild(staffCard(n, loads[n])); });
+  s.bd.appendChild(g);
+  box.appendChild(s.card);
+
+  var w=sectCard("今週の日別負荷",
+    "編集完了希望の件数。能力マーカーは出さない（ボードはテスト10社分、シフトは全社分の労働で分母が揃わないため）。偏りだけを見る");
+  w.bd.appendChild(weekBars());
+  w.bd.appendChild(h("div",{class:"axisnote",style:"text-align:left",text:"破線＝今週の平均"}));
+  box.appendChild(w.card);
+  return box;
+}
+
+/* ---- ⑨ 投稿待ち（§13：承認は済んでいるのに公開されていない本） ---- */
+
+/* 経過時間は「今の工程になった時刻」で数える。無ければ前後の記録で代用する */
+function waitSince(r){
+  var t=r.trans||{};
+  return t[r.status] || t["投稿待ち"] || t["承認済み"] || null;
+}
+function waitHours(r){
+  var t=waitSince(r);
+  return t ? Math.floor((Date.now()-t)/3600000) : 0;
+}
+/* 2日を超えたら「時間」では大きすぎて読めない。日に丸める */
+function waitLabel(hrs){ return hrs<48 ? hrs+"時間" : Math.floor(hrs/24)+"日"; }
+function pendingRows(){
+  var rows=rowsOfMonth().filter(function(r){ return r.status==="投稿待ち"; });
+  /* §13.4 の既定並び：48h超 → 期限超過 → 本日期限 → 24h超 → その他 */
+  function rank(r){
+    var hrs=waitHours(r);
+    if(hrs>=48) return 0;
+    if(r.planned<TODAY) return 1;
+    if(r.planned===TODAY) return 2;
+    if(hrs>=24) return 3;
+    return 4;
+  }
+  return rows.sort(function(a,b){
+    var d=rank(a)-rank(b); if(d) return d;
+    d=waitHours(b)-waitHours(a); if(d) return d;
+    return a.planned<b.planned?-1:1;
+  });
+}
+function pendingKpiStrip(rows){
+  var todayN=0, h24=0, h48=0;
+  rows.forEach(function(r){
+    if(r.planned===TODAY) todayN++;
+    var hrs=waitHours(r);
+    if(hrs>=48) h48++; else if(hrs>=24) h24++;
+  });
+  var g=h("div",{class:"kpis four"});
+  g.appendChild(kpiCard("k3","投稿待ち","upload", rows.length,"本",["投稿すれば完了します"]));
+  g.appendChild(kpiCard("k5","本日期限","calendar", todayN,"本",["投稿予定日が今日"]));
+  g.appendChild(kpiCard("k1","24時間以上","clock", h24,"本",["投稿待ちのまま1日以上"]));
+  g.appendChild(kpiCard("k4","48時間以上","alertCircle", h48,"本",["投稿待ちのまま2日以上。要対応"]));
+  return g;
+}
+function pendingCard(r){
+  var c=contractById(r.contractId)||{display:r.client,poster:"-"};
+  var hrs=waitHours(r), sel=(SELECTED===r.id), ap=(r.status==="承認済み");
+  var cls="wcard"+(ap?" ap":hrs>=48?" h48":hrs>=24?" h24":"");
+  var card=h("div",{class:cls,role:"option",tabindex:"0","aria-selected":sel?"true":"false",
+    onclick:function(){ selectRow(r.id); },
+    onkeydown:function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); selectRow(r.id); } }});
+  card.appendChild(tile(r.contractId, shortName(c), 44, 32, 13));
+  var mid=h("div",{class:"mid"});
+  mid.appendChild(h("div",{class:"ttl",text:r.title||"（タイトル未定）"}));
+  var cli=h("div",{class:"cli"});
+  cli.appendChild(sBadge(r.status));
+  cli.appendChild(h("span",{text:c.display+"・"+r.kind}));
+  mid.appendChild(cli);
+  card.appendChild(mid);
+  var meta=h("div",{class:"meta"});
+  var st=waitSince(r);
+  meta.appendChild(h("div",{},[r.status+"にした ", h("b",{text:st?fmtStamp(st):"—"})]));
+  meta.appendChild(h("div",{},["投稿予定 ", h("b",{text:jpDate(r.planned)}),
+    "　投稿担当 ", h("b",{text:c.poster||"-"})]));
+  var elCls = hrs>=48 ? "el late" : hrs>=24 ? "el warn" : "el";
+  meta.appendChild(h("div",{},[h("span",{class:elCls,
+    text: st ? (r.status+"のまま "+waitLabel(hrs)) : "経過時間は記録がありません"})]));
+  if(r.planned<TODAY) meta.appendChild(h("div",{},[h("span",{class:"el late",
+    text:"投稿予定日を "+daysSince(r.planned)+"日超過"})]));
+  card.appendChild(meta);
+  var act=h("div",{class:"act"});
+  var url=String(r.drive||"").trim();
+  if(/^https?:\/\//i.test(url)){
+    var a=h("a",{class:"drive",href:url,target:"_blank",rel:"noopener noreferrer",
+      onclick:function(e){ e.stopPropagation(); }});
+    a.appendChild(driveMark(16));
+    a.appendChild(h("span",{class:"grow",text:"Driveを開く"}));
+    act.appendChild(a);
+  } else {
+    var b=h("button",{class:"drive",disabled:true,onclick:function(e){ e.stopPropagation(); }});
+    b.appendChild(driveMark(16));
+    b.appendChild(h("span",{class:"grow",text:"Drive未設定"}));
+    act.appendChild(b);
+  }
+  act.appendChild(h("button",{class:"cta",disabled:!writable(),text:ACTION_LABEL[r.status],
+    onclick:function(e){ e.stopPropagation(); advance(r); }}));
+  card.appendChild(act);
+  return card;
+}
+function panelPending(){
+  var box=h("div");
+  var rows=pendingRows();
+  box.appendChild(h("div",{class:"sect"},[
+    h("h2",{text:"投稿待ち"}),
+    h("span",{text:"（承認は済んでいるのに、まだ投稿していない動画）"})]));
+  box.appendChild(pendingKpiStrip(rows));
+  var s=sectCard("投稿待ちの動画",
+    "経過時間の長い順・投稿予定日を過ぎたものを先に出します。投稿したらこの画面から消えます");
+  if(!rows.length){
+    var e=h("div",{class:"emptystate"});
+    e.appendChild(h("b",{text:"投稿待ちはありません"}));
+    e.appendChild(h("p",{text:"承認済みのまま止まっている動画もありません。"}));
+    s.bd.appendChild(e);
+  } else {
+    var g=h("div",{class:"wcards",role:"listbox","aria-label":"投稿待ちの動画"});
+    rows.forEach(function(r){ g.appendChild(pendingCard(r)); });
+    s.bd.appendChild(g);
+  }
+  box.appendChild(s.card);
+
+  /* 承認済みで止まっている本も同じ画面で拾う。投稿待ちへ渡し忘れは事故になる */
+  var ap=rowsOfMonth().filter(function(r){ return r.status==="承認済み"; });
+  if(ap.length){
+    var a2=sectCard("承認済みのまま止まっている動画","「投稿待ちへ」を押すと上のリストに入ります");
+    var g2=h("div",{class:"wcards"});
+    ap.forEach(function(r){ g2.appendChild(pendingCard(r)); });
+    a2.bd.appendChild(g2);
+    box.appendChild(a2.card);
+  }
+  return box;
+}
+
+/* =====================================================================
+   モーダル / トースト
+   ===================================================================== */
+function modal(node){
+  var bg=h("div",{class:"modalbg",onclick:function(e){ if(e.target===bg) bg.remove(); }});
+  bg.appendChild(node); document.body.appendChild(bg); return bg;
+}
+function closeModals(){ document.querySelectorAll(".modalbg").forEach(function(x){ x.remove(); }); }
+/* 行の詳細は全ビュー共通の右パネル（DetailPanel）に統一した。
+   かつての行モーダル openRow は §6.1 に従って廃止（§MUST NOT：モーダルを多用しない）。*/
+function openWho(){
+  var m=h("div",{class:"modal"});
+  m.appendChild(h("h3",{text:"あなたは誰ですか？"}));
+  m.appendChild(h("p",{class:"sub",text:"全員が共用アカウントを使っているため、システム側からは誰が見ているか分かりません。ここでの選択はこの端末にだけ保存され、操作の記録に添えられます。"}));
+  var p=h("div",{class:"picks"});
+  MEMBERS.forEach(function(x){
+    var av=h("div",{class:"avatar",text:x.name.slice(0,1),"aria-hidden":"true"});
+    av.style.cssText="width:26px;height:26px;font-size:12px";
+    av.style.background=tileBg(x.name);
+    p.appendChild(h("button",{onclick:function(){
+      ME=x.name; LS.set("mlboard.me",ME);
+      var vs=visibleViews(); if(!vs.some(function(v){return v[0]===VIEW})) VIEW=vs[0][0];
+      SELECTED=null; closeModals(); render();
+    }},[av, h("span",{text:x.name+"（"+x.role+"）"})]));
+  });
+  m.appendChild(p);
+  modal(m);
+}
+function openBackup(){
+  var m=h("div",{class:"modal"});
+  m.appendChild(h("h3",{text:"退避（コピー用）"}));
+  m.appendChild(h("p",{class:"sub",text:"下の内容を全選択してコピーし、Googleドライブのテキストファイルへ貼り付けて保存してください。ページ側からのダウンロードはブロックされるため、この方式が確実です。1日1回を運用ルールにしてください。"}));
+  var ta=h("textarea"); ta.rows=14; ta.value=JSON.stringify(STATE);
+  ta.style.fontFamily="ui-monospace,SFMono-Regular,Menlo,monospace"; ta.style.fontSize="11px";
+  m.appendChild(ta);
+  var right=h("div",{class:"right"});
+  right.appendChild(h("button",{class:"cta",text:"全選択",onclick:function(){ ta.focus(); ta.select(); }}));
+  right.appendChild(h("button",{class:"ghostbtn",text:"閉じる",onclick:closeModals}));
+  m.appendChild(right);
+  modal(m);
+  setTimeout(function(){ ta.focus(); ta.select(); },50);
+}
+function openGenerate(){
+  var target=nextMonth(monthOf(TODAY));
+  var m=h("div",{class:"modal"});
+  m.appendChild(h("h3",{text:target+" 分を生成"}));
+  var closed=closedDays(SEED_SHIFTS,target,STAFF_MAP);
+  var bd=bizDays(target,closed);
+  var existing=STATE.rows.filter(function(r){return r.month===target});
+  var preview=h("div");
+  if(existing.length) preview.appendChild(h("p",{class:"sub",
+    text:"すでに "+existing.length+" 行あります。未着手かつ未ロックの行のみ再配置し、不足分を追加します。"}));
+  var plan=generate({contracts:SEED_CONTRACTS, ym:target, genDate:TODAY, shifts:SEED_SHIFTS, staff:STAFF_MAP});
+  var caps={}; Object.keys(STAFF_MAP).forEach(function(n){ caps[n]=capacityOf(SEED_SHIFTS,STAFF_MAP[n],target).cap||1; });
+  assignEditors(plan, caps);
+  var byClient={}; plan.forEach(function(r){ byClient[r.client]=(byClient[r.client]||0)+1; });
+  var ul=h("ul",{class:"plain"});
+  Object.keys(byClient).forEach(function(c){ ul.appendChild(h("li",{text:c+"："+byClient[c]+"行"})); });
+  preview.appendChild(h("p",{class:"sub",text:"営業日 "+bd.length+"日／生成 "+plan.length+"行"}));
+  preview.appendChild(ul);
+  var sq=plan.filter(function(r){return r.squeezed}).length;
+  if(sq) preview.appendChild(h("p",{class:"sub",text:"うち "+sq+" 行はリードタイムが確保できず「圧縮」フラグが立ちます。"}));
+  m.appendChild(preview);
+  var right=h("div",{class:"right"});
+  right.appendChild(h("button",{class:"cta",disabled:!writable(),text:"この内容で生成",onclick:function(){
+    var r=merge(target, plan);
+    MONTH=target; SELECTED=null; closeModals(); render();
+    if(r.overflow.length) showToast("削除できなかった動画があります："+r.overflow.join("・"));
+    persist().then(render);
+  }}));
+  right.appendChild(h("button",{class:"ghostbtn",text:"やめる",onclick:closeModals}));
+  m.appendChild(right);
+  modal(m);
+}
+/**
+ * 生成結果を既存行へマージする。
+ * 「未着手かつ未ロックの行」だけを新しい配置に差し替え、進行中・固定済みの行は動かさない。
+ * 契約本数が減って未着手だけでは削りきれない場合は無音にせず overflow で返す。
+ */
+function merge(target, plan){
+  var others  = STATE.rows.filter(function(r){ return r.month!==target; });
+  var keptAll = STATE.rows.filter(function(r){ return r.month===target && (r.status!=="未着手" || r.dateLocked); });
+  var byC={}; keptAll.forEach(function(r){ (byC[r.contractId]=byC[r.contractId]||[]).push(r); });
+  var out=[], overflow=[];
+  SEED_CONTRACTS.forEach(function(c){
+    var kept = byC[c.id] || [];
+    var over = kept.length - c.count;
+    if(over>0) overflow.push(c.display+" "+c.kind+" "+over+"本");
+    var used={}; kept.forEach(function(r){ used[r.planned]=1; });
+    var fresh = plan.filter(function(r){ return r.contractId===c.id && !used[r.planned]; });
+    var need = Math.max(0, c.count - kept.length);
+    out = out.concat(kept, fresh.slice(0, need));
+  });
+  STATE.rows = others.concat(out);
+  STATE.rows.sort(function(a,b){ return a.planned<b.planned?-1:a.planned>b.planned?1:0; });
+  return {overflow:overflow, added:out.length-keptAll.length};
+}
+function nextMonth(ym){ var a=ym.split("-"),y=+a[0],m=+a[1]+1; if(m>12){m=1;y++;} return ymd(y,m,1).slice(0,7); }
+
+function showToast(msg, undo){
+  if(LAST_TOAST) LAST_TOAST.remove();
+  var t=h("div",{class:"toast",role:"status"},[h("span",{text:msg})]);
+  if(undo) t.appendChild(h("button",{text:"元に戻す",onclick:function(){ t.remove(); LAST_TOAST=null; undo(); }}));
+  document.body.appendChild(t); LAST_TOAST=t;
+  setTimeout(function(){ if(LAST_TOAST===t){ t.remove(); LAST_TOAST=null; } },5000);
+}
+
+/* =====================================================================
+   シェルの組み立て
+   ===================================================================== */
+function render(){
+  var sy=window.scrollY||0;
+  var d0=document.querySelector(".detail"), t0=document.querySelector(".taskscroll"), c0=document.querySelector(".cscroll");
+  var dTop=d0?d0.scrollTop:0, tTop=t0?t0.scrollTop:0, cTop=c0?c0.scrollTop:0;
+
+  var root=document.getElementById("root");
+  root.innerHTML="";
+  /* 動画を選べるビューは同じ詳細パネルを使う（§6.1）。
+     チーム負荷はスタッフを見る画面で動画の選択が無いため出さない */
+  var showDetail=!!DETAIL_VIEWS[VIEW];
+  var shell=h("div",{class:"shell"+(showDetail?"":" nodetail")});
+  shell.appendChild(Sidebar());
+
+  var main=h("div",{class:"main"});
+  main.appendChild(Header());
+  var wrap=h("div",{class:"wrap"});
+  var bs=blockers();
+  if(bs.length) wrap.appendChild(topBar(bs[0]));
+
+  if(VIEW==="home"){
+    wrap.appendChild(SummaryGrid());
+    var duo=h("div",{class:"duo"});
+    var left=h("div");
+    left.appendChild(h("div",{class:"sect"},[h("h2",{text:"現場オペレーション"}),h("span",{text:"（編集スタッフ向け）"})]));
+    left.appendChild(MyTasksCard());
+    var rightB=h("div");
+    rightB.appendChild(h("div",{class:"sect"},[h("h2",{text:"マネジメント監視"}),h("span",{text:"（契約別 進捗サマリー）"})]));
+    rightB.appendChild(ContractPanel());
+    duo.appendChild(left); duo.appendChild(rightB);
+    wrap.appendChild(duo);
+    wrap.appendChild(Kanban());
+  } else if(VIEW==="list"){
+    wrap.appendChild(panelList());
+  } else if(VIEW==="today"){
+    wrap.appendChild(panelToday());
+  } else if(VIEW==="track"){
+    wrap.appendChild(h("div",{class:"sect"},[
+      h("h2",{text:"進行トラック"}),
+      h("span",{text:"（"+MONTH.replace("-","年")+"月・契約ごとの投稿ペース）"})]));
+    wrap.appendChild(trackKpiStrip());
+    wrap.appendChild(panelTrack());
+    wrap.appendChild(panelStuck());
+    var g=h("div",{class:"duo"});
+    g.appendChild(panelDaily()); g.appendChild(panelStages());
+    wrap.appendChild(g);
+  } else if(VIEW==="load"){
+    wrap.appendChild(panelLoad());
+  } else if(VIEW==="pending"){
+    wrap.appendChild(panelPending());
+  }
+  main.appendChild(wrap);
+  shell.appendChild(main);
+  if(showDetail) shell.appendChild(DetailPanel());
+  root.appendChild(shell);
+
+  if(POP){
+    var bd1=h("div",{class:"backdrop",onclick:function(){ POP=false; render(); }});
+    bd1.style.background="transparent"; bd1.style.zIndex="55";
+    root.appendChild(bd1);
+  }
+  if(showDetail && DRAWER && narrow()){
+    root.appendChild(h("div",{class:"backdrop",onclick:function(){ DRAWER=false; render(); }}));
+  }
+
+  var d1=document.querySelector(".detail"); if(d1) d1.scrollTop=dTop;
+  var t1=document.querySelector(".taskscroll"); if(t1) t1.scrollTop=tTop;
+  var c1=document.querySelector(".cscroll"); if(c1) c1.scrollTop=cTop;
+  if(sy) window.scrollTo(0,sy);
+}
+
+var _RZ=null;
+window.addEventListener("resize", function(){
+  clearTimeout(_RZ);
+  _RZ=setTimeout(function(){ if(STATE) render(); }, 180);
+});
+
+/* ---- サンプル生成（初回のみ・明示的にサンプルと分かる形で） ---- */
+function seedSample(){
+  var ym=monthOf(TODAY);
+  var rows=generate({contracts:SEED_CONTRACTS, ym:ym, genDate:"2026-07-15", shifts:SEED_SHIFTS, staff:STAFF_MAP});
+  var caps={}; Object.keys(STAFF_MAP).forEach(function(n){ caps[n]=capacityOf(SEED_SHIFTS,STAFF_MAP[n],ym).cap||1; });
+  assignEditors(rows, caps);
+  // 進捗を決定的に散らす（過去分は概ね投稿済、一部を残して遅延を作る）
+  var seed=7;
+  rows.forEach(function(r,i){
+    seed=(seed*1103515245+12345)&0x7fffffff;
+    var rnd=(seed>>>8)%100;
+    if(r.planned < TODAY){
+      if(rnd<86){ r.status="投稿済"; r.postedAt=r.planned; r.trans={"投稿済":toUTC(r.planned)}; }
+      else if(rnd<93){ r.status="投稿待ち"; r.trans={"投稿待ち":toUTC(addDays(r.planned,-1))}; }
+      else { r.status="確認中"; r.trans={"確認中":toUTC(addDays(r.planned,-4))}; }
+    } else if(r.planned===TODAY){
+      r.status = rnd<50 ? "投稿待ち" : "確認中";
+      r.trans={}; r.trans[r.status]=toUTC(addDays(TODAY,-2));
+    } else {
+      r.status = rnd<40 ? "未着手" : rnd<70 ? "編集中" : rnd<88 ? "確認中" : "投稿待ち";
+      r.trans={}; if(r.status!=="未着手") r.trans[r.status]=toUTC(TODAY);
+    }
+  });
+  return rows;
+}
+
+/* ---- 起動 ---- */
+function boot(){
+  STATE = readState();
+  TODAY = fromUTC(Date.now() + 9*3600*1000); // Asia/Tokyo
+  ME = LS.get("mlboard.me", null);
+  if(!STATE.rows.length && !STATE.seeded){
+    STATE.rows = seedSample();
+    STATE.seeded = true;
+  }
+  MONTH = monthOf(TODAY);
+  if(!STATE.rows.some(function(r){return r.month===MONTH})){
+    var ms=monthList(); if(ms.length) MONTH=ms[ms.length-1];
+  }
+  var vs=visibleViews(); if(!vs.some(function(v){return v[0]===VIEW})) VIEW=vs[0][0];
+  render();
+  if(!ME) openWho();
+
+  window.addEventListener("beforeunload", function(e){
+    if(OPS.all().length){ e.preventDefault(); e.returnValue=""; }
+  });
+
+  if(window.claude && claude.use){
+    claude.use("artifact").then(function(api){
+      ARTIFACT = api;
+      if(!api){ CAN_WRITE=false; render(); return; }
+      replayPending();
+      render();
+    }).catch(function(){ CAN_WRITE=false; render(); });
+  } else {
+    CAN_WRITE = false; render();
+  }
+}
+boot();
+</script>

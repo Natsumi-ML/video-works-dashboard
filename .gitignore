@@ -1,0 +1,21 @@
+# 生成物・ローカル作業ファイル
+_preview_test.html
+.pv.tmp
+
+# バックアップ（削除せずローカル保持）
+*.bak.html
+local_backups/
+
+# ローカル設定
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 秘密情報
+.env
+.env.*
+!.env.example
+*.pem
+*.key
