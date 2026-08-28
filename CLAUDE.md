@@ -3,18 +3,18 @@
 このリポジトリのUI/UXを変更する前に、必ず以下を参照してください。
 
 ## UI仕様書
-- `docs/ui/SOCIAL_BASE_UI_IMPLEMENTATION_SPEC.md`
+- `SOCIAL_BASE_UI_IMPLEMENTATION_SPEC.md`
 
 ## 完成イメージ
-- `docs/ui/reference/01-home.png`
-- `docs/ui/reference/02-today.png`
-- `docs/ui/reference/03-videos.png`
-- `docs/ui/reference/04-team-load.png`
-- `docs/ui/reference/05-calendar.png`
-- `docs/ui/reference/06-client-management.png`
+- `01_home.png` — ホーム
+- `02_today.png` — 今日
+- `03_alldata.png` — 動画一覧 + 進行トラック統合
+- `04_team.png` — チーム負荷
+- `05_calendar.png` — 投稿カレンダー
+- `06_client.png` — クライアント管理
 
 ## 正式ロゴ
-- `docs/ui/reference/social-base-logo-reference.png`
+- `rogo.png`
 
 ## 重要ルール
 - 仕様書と参考画像を確認せずにUIを独自判断で再設計しない。
@@ -23,11 +23,11 @@
 - 「進行トラック」は独立ページにせず「動画一覧」へ統合する。
 - 「クライアント管理」は社員のみに表示する。
 - スマホ版はPC版の単純縮小にしない。
-- 正式ロゴは `social-base-logo-reference.png` のデザインを基準にする。
+- 正式ロゴは `rogo.png` のデザインを基準にする。
 
 ## 実装前
-1. 既存コード構造を確認する。
-2. UI仕様書を読む。
+1. 現在のコード構造を確認する。
+2. `SOCIAL_BASE_UI_IMPLEMENTATION_SPEC.md` を読む。
 3. 該当画面の参考画像を確認する。
 4. 変更計画を簡潔に整理してから実装する。
 
