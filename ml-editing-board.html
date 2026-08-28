@@ -344,22 +344,32 @@ svg{flex:none}
 .tabs .c{background:rgba(255,255,255,.14);border-radius:999px;padding:0 7px;font-size:12px;font-weight:700;
   min-width:20px;text-align:center}
 .tabs button[aria-selected="true"] .c{background:#3b82f6;color:#fff}
-.taskscroll{max-height:264px;overflow-y:auto}
-.trow{display:flex;align-items:center;gap:10px;padding:11px 16px;cursor:pointer;
-  border-bottom:1px solid rgba(255,255,255,.05);min-height:62px;width:100%;background:none;
+.taskscroll{max-height:300px;overflow-y:auto}
+/* 完成イメージ：desktop は表形式（§16.2）。列＝icon｜クライアント/タイトル｜ステータス｜期限｜アクション */
+.tthead{display:grid;grid-template-columns:40px minmax(0,1fr) 104px 132px 190px;gap:12px;
+  align-items:center;padding:11px 16px 8px;font-size:11.5px;color:var(--text-on-dark-muted);
+  border-bottom:1px solid var(--border-dark)}
+.trow{display:grid;grid-template-columns:40px minmax(0,1fr) 104px 132px 190px;gap:12px;
+  align-items:center;padding:11px 16px;cursor:pointer;
+  border-bottom:1px solid rgba(255,255,255,.05);min-height:64px;width:100%;background:none;
   border-left:0;border-right:0;border-top:0;text-align:left;color:inherit}
 .trow:hover{background:var(--bg-dark-row)}
 .trow[aria-selected="true"]{background:var(--bg-dark-row);box-shadow:inset 3px 0 0 #60a5fa}
-.tile{border-radius:6px;flex:none;display:flex;align-items:center;justify-content:center;
+.tile{border-radius:8px;flex:none;display:flex;align-items:center;justify-content:center;
   font-weight:700;color:#fff;letter-spacing:.02em;overflow:hidden}
-.trow .mid{flex:1;min-width:0}
-.trow .ttl{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.5}
-.trow .cli{font-size:12px;color:var(--text-on-dark-muted);display:flex;align-items:center;gap:7px;min-width:0}
-.trow .cli > span:not(.sbadge){overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.trow .due{font-size:12px;text-align:right;white-space:nowrap;line-height:1.45;color:var(--text-on-dark-muted)}
-.trow .due b{display:block;font-size:13px;color:var(--text-on-dark)}
+.trow .mid{min-width:0}
+.trow .cli{font-size:11.5px;color:var(--text-on-dark-muted);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trow .ttl{font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.55}
+.trow .tst{min-width:0}
+.trow .due{font-size:11.5px;white-space:nowrap;line-height:1.5;color:var(--text-on-dark-muted)}
+.trow .due b{display:block;font-size:13px;color:var(--text-on-dark);font-weight:700}
 .trow .due.od b{color:#fca5a5}
-.prio{font-size:12px;font-weight:700;border-radius:999px;padding:2px 0;white-space:nowrap;flex:0 0 32px;width:32px;text-align:center}
+.trow .tact{display:flex;align-items:center;gap:8px;justify-content:flex-end;min-width:0}
+.trow .tact .actbtns{width:100%;flex-wrap:nowrap}
+.trow .tact .cta,.trow .tact .outbtn{flex:1;min-width:0;padding:0 10px}
+.prio{font-style:normal;font-size:11px;font-weight:700;border-radius:999px;padding:1px 7px;
+  white-space:nowrap;display:inline-block;margin-left:5px}
 .prio.high{background:rgba(239,68,68,.20);color:#fca5a5}
 .prio.med{background:rgba(245,158,11,.20);color:#fcd34d}
 .prio.low{background:rgba(255,255,255,.10);color:var(--text-on-dark-muted)}
@@ -935,14 +945,15 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
   .staffcards,.pcards{grid-template-columns:1fr}
   /* KPIポップオーバーはインラインアコーディオンにする（§15.3 mobile） */
   .kpipop{position:static;margin-top:8px;max-width:none;min-width:0}
-  /* My Tasks 行 → タスクカード（§37） */
+  /* My Tasks 行 → タスクカード（§37）。desktop の grid をカードに戻す */
+  .tthead{display:none}
   .taskscroll{max-height:none}
-  .trow{flex-wrap:wrap;min-height:0;padding:12px 13px;gap:9px}
+  .trow{display:flex;flex-wrap:wrap;align-items:center;min-height:0;padding:12px 13px;gap:9px}
   .trow .mid{flex:1 1 46%}
-  .trow .prio{order:2}
-  .trow .due{order:3;margin-left:auto}
+  .trow .tst{order:2}
+  .trow .due{order:3;margin-left:auto;text-align:right}
   .trow .taskdrive{order:4}
-  .trow .actbtns{order:5}
+  .trow .tact{order:5;width:100%}
   .taskdrive{display:flex;width:100%;gap:8px}
   .taskdrive .drivebtn{flex:1;justify-content:center;height:44px}
   .dark .drivebtn{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.22);color:#fff}
@@ -2153,25 +2164,31 @@ function taskRow(r){
   var row=h("div",{class:"trow",role:"option",tabindex:"0","aria-selected":sel?"true":"false",
     onclick:function(){ selectRow(r.id); },
     onkeydown:function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); selectRow(r.id); } }});
-  row.appendChild(tile(r.contractId, shortName(c), 56, 34, 12));
+  row.appendChild(tile(r.contractId, shortName(c), 40, 40, 12));
+
+  /* 完成イメージ：クライアント名が上・動画タイトルが下 */
   var mid=h("div",{class:"mid"});
+  mid.appendChild(h("div",{class:"cli",text:c.client}));
   mid.appendChild(h("div",{class:"ttl",text:r.title||"（タイトル未定）"}));
-  var sub=h("div",{class:"cli"});
-  sub.appendChild(sBadge(r.status, true));
-  sub.appendChild(h("span",{text:c.display+"・"+r.kind+"・"+(r.editor||"未割当")}));
-  mid.appendChild(sub);
   /* 修正指示があれば1行で見せる（§37。全文は詳細パネル） */
   if(r.revisionNote) mid.appendChild(h("div",{class:"trev",text:"修正指示：" + r.revisionNote}));
   row.appendChild(mid);
 
+  /* 現在ステータス（ソリッドチップ） */
+  var stc=h("div",{class:"tst"});
+  stc.appendChild(sBadge(r.status, true));
+  row.appendChild(stc);
+
+  /* リスク・期限 */
   var od=(r.planned<TODAY);
   var due=h("div",{class:"due"+(od?" od":"")});
-  due.appendChild(h("b",{text:(r.planned===TODAY?"今日 ":"")+jpDate(r.planned)}));
-  due.appendChild(h("span",{text:"投稿予定"}));
-  row.appendChild(due);
-
+  due.appendChild(h("b",{text:(r.planned===TODAY?"今日 ":"")+jpDate(r.planned)+"（"+WD[dow(r.planned)]+"）"}));
   var p=prioOf(r);
-  row.appendChild(h("span",{class:"prio "+p, text:prioLabel(p), title:"優先度 "+prioLabel(p)}));
+  var d2=h("span",{});
+  d2.appendChild(txt("投稿予定 "));
+  d2.appendChild(h("i",{class:"prio "+p, text:prioLabel(p), title:"優先度 "+prioLabel(p)}));
+  due.appendChild(d2);
+  row.appendChild(due);
 
   var ab=actionButtons(r), pend={}; OPS.all().forEach(function(o){ pend[o.target]=1; });
   /* モバイルのタスクカードには Drive 2ボタンを添える（§37）。desktop では出さない */
@@ -2179,12 +2196,10 @@ function taskRow(r){
     var db=driveButtons((contractById(r.contractId)||{client:r.client}).client);
     if(db){ db.classList.add("taskdrive"); row.appendChild(db); }
   }
-  if(ab){
-    row.appendChild(ab);
-  } else {
-    var sp=h("span"); sp.style.cssText="width:114px;flex:none"; row.appendChild(sp);
-  }
-  if(pend[r.id]) row.appendChild(h("span",{class:"syncing",text:"同期中"}));
+  var act=h("div",{class:"tact"});
+  if(ab) act.appendChild(ab);
+  if(pend[r.id]) act.appendChild(h("span",{class:"syncing",text:"同期中"}));
+  row.appendChild(act);
   return row;
 }
 function MyTasksCard(){
@@ -2209,6 +2224,13 @@ function MyTasksCard(){
       h("b",{text:TASKTAB==="all"?"未完了のタスクはありません":"該当するタスクはありません"}),
       h("span",{text:"すべて順調です。"})]));
   } else {
+    /* 列ヘッダー（完成イメージ。mobile では非表示） */
+    var thead=h("div",{class:"tthead","aria-hidden":"true"},[
+      h("span",{style:"grid-column:1/3",text:"クライアント / 動画タイトル"}),
+      h("span",{text:"現在ステータス"}),
+      h("span",{text:"リスク・期限"}),
+      h("span",{text:"次のアクション"})]);
+    card.appendChild(thead);
     var sc=h("div",{class:"taskscroll",role:"listbox","aria-label":"自分のタスク"});
     rows.forEach(function(r){ sc.appendChild(taskRow(r)); });
     card.appendChild(sc);
