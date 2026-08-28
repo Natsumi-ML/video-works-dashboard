@@ -13,6 +13,9 @@
 - `05_calendar.png` — 投稿カレンダー
 - `06_client.png` — クライアント管理
 
+- ## レスポンシブ仕様
+- `SOCIAL_BASE_TODAY_RESPONSIVE_SPEC.md`
+
 ## 正式ロゴ
 - `rogo.png`
 
