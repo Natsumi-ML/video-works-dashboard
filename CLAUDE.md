@@ -4,6 +4,8 @@
 
 ## UI仕様書
 - `SOCIAL_BASE_UI_IMPLEMENTATION_SPEC.md`
+- `SOCIAL_BASE_TODAY_RESPONSIVE_SPEC.md`
+- `SOCIAL_BASE_CLIENT_MANAGEMENT_RESPONSIVE_SPEC.md`
 
 ## 完成イメージ
 - `01_home.png` — ホーム
@@ -14,7 +16,6 @@
 - `06_client.png` — クライアント管理
 
 - ## レスポンシブ仕様
-- `SOCIAL_BASE_TODAY_RESPONSIVE_SPEC.md`
 - 「今日」画面のTablet/Mobile実装は`SOCIAL_BASE_TODAY_RESPONSIVE_SPEC.md`を正とする。
 
 ## 正式ロゴ
