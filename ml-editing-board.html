@@ -565,9 +565,17 @@ table.list tr.pick[aria-selected="true"] td:first-child{box-shadow:inset 3px 0 0
 table.list tr.pick:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .cli2{display:flex;align-items:center;gap:9px;min-width:0}
 .cli2 span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.titlebtn{background:none;border:0;padding:0;cursor:pointer;font-size:13px;font-weight:600;
+.titlebtn{background:none;border:0;padding:0;cursor:pointer;font-size:12px;font-weight:600;
   color:var(--accent);text-align:left}
 .titlebtn:hover{text-decoration:underline}
+.lnm{min-width:0;display:flex;flex-direction:column}
+.lnm b{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lnm span{font-size:12px;color:var(--text-secondary);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.od2{color:var(--late);font-weight:600}
+.drivecell{background:none;border:1px solid var(--border);border-radius:8px;width:34px;height:34px;
+  display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.drivecell:hover{border-color:var(--border-strong);background:var(--surface-blue-soft)}
 .kindsub{font-size:12px;color:var(--text-secondary);margin-top:2px}
 .syncing{font-size:12px;color:var(--text-muted);white-space:nowrap}
 .dnum{font-variant-numeric:tabular-nums}
@@ -585,18 +593,20 @@ table.list tr.pick:focus-visible{outline:2px solid var(--accent);outline-offset:
 .pcard.lv-today{border-left-color:var(--st-review)}
 .pcard.lv-wait{border-left-color:var(--st-waiting)}
 .pcard.lv-info{border-left-color:var(--accent)}
-.pcard .ph{display:flex;align-items:center;gap:9px;min-width:0}
-.pcard .ph .nm{flex:1;min-width:0;font-size:12px;color:var(--text-secondary);
+.pcard .ph{display:flex;align-items:center;gap:9px;min-width:0;justify-content:space-between}
+.pcard .plab{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700}
+.pcard .plab i{width:8px;height:8px;border-radius:50%;background:currentColor}
+.pcard .plab.late{color:var(--critical)} .pcard .plab.warn{color:#B45309}
+.pcard .plab.info{color:var(--text-secondary)}
+.pcard .prem{font-size:12px;font-weight:700;color:var(--critical);background:var(--critical-soft);
+  border-radius:999px;padding:2px 10px;white-space:nowrap}
+.pcard .pnm{flex:1;min-width:0;display:flex;flex-direction:column}
+.pcard .pnm b{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pcard .pnm span{font-size:12px;color:var(--text-secondary);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pcard .pt{font-size:14px;font-weight:700;line-height:1.5;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pcard .why{font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;line-height:1.45}
-.pcard .why.late{color:var(--late)} .pcard .why.warn{color:var(--warn)}
-.pcard .why.info{color:var(--text-secondary)}
-.pcard .pkv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 10px;font-size:12px;
-  color:var(--text-secondary)}
-.pcard .pkv b{color:var(--text-primary);font-weight:600;font-variant-numeric:tabular-nums}
-.pcard .cta{width:100%;min-width:0}
+.pcard .pgoal{font-size:12.5px;color:var(--text-secondary);border-top:1px solid var(--border);
+  padding-top:8px}
+.pcard .pgoal b{color:var(--text-primary)}
 .daygroup{margin-top:16px}
 .daygroup h4{font-size:13px;color:var(--text-secondary);font-weight:600;margin:0 0 6px}
 .narrowrow{display:flex;justify-content:space-between;gap:12px;padding:11px 0;
@@ -1472,6 +1482,7 @@ var STAFFPICK = null;          /* チーム負荷：選択中のスタッフ */
 var LOAD_CFG = {today:8, week:2, overdue:15, review:4, full:120};
 var FILTER = {editor:"__me__", status:"open", client:"__all__", q:"", sort:"planned"};
 var TASKTAB = "all", DETAILTAB = "detail", POP = false, DRAWER = false;
+var LFILTER_OPEN = false;   /* すべての動画：フィルタバーの開閉（完成イメージは閉が既定） */
 var SVGNS = "http://www.w3.org/2000/svg";
 
 /* ---------------------------------------------------------------
@@ -2506,6 +2517,9 @@ function listKpiStrip(){
 function trackBlock(){
   var s=sectCard("クライアント進行トラック","クライアント単位の今月の進捗。行をクリックすると下の一覧をそのクライアントに絞り込みます");
   s.card.id="trackblock";
+  var thd=s.card.querySelector(".hd");
+  thd.appendChild(h("div",{class:"spacer"}));
+  thd.appendChild(h("span",{class:"pill",text:MONTH.replace("-","年")+"月"}));
   /* モバイルはカード（テーブルの縮小はしない §36） */
   if(mobile()){
     var mbox=h("div",{class:"vcards"});
@@ -2622,30 +2636,36 @@ function priorityPicks(){
   out.sort(function(a,b){ return (a.rank-b.rank) || (b.k-a.k); });
   return out.slice(0,3);
 }
+/* 優先対応カード（完成イメージ：ラベル＋残りチップ／クライアント＋動画名／目標・投稿済み） */
+var PRIO_LABEL={late:"遅延リスク", today:"本日締切", wait:"投稿待ち滞留", info:"要確認"};
 function priorityCard(p){
-  var r=p.r, c=contractById(r.contractId)||{display:r.client,poster:"-"};
+  var r=p.r, c=contractById(r.contractId)||{display:r.client,client:r.client,poster:"-"};
   var sel=(SELECTED===r.id);
+  /* クライアント単位の目標・投稿済み・残り */
+  var ids={}; SEED_CONTRACTS.forEach(function(x){ if(x.client===c.client) ids[x.id]=1; });
+  var goal=0; SEED_CONTRACTS.forEach(function(x){ if(ids[x.id]) goal+=x.count; });
+  var posted=rowsOfMonth().filter(function(x){ return ids[x.contractId] && x.status==="投稿済み"; }).length;
+
   var card=h("div",{class:"pcard lv-"+p.lv,role:"option",tabindex:"0","aria-selected":sel?"true":"false",
+    title:p.why,
     onclick:function(){ selectRow(r.id); },
     onkeydown:function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); selectRow(r.id); } }});
+  var top=h("div",{class:"ph"});
+  var lab=h("span",{class:"plab "+p.tone});
+  var pd=h("i"); lab.appendChild(pd); lab.appendChild(txt(PRIO_LABEL[p.lv]||"要確認"));
+  top.appendChild(lab);
+  top.appendChild(h("span",{class:"prem",text:"残り "+Math.max(0,goal-posted)+"本"}));
+  card.appendChild(top);
   var ph=h("div",{class:"ph"});
-  ph.appendChild(tile(r.contractId, shortName(c), 32, 24, 11));
-  ph.appendChild(h("span",{class:"nm",text:c.display+"　"+r.kind}));
-  ph.appendChild(sBadge(r.status));
+  ph.appendChild(tile(r.contractId, shortName(c), 32, 32, 12));
+  var nm=h("div",{class:"pnm"});
+  nm.appendChild(h("b",{text:c.client}));
+  nm.appendChild(h("span",{text:r.title||(c.display+" "+r.kind)}));
+  ph.appendChild(nm);
   card.appendChild(ph);
-  card.appendChild(h("div",{class:"pt",text:r.title||"（タイトル未定）"}));
-  var why=h("div",{class:"why "+p.tone});
-  why.appendChild(ic(p.tone==="info"?"info":"alert",14));
-  why.appendChild(h("span",{text:p.why}));
-  card.appendChild(why);
-  var kv=h("div",{class:"pkv"});
-  [["投稿予定",jpDate(r.planned)],["編集完了希望",jpDate(r.due)],
-   ["担当",r.editor||"未割当"],["投稿担当",c.poster||"-"]].forEach(function(x){
-    kv.appendChild(h("div",{},[x[0]+" ", h("b",{text:x[1]})]));
-  });
-  card.appendChild(kv);
-  var ab=actionButtons(r);
-  if(ab) card.appendChild(ab);
+  card.appendChild(h("div",{class:"pgoal"},[
+    txt("目標 "), h("b",{class:"num",text:goal+"本"}),
+    txt("　／　投稿済み "), h("b",{class:"num",text:posted+"本"})]));
   return card;
 }
 function PriorityVideos(){
@@ -2706,7 +2726,21 @@ function panelList(){
   box.appendChild(PriorityVideos());
   box.appendChild(trackBlock());
   var s=sectCard("すべての動画");
-  s.bd.appendChild(listFilterBar());
+  /* ヘッダー右の操作（完成イメージ）：月・フィルタ・CSV出力 */
+  var hd=s.card.querySelector(".hd");
+  hd.appendChild(h("div",{class:"spacer"}));
+  var months=monthList();
+  var msel=h("select",{class:"calsel","aria-label":"対象月",
+    onchange:function(e){ MONTH=e.target.value; SELECTED=null; SELECTEDC=null; render(); }});
+  months.forEach(function(m){ msel.appendChild(h("option",{value:m,text:m.replace("-","年")+"月"})); });
+  msel.value=MONTH;
+  hd.appendChild(msel);
+  hd.appendChild(h("button",{class:"chipbtn sm","aria-expanded":LFILTER_OPEN?"true":"false",
+    onclick:function(){ LFILTER_OPEN=!LFILTER_OPEN; render(); }},
+    [ic("sort",15), h("span",{text:"フィルタ"})]));
+  hd.appendChild(h("button",{class:"chipbtn sm",onclick:openCsv},
+    [ic("save",15), h("span",{text:"CSV出力"})]));
+  if(LFILTER_OPEN) s.bd.appendChild(listFilterBar());
   var wrap=h("div",{class:"listwrap",id:"listwrap"});
   wrap.appendChild(listTable());
   s.bd.appendChild(wrap);
@@ -2768,55 +2802,101 @@ function listCards(){
   });
   return box;
 }
+/* クライアント単位の集計（すべての動画・進行トラックで共用） */
+function clientAggByName(name){
+  var ids={}, goal=0;
+  SEED_CONTRACTS.forEach(function(c){ if(c.client===name){ ids[c.id]=1; goal+=c.count; } });
+  var posted=0, todo=0, doing=0;
+  rowsOfMonth().forEach(function(r){
+    if(!ids[r.contractId]) return;
+    if(r.status==="投稿済み") posted++;
+    else if(r.status==="未着手") todo++;
+    else doing++;
+  });
+  return {goal:goal, posted:posted, todo:todo, doing:doing,
+          remain:Math.max(0,goal-posted), pct:pct(posted,goal)};
+}
 function listTable(){
   if(mobile()) return listCards();
   var rows=filteredRows();
+  var aggCache={};
+  function aggOf(name){ return aggCache[name] || (aggCache[name]=clientAggByName(name)); }
   var t=h("table",{class:"list"});
   var hr=h("tr");
-  ["クライアント","タイトル／種別","担当","投稿予定","編集完了希望","状態",""].forEach(function(x){ hr.appendChild(h("th",{text:x})); });
+  /* 完成イメージ（03）の列構成 */
+  ["クライアント / 動画","今月目標","投稿済み","進行中","未着手","残り","進捗","ステータス","担当","Google Drive"]
+    .forEach(function(x){ hr.appendChild(h("th",{text:x})); });
   t.appendChild(hr);
   var pend={}; OPS.all().forEach(function(o){ pend[o.target]=1; });
   rows.forEach(function(r){
-    var c=contractById(r.contractId)||{display:r.client};
+    var c=contractById(r.contractId)||{display:r.client,client:r.client};
+    var a=aggOf(c.client);
     var sel=(SELECTED===r.id), open=(r.status!=="投稿済み");
+    var late=(open && r.planned<TODAY);
     var tr=h("tr",{class:"pick"+(open?"":" done"),tabindex:"0","aria-selected":sel?"true":"false",
       onclick:function(){ selectRow(r.id); },
       onkeydown:function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); selectRow(r.id); } }});
-    tr.appendChild(h("td",{},[h("div",{class:"cli2"},[
-      tile(r.contractId, shortName(c), 30, 22, 11), h("span",{text:c.display})])]));
+    /* クライアント / 動画（タイトル未入力はここから直せる §9.6） */
     var tc=h("td");
-    if(r.title) tc.appendChild(h("div",{style:"font-weight:600",text:r.title}));
-    /* 未入力はここから直せるようにする（§9.6）。行クリックと二重に動かさない */
-    else tc.appendChild(h("button",{class:"titlebtn",text:"（タイトル未定）",
+    var c2=h("div",{class:"cli2"});
+    c2.appendChild(tile(r.contractId, shortName(c), 34, 34, 12));
+    var nm=h("div",{class:"lnm"});
+    nm.appendChild(h("b",{text:c.client}));
+    if(r.title) nm.appendChild(h("span",{text:r.title}));
+    else nm.appendChild(h("button",{class:"titlebtn",text:"（タイトル未定）",
       onclick:function(e){ e.stopPropagation(); selectRow(r.id,"title"); }}));
-    tc.appendChild(h("div",{class:"kindsub",text:r.kind}));
+    c2.appendChild(nm);
+    tc.appendChild(c2);
+    if(late) tc.appendChild(h("div",{class:"kindsub od2",text:"投稿予定 "+jpDate(r.planned)+" を "+daysSince(r.planned)+"日超過"}));
     tr.appendChild(tc);
-    tr.appendChild(h("td",{text:r.editor||"未割当"}));
-    var pd=h("td");
-    var late=(open && r.planned<TODAY), tdy=(open && r.planned===TODAY);
-    if(late||tdy){ pd.appendChild(icon(late?"late":"warn")); pd.appendChild(txt(" ")); }
-    pd.appendChild(h("span",{class:"dnum"+(late?" od":tdy?" tdy":""),text:jpDate(r.planned)}));
-    if(late) pd.appendChild(h("div",{class:"kindsub",text:daysSince(r.planned)+"日超過"}));
-    tr.appendChild(pd);
-    var dd=h("td");
-    dd.appendChild(h("span",{class:"dnum",text:jpDate(r.due)}));
-    if(r.squeezed) dd.appendChild(h("span",{class:"pill",text:"圧縮",style:"margin-left:6px"}));
-    tr.appendChild(dd);
+    [a.goal, a.posted, a.doing, a.todo, a.remain].forEach(function(v){
+      tr.appendChild(h("td",{},[num(v), txt(" 本")]));
+    });
+    var pg=h("td");
+    var bar=h("div",{class:"pbar"}); var i=h("i"); i.style.width=Math.min(100,a.pct)+"%";
+    if(late) i.style.background="var(--critical)";
+    bar.appendChild(i); pg.appendChild(bar);
+    pg.appendChild(h("span",{class:"pcv",text:a.pct+"%"}));
+    tr.appendChild(pg);
     tr.appendChild(h("td",{},[sBadge(r.status)]));
-    var ad=h("td");
-    var ab=actionButtons(r);
-    if(ab) ad.appendChild(ab);
-    if(pend[r.id]) ad.appendChild(h("div",{class:"syncing",text:"同期中"}));
-    tr.appendChild(ad);
+    tr.appendChild(h("td",{text:r.editor||"未割当"}));
+    var dr=h("td");
+    dr.appendChild(h("button",{class:"drivecell","aria-label":"Google Drive（詳細を開く）",
+      title:"Drive フォルダは詳細パネルから開けます",
+      onclick:function(e){ e.stopPropagation(); selectRow(r.id); }},[driveMark(18)]));
+    if(pend[r.id]) dr.appendChild(h("div",{class:"syncing",text:"同期中"}));
+    tr.appendChild(dr);
     t.appendChild(tr);
   });
   if(!rows.length){
     var e=h("tr");
-    e.appendChild(h("td",{colspan:"7",text:"該当する動画はありません。絞り込みを緩めてください。",
+    e.appendChild(h("td",{colspan:"10",text:"該当する動画はありません。絞り込みを緩めてください。",
       style:"color:var(--text-muted)"}));
     t.appendChild(e);
   }
   return t;
+}
+/* CSV出力。アーティファクトはダウンロードが遮断されるためコピー方式（退避と同じ） */
+function openCsv(){
+  var rows=filteredRows();
+  var esc=function(v){ v=String(v==null?"":v); return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; };
+  var lines=[["クライアント","タイトル","種別","ステータス","担当","投稿予定","編集完了希望","投稿完了日"].join(",")];
+  rows.forEach(function(r){
+    var c=contractById(r.contractId)||{client:r.client};
+    lines.push([c.client, r.title||"", r.kind, r.status, r.editor||"", r.planned, r.due, r.postedAt||""].map(esc).join(","));
+  });
+  var m=h("div",{class:"modal"});
+  m.appendChild(h("h3",{text:"CSV出力（コピー用）"}));
+  m.appendChild(h("p",{class:"sub",text:"ブラウザの制限でファイル保存ができないため、下の内容をコピーして .csv ファイルに貼り付けてください。表示中の絞り込みが反映されています（"+rows.length+"行）。"}));
+  var ta=h("textarea"); ta.rows=12; ta.value=lines.join("\n");
+  ta.style.fontFamily="ui-monospace,SFMono-Regular,Menlo,monospace"; ta.style.fontSize="11px";
+  m.appendChild(ta);
+  var right=h("div",{class:"right"});
+  right.appendChild(h("button",{class:"cta",text:"全選択",onclick:function(){ ta.focus(); ta.select(); }}));
+  right.appendChild(h("button",{class:"ghostbtn",text:"閉じる",onclick:closeModals}));
+  m.appendChild(right);
+  modal(m);
+  setTimeout(function(){ ta.focus(); ta.select(); },50);
 }
 function renderListOnly(){
   var w=document.getElementById("listwrap");
