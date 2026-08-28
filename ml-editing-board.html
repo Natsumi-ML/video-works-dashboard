@@ -3874,6 +3874,8 @@ function staffCard(name, o){
     h("span",{text:"負荷目安 "+o.score+" / 100"})]));
   return card;
 }
+/* 今週の日別負荷のグラフ。2026-08-29 にチーム負荷ページから外したため現在どこからも呼ばれていない。
+   戻す場合は panelLoad() の末尾で sectCard に差し込むだけでよい（CSS .daywrap.wk / .avgline / .axisnote も残してある） */
 function weekBars(){
   var days=axisDays(), i=0; while(i<days.length && days[i]<TODAY) i++;
   var start=Math.max(0,i-2), week=days.slice(start,start+7);
@@ -3922,11 +3924,7 @@ function panelLoad(){
   var sg=suggestionSection(loads);
   if(sg) box.appendChild(sg);
 
-  var w=sectCard("今週の日別負荷",
-    "編集完了希望の件数。能力マーカーは出さない（ボードはテスト10社分、シフトは全社分の労働で分母が揃わないため）。偏りだけを見る");
-  w.bd.appendChild(weekBars());
-  w.bd.appendChild(h("div",{class:"axisnote",style:"text-align:left",text:"破線＝今週の平均"}));
-  box.appendChild(w.card);
+  /* 最下部にあった「今週の日別負荷」は 2026-08-29 のユーザー指示で削除（PC・モバイル共通） */
   return box;
 }
 
