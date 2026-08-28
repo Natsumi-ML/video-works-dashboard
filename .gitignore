@@ -19,3 +19,9 @@ Thumbs.db
 !.env.example
 *.pem
 *.key
+
+# Visual QA 生成物（build_qa_today.sh で再生成可能）
+_qa_today.html
+_qa_impl.png
+_qa_diff.png
+_qa_overlay.png
