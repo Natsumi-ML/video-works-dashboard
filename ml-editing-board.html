@@ -354,6 +354,29 @@ svg{flex:none}
 .drive[disabled]{border-color:var(--border-soft);color:var(--text-muted);cursor:not-allowed;background:#f8fafc}
 .drive .grow{flex:1;text-align:left}
 .helper{font-size:12px;color:var(--text-muted);margin:7px 0 0}
+/* Drive 2ボタン（§9.2：素材を開く／確認用にアップロード） */
+.drivebtns{display:flex;gap:8px;flex-wrap:wrap;min-width:0}
+.drivebtn{display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 12px;cursor:pointer;
+  border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text-primary);
+  font-size:12.5px;font-weight:700;text-decoration:none;white-space:nowrap}
+.drivebtn:hover{border-color:var(--border-strong);background:var(--surface-blue-soft)}
+.drivebtn.unset{color:var(--text-secondary);border-style:dashed}
+/* 修正指示（§17.3：critical soft、全面赤にはしない） */
+.revnote{background:var(--critical-soft);border:1px solid var(--critical-border);
+  border-radius:var(--radius-md);padding:11px 13px}
+.revnote b{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--critical);margin:0 0 5px}
+.revnote p{margin:0;font-size:13px;color:var(--text-primary);white-space:pre-wrap;overflow-wrap:anywhere}
+/* ステータス操作の並び（主＝cta／副＝outbtn） */
+.actbtns{display:flex;gap:8px;align-items:center;flex:none;flex-wrap:wrap}
+.outbtn{background:var(--surface);color:var(--brand-blue);border:1px solid var(--brand-blue);
+  border-radius:10px;height:38px;padding:0 14px;cursor:pointer;font-size:13px;font-weight:700;
+  white-space:nowrap;flex:none;transition:background 160ms ease}
+.outbtn:hover:not([disabled]){background:var(--surface-blue-soft)}
+.outbtn[disabled]{color:var(--text-muted);border-color:var(--border);cursor:not-allowed}
+/* 要修正の入力欄（§8.3：薄い critical 背景＋critical 枠。赤くしすぎない） */
+.revta{width:100%;border:1px solid var(--critical-border);background:var(--critical-soft);
+  border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.7;resize:vertical;margin:10px 0 0}
+.revta:focus{outline:none;border-color:var(--critical)}
 .dtabs{display:flex;gap:14px;padding:0 18px;border-bottom:1px solid var(--border-soft);flex-wrap:wrap}
 .dtabs button{background:none;border:0;padding:12px 0;cursor:pointer;font-size:13px;font-weight:600;
   color:var(--text-secondary);border-bottom:2px solid transparent}
@@ -467,7 +490,7 @@ table.list tr.pick:focus-visible{outline:2px solid var(--accent);outline-offset:
 .trow2 .when .od{color:var(--late);font-weight:700}
 .trow2.done{opacity:.72;box-shadow:none}
 /* 完了の手ざわり（§10.6）。派手にはしない。
-   投稿済 → 右へ抜けて「完了済み」へ移る／途中の工程 → その場で一瞬光る */
+   投稿済み → 右へ抜けて「完了済み」へ移る／途中の工程 → その場で一瞬光る */
 @keyframes rowfinish{
   0%  {opacity:1;transform:none;background:var(--bg-panel)}
   30% {background:#e9f9f0;border-color:var(--ok)}
@@ -645,7 +668,7 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 }
 </style>
 
-<script id="state" type="application/json">{"version":1,"seeded":true,"rows":[{"id":"r-2026-08-NCN-0","contractId":"ncn-v","client":"NCN","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-03","due":"2026-07-23","postedAt":"2026-08-03","trans":{"投稿済":1785715200000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-柿本商会-22","contractId":"kaki-v","client":"柿本商会","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済","planned":"2026-08-04","due":"2026-07-24","postedAt":"2026-08-04","trans":{"投稿済":1785801600000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-SBSネクサード-6","contractId":"sbs-v","client":"SBSネクサード","kind":"動画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済","planned":"2026-08-05","due":"2026-07-27","postedAt":"2026-08-05","trans":{"投稿済":1785888000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-木下テーブルテニスクラブ-12","contractId":"kino-v","client":"木下テーブルテニスクラブ","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-05","due":"2026-07-27","postedAt":"2026-08-05","trans":{"投稿済":1785888000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-茨城交通-28","contractId":"ibako-v","client":"茨城交通","kind":"動画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済","planned":"2026-08-05","due":"2026-07-27","postedAt":"2026-08-05","trans":{"投稿済":1785888000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-NCN-1","contractId":"ncn-v","client":"NCN","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-06","due":"2026-07-28","postedAt":"2026-08-06","trans":{"投稿済":1785974400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-アシストタクシー-34","contractId":"assist-v","client":"アシストタクシー","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"確認中","planned":"2026-08-06","due":"2026-08-03","postedAt":null,"trans":{"確認中":1785628800000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-ヒロダクト工業-38","contractId":"hiro-v","client":"ヒロダクト工業","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済","planned":"2026-08-06","due":"2026-08-03","postedAt":"2026-08-06","trans":{"投稿済":1785974400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-メトロ自動車-42","contractId":"metro-v","client":"メトロ自動車","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-06","due":"2026-08-03","postedAt":"2026-08-06","trans":{"投稿済":1785974400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-なの花交通バス-46","contractId":"nano-v","client":"なの花交通バス","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-06","due":"2026-08-03","postedAt":"2026-08-06","trans":{"投稿済":1785974400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-グレースホールディングス-18","contractId":"grace-v","client":"グレースホールディングス","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済","planned":"2026-08-07","due":"2026-07-29","postedAt":"2026-08-07","trans":{"投稿済":1786060800000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-柿本商会-23","contractId":"kaki-s","client":"柿本商会","kind":"静止画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済","planned":"2026-08-07","due":"2026-07-29","postedAt":"2026-08-07","trans":{"投稿済":1786060800000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-SBSネクサード-7","contractId":"sbs-v","client":"SBSネクサード","kind":"動画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済","planned":"2026-08-10","due":"2026-07-30","postedAt":"2026-08-10","trans":{"投稿済":1786320000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-木下テーブルテニスクラブ-13","contractId":"kino-v","client":"木下テーブルテニスクラブ","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-10","due":"2026-07-30","postedAt":"2026-08-10","trans":{"投稿済":1786320000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-アシストタクシー-35","contractId":"assist-v","client":"アシストタクシー","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-10","due":"2026-08-05","postedAt":"2026-08-10","trans":{"投稿済":1786320000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-茨城交通-29","contractId":"ibako-s","client":"茨城交通","kind":"静止画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済","planned":"2026-08-12","due":"2026-07-31","postedAt":"2026-08-12","trans":{"投稿済":1786492800000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-NCN-2","contractId":"ncn-v","client":"NCN","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-13","due":"2026-08-03","postedAt":"2026-08-13","trans":{"投稿済":1786579200000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-柿本商会-24","contractId":"kaki-v","client":"柿本商会","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済","planned":"2026-08-13","due":"2026-08-03","postedAt":"2026-08-13","trans":{"投稿済":1786579200000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-ヒロダクト工業-39","contractId":"hiro-v","client":"ヒロダクト工業","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿待ち","planned":"2026-08-13","due":"2026-08-07","postedAt":null,"trans":{"投稿待ち":1786492800000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-メトロ自動車-43","contractId":"metro-v","client":"メトロ自動車","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-13","due":"2026-08-07","postedAt":"2026-08-13","trans":{"投稿済":1786579200000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-SBSネクサード-8","contractId":"sbs-v","client":"SBSネクサード","kind":"動画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済","planned":"2026-08-14","due":"2026-08-04","postedAt":"2026-08-14","trans":{"投稿済":1786665600000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-木下テーブルテニスクラブ-14","contractId":"kino-s","client":"木下テーブルテニスクラブ","kind":"静止画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-14","due":"2026-08-04","postedAt":"2026-08-14","trans":{"投稿済":1786665600000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-グレースホールディングス-19","contractId":"grace-v","client":"グレースホールディングス","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済","planned":"2026-08-17","due":"2026-08-05","postedAt":"2026-08-17","trans":{"投稿済":1786924800000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-茨城交通-30","contractId":"ibako-v","client":"茨城交通","kind":"動画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済","planned":"2026-08-17","due":"2026-08-05","postedAt":"2026-08-17","trans":{"投稿済":1786924800000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-なの花交通バス-47","contractId":"nano-v","client":"なの花交通バス","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-17","due":"2026-08-12","postedAt":"2026-08-17","trans":{"投稿済":1786924800000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-NCN-3","contractId":"ncn-v","client":"NCN","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-18","due":"2026-08-06","postedAt":"2026-08-18","trans":{"投稿済":1787011200000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-アシストタクシー-36","contractId":"assist-v","client":"アシストタクシー","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-18","due":"2026-08-13","postedAt":"2026-08-18","trans":{"投稿済":1787011200000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-柿本商会-25","contractId":"kaki-s","client":"柿本商会","kind":"静止画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済","planned":"2026-08-19","due":"2026-08-07","postedAt":"2026-08-19","trans":{"投稿済":1787097600000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-ヒロダクト工業-40","contractId":"hiro-v","client":"ヒロダクト工業","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済","planned":"2026-08-19","due":"2026-08-14","postedAt":"2026-08-19","trans":{"投稿済":1787097600000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-SBSネクサード-9","contractId":"sbs-v","client":"SBSネクサード","kind":"動画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済","planned":"2026-08-20","due":"2026-08-10","postedAt":"2026-08-20","trans":{"投稿済":1787184000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-木下テーブルテニスクラブ-15","contractId":"kino-v","client":"木下テーブルテニスクラブ","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-20","due":"2026-08-10","postedAt":"2026-08-20","trans":{"投稿済":1787184000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-茨城交通-31","contractId":"ibako-s","client":"茨城交通","kind":"静止画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済","planned":"2026-08-20","due":"2026-08-10","postedAt":"2026-08-20","trans":{"投稿済":1787184000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-メトロ自動車-44","contractId":"metro-v","client":"メトロ自動車","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-20","due":"2026-08-17","postedAt":"2026-08-20","trans":{"投稿済":1787184000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-なの花交通バス-48","contractId":"nano-v","client":"なの花交通バス","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"確認中","planned":"2026-08-20","due":"2026-08-17","postedAt":null,"trans":{"確認中":1786838400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-NCN-4","contractId":"ncn-v","client":"NCN","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"未着手","planned":"2026-08-21","due":"2026-08-12","postedAt":null,"trans":{"投稿済":1787270400000,"投稿待ち":1787745140152,"確認中":1787745163662,"編集中":1787745165113,"未着手":1787745170740},"actor":"なつみ","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-グレースホールディングス-20","contractId":"grace-v","client":"グレースホールディングス","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済","planned":"2026-08-24","due":"2026-08-13","postedAt":"2026-08-24","trans":{"投稿済":1787529600000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-柿本商会-26","contractId":"kaki-v","client":"柿本商会","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済","planned":"2026-08-24","due":"2026-08-13","postedAt":"2026-08-24","trans":{"投稿済":1787529600000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-SBSネクサード-10","contractId":"sbs-v","client":"SBSネクサード","kind":"動画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済","planned":"2026-08-25","due":"2026-08-14","postedAt":"2026-08-25","trans":{"投稿済":1787616000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-木下テーブルテニスクラブ-16","contractId":"kino-v","client":"木下テーブルテニスクラブ","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿待ち","planned":"2026-08-25","due":"2026-08-14","postedAt":null,"trans":{"投稿待ち":1787745043484,"投稿済":1787745039412},"actor":"なつみ","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-アシストタクシー-37","contractId":"assist-v","client":"アシストタクシー","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済","planned":"2026-08-25","due":"2026-08-20","postedAt":"2026-08-25","trans":{"投稿済":1787616000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-茨城交通-32","contractId":"ibako-v","client":"茨城交通","kind":"動画","month":"2026-08","title":"","editor":"つかさ","status":"確認中","planned":"2026-08-26","due":"2026-08-17","postedAt":null,"trans":{"確認中":1787785426947,"投稿待ち":1787785424997},"actor":"なつみ","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-ヒロダクト工業-41","contractId":"hiro-v","client":"ヒロダクト工業","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿待ち","planned":"2026-08-26","due":"2026-08-21","postedAt":null,"trans":{"投稿待ち":1787529600000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-NCN-5","contractId":"ncn-v","client":"NCN","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"編集中","planned":"2026-08-27","due":"2026-08-18","postedAt":null,"trans":{"編集中":1787702400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-柿本商会-27","contractId":"kaki-s","client":"柿本商会","kind":"静止画","month":"2026-08","title":"","editor":"ゆかり","status":"未着手","planned":"2026-08-27","due":"2026-08-18","postedAt":null,"trans":{},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-メトロ自動車-45","contractId":"metro-v","client":"メトロ自動車","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"編集中","planned":"2026-08-27","due":"2026-08-24","postedAt":null,"trans":{"編集中":1787745117947},"actor":"なつみ","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-SBSネクサード-11","contractId":"sbs-v","client":"SBSネクサード","kind":"動画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済","planned":"2026-08-28","due":"2026-08-19","postedAt":"2026-08-26","trans":{"編集中":1787702400000,"確認中":1787745018813,"投稿待ち":1787745052155,"投稿済":1787745056845},"actor":"なつみ","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-木下テーブルテニスクラブ-17","contractId":"kino-s","client":"木下テーブルテニスクラブ","kind":"静止画","month":"2026-08","title":"","editor":"りりか","status":"編集中","planned":"2026-08-28","due":"2026-08-19","postedAt":null,"trans":{"編集中":1787702400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-なの花交通バス-49","contractId":"nano-v","client":"なの花交通バス","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"確認中","planned":"2026-08-28","due":"2026-08-25","postedAt":null,"trans":{"確認中":1787702400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-グレースホールディングス-21","contractId":"grace-v","client":"グレースホールディングス","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"編集中","planned":"2026-08-31","due":"2026-08-20","postedAt":null,"trans":{"編集中":1787702400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-茨城交通-33","contractId":"ibako-s","client":"茨城交通","kind":"静止画","month":"2026-08","title":"","editor":"つかさ","status":"確認中","planned":"2026-08-31","due":"2026-08-20","postedAt":null,"trans":{"確認中":1787702400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}}],"months":{},"maintenance":false,"lastUpdated":"2026-08-26T23:03:47.835Z"}</script>
+<script id="state" type="application/json">{"version":1,"seeded":true,"rows":[{"id":"r-2026-08-NCN-0","contractId":"ncn-v","client":"NCN","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済み","planned":"2026-08-03","due":"2026-07-23","postedAt":"2026-08-03","trans":{"投稿済み":1785715200000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-柿本商会-22","contractId":"kaki-v","client":"柿本商会","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済み","planned":"2026-08-04","due":"2026-07-24","postedAt":"2026-08-04","trans":{"投稿済み":1785801600000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-SBSネクサード-6","contractId":"sbs-v","client":"SBSネクサード","kind":"動画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済み","planned":"2026-08-05","due":"2026-07-27","postedAt":"2026-08-05","trans":{"投稿済み":1785888000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-木下テーブルテニスクラブ-12","contractId":"kino-v","client":"木下テーブルテニスクラブ","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済み","planned":"2026-08-05","due":"2026-07-27","postedAt":"2026-08-05","trans":{"投稿済み":1785888000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-茨城交通-28","contractId":"ibako-v","client":"茨城交通","kind":"動画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済み","planned":"2026-08-05","due":"2026-07-27","postedAt":"2026-08-05","trans":{"投稿済み":1785888000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-NCN-1","contractId":"ncn-v","client":"NCN","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済み","planned":"2026-08-06","due":"2026-07-28","postedAt":"2026-08-06","trans":{"投稿済み":1785974400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-アシストタクシー-34","contractId":"assist-v","client":"アシストタクシー","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"確認中","planned":"2026-08-06","due":"2026-08-03","postedAt":null,"trans":{"確認中":1785628800000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-ヒロダクト工業-38","contractId":"hiro-v","client":"ヒロダクト工業","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済み","planned":"2026-08-06","due":"2026-08-03","postedAt":"2026-08-06","trans":{"投稿済み":1785974400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-メトロ自動車-42","contractId":"metro-v","client":"メトロ自動車","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済み","planned":"2026-08-06","due":"2026-08-03","postedAt":"2026-08-06","trans":{"投稿済み":1785974400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-なの花交通バス-46","contractId":"nano-v","client":"なの花交通バス","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済み","planned":"2026-08-06","due":"2026-08-03","postedAt":"2026-08-06","trans":{"投稿済み":1785974400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-グレースホールディングス-18","contractId":"grace-v","client":"グレースホールディングス","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済み","planned":"2026-08-07","due":"2026-07-29","postedAt":"2026-08-07","trans":{"投稿済み":1786060800000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-柿本商会-23","contractId":"kaki-s","client":"柿本商会","kind":"静止画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済み","planned":"2026-08-07","due":"2026-07-29","postedAt":"2026-08-07","trans":{"投稿済み":1786060800000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-SBSネクサード-7","contractId":"sbs-v","client":"SBSネクサード","kind":"動画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済み","planned":"2026-08-10","due":"2026-07-30","postedAt":"2026-08-10","trans":{"投稿済み":1786320000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-木下テーブルテニスクラブ-13","contractId":"kino-v","client":"木下テーブルテニスクラブ","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済み","planned":"2026-08-10","due":"2026-07-30","postedAt":"2026-08-10","trans":{"投稿済み":1786320000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-アシストタクシー-35","contractId":"assist-v","client":"アシストタクシー","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済み","planned":"2026-08-10","due":"2026-08-05","postedAt":"2026-08-10","trans":{"投稿済み":1786320000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-茨城交通-29","contractId":"ibako-s","client":"茨城交通","kind":"静止画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済み","planned":"2026-08-12","due":"2026-07-31","postedAt":"2026-08-12","trans":{"投稿済み":1786492800000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-NCN-2","contractId":"ncn-v","client":"NCN","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済み","planned":"2026-08-13","due":"2026-08-03","postedAt":"2026-08-13","trans":{"投稿済み":1786579200000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-柿本商会-24","contractId":"kaki-v","client":"柿本商会","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済み","planned":"2026-08-13","due":"2026-08-03","postedAt":"2026-08-13","trans":{"投稿済み":1786579200000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-ヒロダクト工業-39","contractId":"hiro-v","client":"ヒロダクト工業","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿待ち","planned":"2026-08-13","due":"2026-08-07","postedAt":null,"trans":{"投稿待ち":1786492800000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-メトロ自動車-43","contractId":"metro-v","client":"メトロ自動車","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済み","planned":"2026-08-13","due":"2026-08-07","postedAt":"2026-08-13","trans":{"投稿済み":1786579200000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-SBSネクサード-8","contractId":"sbs-v","client":"SBSネクサード","kind":"動画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済み","planned":"2026-08-14","due":"2026-08-04","postedAt":"2026-08-14","trans":{"投稿済み":1786665600000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-木下テーブルテニスクラブ-14","contractId":"kino-s","client":"木下テーブルテニスクラブ","kind":"静止画","month":"2026-08","title":"","editor":"りりか","status":"投稿済み","planned":"2026-08-14","due":"2026-08-04","postedAt":"2026-08-14","trans":{"投稿済み":1786665600000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-グレースホールディングス-19","contractId":"grace-v","client":"グレースホールディングス","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済み","planned":"2026-08-17","due":"2026-08-05","postedAt":"2026-08-17","trans":{"投稿済み":1786924800000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-茨城交通-30","contractId":"ibako-v","client":"茨城交通","kind":"動画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済み","planned":"2026-08-17","due":"2026-08-05","postedAt":"2026-08-17","trans":{"投稿済み":1786924800000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-なの花交通バス-47","contractId":"nano-v","client":"なの花交通バス","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済み","planned":"2026-08-17","due":"2026-08-12","postedAt":"2026-08-17","trans":{"投稿済み":1786924800000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-NCN-3","contractId":"ncn-v","client":"NCN","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済み","planned":"2026-08-18","due":"2026-08-06","postedAt":"2026-08-18","trans":{"投稿済み":1787011200000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-アシストタクシー-36","contractId":"assist-v","client":"アシストタクシー","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済み","planned":"2026-08-18","due":"2026-08-13","postedAt":"2026-08-18","trans":{"投稿済み":1787011200000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-柿本商会-25","contractId":"kaki-s","client":"柿本商会","kind":"静止画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済み","planned":"2026-08-19","due":"2026-08-07","postedAt":"2026-08-19","trans":{"投稿済み":1787097600000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-ヒロダクト工業-40","contractId":"hiro-v","client":"ヒロダクト工業","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済み","planned":"2026-08-19","due":"2026-08-14","postedAt":"2026-08-19","trans":{"投稿済み":1787097600000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-SBSネクサード-9","contractId":"sbs-v","client":"SBSネクサード","kind":"動画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済み","planned":"2026-08-20","due":"2026-08-10","postedAt":"2026-08-20","trans":{"投稿済み":1787184000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-木下テーブルテニスクラブ-15","contractId":"kino-v","client":"木下テーブルテニスクラブ","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済み","planned":"2026-08-20","due":"2026-08-10","postedAt":"2026-08-20","trans":{"投稿済み":1787184000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-茨城交通-31","contractId":"ibako-s","client":"茨城交通","kind":"静止画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済み","planned":"2026-08-20","due":"2026-08-10","postedAt":"2026-08-20","trans":{"投稿済み":1787184000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-メトロ自動車-44","contractId":"metro-v","client":"メトロ自動車","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済み","planned":"2026-08-20","due":"2026-08-17","postedAt":"2026-08-20","trans":{"投稿済み":1787184000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-なの花交通バス-48","contractId":"nano-v","client":"なの花交通バス","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"確認中","planned":"2026-08-20","due":"2026-08-17","postedAt":null,"trans":{"確認中":1786838400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-NCN-4","contractId":"ncn-v","client":"NCN","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"未着手","planned":"2026-08-21","due":"2026-08-12","postedAt":null,"trans":{"投稿済み":1787270400000,"投稿待ち":1787745140152,"確認中":1787745163662,"編集中":1787745165113,"未着手":1787745170740},"actor":"なつみ","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-グレースホールディングス-20","contractId":"grace-v","client":"グレースホールディングス","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済み","planned":"2026-08-24","due":"2026-08-13","postedAt":"2026-08-24","trans":{"投稿済み":1787529600000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-柿本商会-26","contractId":"kaki-v","client":"柿本商会","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿済み","planned":"2026-08-24","due":"2026-08-13","postedAt":"2026-08-24","trans":{"投稿済み":1787529600000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-SBSネクサード-10","contractId":"sbs-v","client":"SBSネクサード","kind":"動画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済み","planned":"2026-08-25","due":"2026-08-14","postedAt":"2026-08-25","trans":{"投稿済み":1787616000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-木下テーブルテニスクラブ-16","contractId":"kino-v","client":"木下テーブルテニスクラブ","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿待ち","planned":"2026-08-25","due":"2026-08-14","postedAt":null,"trans":{"投稿待ち":1787745043484,"投稿済み":1787745039412},"actor":"なつみ","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-アシストタクシー-37","contractId":"assist-v","client":"アシストタクシー","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"投稿済み","planned":"2026-08-25","due":"2026-08-20","postedAt":"2026-08-25","trans":{"投稿済み":1787616000000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-茨城交通-32","contractId":"ibako-v","client":"茨城交通","kind":"動画","month":"2026-08","title":"","editor":"つかさ","status":"確認中","planned":"2026-08-26","due":"2026-08-17","postedAt":null,"trans":{"確認中":1787785426947,"投稿待ち":1787785424997},"actor":"なつみ","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-ヒロダクト工業-41","contractId":"hiro-v","client":"ヒロダクト工業","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"投稿待ち","planned":"2026-08-26","due":"2026-08-21","postedAt":null,"trans":{"投稿待ち":1787529600000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-NCN-5","contractId":"ncn-v","client":"NCN","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"編集中","planned":"2026-08-27","due":"2026-08-18","postedAt":null,"trans":{"編集中":1787702400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-柿本商会-27","contractId":"kaki-s","client":"柿本商会","kind":"静止画","month":"2026-08","title":"","editor":"ゆかり","status":"未着手","planned":"2026-08-27","due":"2026-08-18","postedAt":null,"trans":{},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-メトロ自動車-45","contractId":"metro-v","client":"メトロ自動車","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"編集中","planned":"2026-08-27","due":"2026-08-24","postedAt":null,"trans":{"編集中":1787745117947},"actor":"なつみ","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-SBSネクサード-11","contractId":"sbs-v","client":"SBSネクサード","kind":"動画","month":"2026-08","title":"","editor":"つかさ","status":"投稿済み","planned":"2026-08-28","due":"2026-08-19","postedAt":"2026-08-26","trans":{"編集中":1787702400000,"確認中":1787745018813,"投稿待ち":1787745052155,"投稿済み":1787745056845},"actor":"なつみ","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-木下テーブルテニスクラブ-17","contractId":"kino-s","client":"木下テーブルテニスクラブ","kind":"静止画","month":"2026-08","title":"","editor":"りりか","status":"編集中","planned":"2026-08-28","due":"2026-08-19","postedAt":null,"trans":{"編集中":1787702400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-なの花交通バス-49","contractId":"nano-v","client":"なの花交通バス","kind":"動画","month":"2026-08","title":"","editor":"りりか","status":"確認中","planned":"2026-08-28","due":"2026-08-25","postedAt":null,"trans":{"確認中":1787702400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-グレースホールディングス-21","contractId":"grace-v","client":"グレースホールディングス","kind":"動画","month":"2026-08","title":"","editor":"ゆかり","status":"編集中","planned":"2026-08-31","due":"2026-08-20","postedAt":null,"trans":{"編集中":1787702400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}},{"id":"r-2026-08-茨城交通-33","contractId":"ibako-s","client":"茨城交通","kind":"静止画","month":"2026-08","title":"","editor":"つかさ","status":"確認中","planned":"2026-08-31","due":"2026-08-20","postedAt":null,"trans":{"確認中":1787702400000},"actor":"","dateLocked":false,"squeezed":false,"url":"","note":"","updatedAt":{}}],"months":{},"maintenance":false,"lastUpdated":"2026-08-26T23:03:47.835Z"}</script>
 
 <div id="root"></div>
 
@@ -657,11 +680,25 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 "use strict";
 var PRISTINE = "<!doctype html>\n" + document.documentElement.outerHTML;
 
-/* 工程は6段階（§17.1）。承認済み＝内容OK・まだ投稿していない状態で、
-   「確認OK」と「投稿した」の間に入る。承認済み≠完了（§3.2） */
-var STATUSES = ["未着手","編集中","確認中","承認済み","投稿待ち","投稿済"];
-var ACTION_LABEL = {"未着手":"着手する","編集中":"編集完了","確認中":"確認OK",
-                    "承認済み":"投稿待ちへ","投稿待ち":"投稿した"};
+/* 正式ステータス（SOCIAL BASE §7.1）。「承認済み」はステータスとして使わない：
+   「承認」は 確認中 → 投稿待ち へ進めるアクション名。
+   「要修正」は確認中からの分岐で、修正完了で確認中へ戻る（§8.1） */
+var STATUSES = ["未着手","編集中","要修正","確認中","投稿待ち","投稿済み"];
+/* ステッパー・工程列で使う主工程（要修正は分岐のため含めない §17.5） */
+var MAIN_STATUSES = ["未着手","編集中","確認中","投稿待ち","投稿済み"];
+/* アクション（§8.2）。「次へ」は使用禁止。ボタンには必ず具体的アクション名を出す */
+var STATUS_ACTIONS = {
+  "未着手":["着手する"], "編集中":["編集完了"], "要修正":["修正完了"],
+  "確認中":["承認","要修正"], "投稿待ち":["投稿済みにする"], "投稿済み":[]
+};
+var ACTION_TO = {"着手する":"編集中","編集完了":"確認中","修正完了":"確認中",
+                 "承認":"投稿待ち","要修正":"要修正","投稿済みにする":"投稿済み"};
+/* 主アクション（1ボタンで進める文言）。確認中は 承認／要修正 の2択（§16.2） */
+var ACTION_LABEL = {"未着手":"着手する","編集中":"編集完了","要修正":"修正完了",
+                    "確認中":"承認","投稿待ち":"投稿済みにする"};
+/* 「1段戻す」用。要修正の取り消しは確認中へ戻る */
+var PREV_STATUS = {"編集中":"未着手","確認中":"編集中","要修正":"確認中",
+                   "投稿待ち":"確認中","投稿済み":"投稿待ち"};
 var TODAY = null; // 実行時に決定
 
 function p2(n){return (n<10?"0":"")+n}
@@ -781,7 +818,7 @@ function interleave(a,b){
 function judge(rows, today){
   var late=0, dueToday=0, done=0, ready=0;
   rows.forEach(function(r){
-    if(r.status==="投稿済"){ done++; return; }
+    if(r.status==="投稿済み"){ done++; return; }
     if(r.status==="投稿待ち") ready++;
     if(r.planned < today) late++;
     else if(r.planned === today) dueToday++;
@@ -906,6 +943,17 @@ function nearestWorking(bd, workSet, from, taken){
 
 /* --- 操作の適用（op journal の再適用にも使う） --- */
 function applyOp(st, op){
+  /* クライアント設定（Drive URL 等）。target＝クライアント名、field 単位の last-write-wins */
+  if(op.type==="client"){
+    st.clients = st.clients || {};
+    var cl = st.clients[op.target] || (st.clients[op.target] = {updatedAt:{}});
+    cl.updatedAt = cl.updatedAt || {};
+    var cf = op.payload.field;
+    if((cl.updatedAt[cf]||0) > op.at) return "stale";
+    cl[cf] = op.payload.value;
+    cl.updatedAt[cf] = op.at;
+    return "ok";
+  }
   var r=null;
   for(var i=0;i<st.rows.length;i++){ if(st.rows[i].id===op.target){ r=st.rows[i]; break; } }
   if(!r) return "gone";
@@ -915,7 +963,7 @@ function applyOp(st, op){
     r.trans = r.trans || {};
     r.trans[op.payload.to] = op.at;
     r.actor = op.payload.actor || r.actor;
-    r.postedAt = op.payload.to==="投稿済" ? (op.payload.on || fromUTC(op.at)) : null;
+    r.postedAt = op.payload.to==="投稿済み" ? (op.payload.on || fromUTC(op.at)) : null;
     return "ok";
   }
   // 状態遷移以外は last-write-wins
@@ -989,7 +1037,30 @@ var DRAFT = {
 
 function readState(){
   var el=document.getElementById("state");
-  try{ return JSON.parse(el.textContent); }catch(e){ return {version:1,seeded:false,rows:[],months:{},maintenance:false}; }
+  try{ return migrateState(JSON.parse(el.textContent)); }
+  catch(e){ return migrateState({version:1,seeded:false,rows:[],months:{},maintenance:false}); }
+}
+/* 旧データの移行。公開版に保存済みの運用データは旧語彙のまま来るため、
+   読み込み時に必ず正規化する（保存し直すまで何度読んでも同じ結果になる冪等処理）。
+   - 「承認済み」はステータス廃止（§7.1）→ 内容OK・未投稿 ＝「投稿待ち」へ
+   - 「投稿済」→「投稿済み」
+   - revisionNote（修正指示 §8.3）と clients（Drive URL §9）の器を用意する */
+function migrateState(st){
+  st.rows = st.rows || [];
+  st.rows.forEach(function(r){
+    if(r.status==="承認済み") r.status="投稿待ち";
+    if(r.status==="投稿済")   r.status="投稿済み";
+    if(r.trans){
+      if(r.trans["承認済み"]!=null && r.trans["投稿待ち"]==null) r.trans["投稿待ち"]=r.trans["承認済み"];
+      delete r.trans["承認済み"];
+      if(r.trans["投稿済"]!=null && r.trans["投稿済み"]==null) r.trans["投稿済み"]=r.trans["投稿済"];
+      delete r.trans["投稿済"];
+    }
+    if(r.revisionNote==null) r.revisionNote="";
+  });
+  /* クライアント名 → {material, review, updatedAt:{}}。フォルダの自動作成はしない（§9.1） */
+  st.clients = st.clients || {};
+  return st;
 }
 /** state を埋め込んだ完全なドキュメントを作る。DOM のシリアライズはしない */
 function buildDoc(st){
@@ -1179,10 +1250,10 @@ function statusPill(level){
 var SV = {
   "未着手":  {v:"--st-todo",    ink:"--st-todo-ink",    tint:"--st-todo-tint"},
   "編集中":  {v:"--st-editing", ink:"--st-editing-ink", tint:"--st-editing-tint"},
+  "要修正":  {v:"--st-revise",  ink:"--st-revise-ink",  tint:"--st-revise-tint"},
   "確認中":  {v:"--st-review",  ink:"--st-review-ink",  tint:"--st-review-tint"},
-  "承認済み":{v:"--st-approved",ink:"--st-approved-ink",tint:"--st-approved-tint"},
   "投稿待ち":{v:"--st-waiting", ink:"--st-waiting-ink", tint:"--st-waiting-tint"},
-  "投稿済":  {v:"--st-posted",  ink:"--st-posted-ink",  tint:"--st-posted-tint"}
+  "投稿済み":{v:"--st-posted",  ink:"--st-posted-ink",  tint:"--st-posted-tint"}
 };
 function sv(st){ return SV[st] || SV["未着手"]; }
 function dot(tok, px){
@@ -1256,7 +1327,7 @@ function prioLabel(p){ return p==="high" ? "高" : p==="med" ? "中" : "低"; }
 function prioRank(r){ var p=prioOf(r); return p==="high"?0:p==="med"?1:2; }
 
 function myTasks(tab){
-  var rows=rowsOfMonth().filter(function(r){ return r.status!=="投稿済"; });
+  var rows=rowsOfMonth().filter(function(r){ return r.status!=="投稿済み"; });
   if(STAFF_MAP[ME]) rows=rows.filter(function(r){
     return r.editor===ME || (contractById(r.contractId)||{}).poster===ME; });
   if(tab==="today")       rows=rows.filter(function(r){ return r.planned<=TODAY || r.due<=TODAY; });
@@ -1272,7 +1343,7 @@ function summary(){
   var target=0; cs.forEach(function(c){ target+=c.count; });
   var posted=0, waiting=0, dueToday=0;
   rows.forEach(function(r){
-    if(r.status==="投稿済"){ posted++; return; }
+    if(r.status==="投稿済み"){ posted++; return; }
     if(r.status==="投稿待ち"){ waiting++; if(r.planned===TODAY) dueToday++; }
   });
   var risk=0, warnC=0;
@@ -1533,19 +1604,25 @@ function SummaryGrid(){
 /* ---------------------------------------------------------------
    My Tasks（ダークカード）
    --------------------------------------------------------------- */
-function nextStatus(s){ var i=STATUSES.indexOf(s); return i<0||i>=STATUSES.length-1 ? null : STATUSES[i+1]; }
-function advance(r){
+/* 主アクションで進んだ先（表示判定用）。線形順ではなくアクション定義から引く */
+function nextStatus(s){ var a=ACTION_LABEL[s]; return a ? ACTION_TO[a] : null; }
+/* アクション実行（§8.2）。「要修正」だけは修正指示の入力を挟む（§8.3） */
+function doAction(r, action){
+  if(action==="要修正"){ openReviseInput(r); return; }
+  var to = ACTION_TO[action]; if(!to) return;
   // commit() は applyOp で r.status を同期的に書き換えるため、
   // 取り消し用の遷移元は「進める前」にここで確定させておく。
   var from = r.status;
-  var to = nextStatus(from); if(!to) return;
   var c = contractById(r.contractId) || {display:r.client};
   var name = r.title || (c.display+" "+r.kind);
   commit(newOp("status", r.id, {from:from, to:to, actor:ME, on:TODAY}));
+  /* 承認したら修正指示は役目を終える。再修正時はまた入力される */
+  if(action==="承認" && r.revisionNote) commit(newOp("edit", r.id, {field:"revisionNote", value:""}));
   showToast("「"+name+"」を"+to+"にしました", function(){
     commit(newOp("status", r.id, {from:to, to:from, actor:ME}));
   });
 }
+function advance(r){ var a=ACTION_LABEL[r.status]; if(a) doAction(r, a); }
 /* 全ビュー共通の選択。focusField を渡すと詳細パネルの該当入力へ寄せる（§9.6） */
 function selectRow(id, focusField){
   SELECTED=id; DETAILTAB="detail"; POP=false;
@@ -1580,10 +1657,9 @@ function taskRow(r){
   var p=prioOf(r);
   row.appendChild(h("span",{class:"prio "+p, text:prioLabel(p), title:"優先度 "+prioLabel(p)}));
 
-  var nx=nextStatus(r.status), pend={}; OPS.all().forEach(function(o){ pend[o.target]=1; });
-  if(nx){
-    row.appendChild(h("button",{class:"cta",disabled:!writable(),text:ACTION_LABEL[r.status],
-      onclick:function(e){ e.stopPropagation(); advance(r); }}));
+  var ab=actionButtons(r), pend={}; OPS.all().forEach(function(o){ pend[o.target]=1; });
+  if(ab){
+    row.appendChild(ab);
   } else {
     var sp=h("span"); sp.style.cssText="width:114px;flex:none"; row.appendChild(sp);
   }
@@ -1660,10 +1736,10 @@ function contractRow(c){
   var row=h("button",{class:"crow"+(j.level==="ok"?"":" "+j.level),
     "aria-selected":SELECTEDC===c.id?"true":"false",
     title:c.client+" "+c.kind,
-    "aria-label":c.client+" "+c.kind+"：必要"+c.count+"本、投稿済"+j.done+"本、投稿待ち"+j.ready+"本、遅延"+j.late+"本",
+    "aria-label":c.client+" "+c.kind+"：必要"+c.count+"本、投稿済み"+j.done+"本、投稿待ち"+j.ready+"本、遅延"+j.late+"本",
     onclick:function(){
       SELECTEDC=c.id; POP=false;
-      var cand=rs.filter(function(r){ return r.status!=="投稿済"; })
+      var cand=rs.filter(function(r){ return r.status!=="投稿済み"; })
                  .sort(function(a,b){ return a.planned<b.planned?-1:1; })[0];
       if(cand){ SELECTED=cand.id; DETAILTAB="detail"; if(narrow()) DRAWER=true; }
       render();
@@ -1805,8 +1881,12 @@ function field(r, label, f, type, ph){
 }
 function timeline(r){
   var ul=h("ul",{class:"tl"});
-  var cur=STATUSES.indexOf(r.status);
-  STATUSES.forEach(function(st,i){
+  /* 主工程で組む。要修正は分岐（§17.5）なので、通った/現在のときだけ確認中の前に挟む */
+  var list=MAIN_STATUSES.slice();
+  if((r.trans && r.trans["要修正"]!=null) || r.status==="要修正")
+    list.splice(list.indexOf("確認中"), 0, "要修正");
+  var cur=list.indexOf(r.status);
+  list.forEach(function(st,i){
     var t = r.trans && r.trans[st];
     var cls = st===r.status ? "cur" : (t || i<cur) ? "done" : "todo";
     var li=h("li",{class:cls});
@@ -1848,31 +1928,30 @@ function DetailPanel(){
   function kvrow(k,v,cls){ kv.appendChild(h("div",{class:"k",text:k})); kv.appendChild(h("div",{class:"v "+(cls||""),text:v})); }
   kvrow("行ID", r.id);
   kvrow("担当", r.editor||"未割当");
-  kvrow("投稿予定", jpDate(r.planned)+(r.dateLocked?"（固定）":""), r.planned<TODAY&&r.status!=="投稿済"?"od":"");
+  kvrow("投稿予定", jpDate(r.planned)+(r.dateLocked?"（固定）":""), r.planned<TODAY&&r.status!=="投稿済み"?"od":"");
   kvrow("編集完了希望", jpDate(r.due)+(r.squeezed?"（圧縮）":""));
   kvrow("工程", c.steps===4?"4ステップ（先方確認あり）":"2ステップ（先方確認なし）");
   kvrow("投稿担当", c.poster||"-");
   s1.appendChild(kv);
   d.appendChild(s1);
 
-  /* Google Drive */
-  var s2=h("div",{class:"dsec"});
-  var url=String(r.drive||"").trim();
-  var ok = /^https?:\/\//i.test(url);
-  if(ok){
-    var a=h("a",{class:"drive",href:url,target:"_blank",rel:"noopener noreferrer"});
-    a.appendChild(driveMark(20));
-    a.appendChild(h("span",{class:"grow",text:"Google Drive フォルダを開く"}));
-    a.appendChild(ic("externalLink",16));
-    s2.appendChild(a);
-  } else {
-    var b=h("button",{class:"drive",disabled:true});
-    b.appendChild(driveMark(20));
-    b.appendChild(h("span",{class:"grow",text:"Google Drive フォルダを開く"}));
-    s2.appendChild(b);
-    s2.appendChild(h("p",{class:"helper",text:"Google Drive フォルダが未設定です。「詳細」タブのURL欄に貼り付けてください。"}));
+  /* 修正指示（§17.3）。要修正のうちは詳細の上部寄りに強調表示する */
+  if(r.revisionNote){
+    var rn=h("div",{class:"dsec"});
+    var rc=h("div",{class:"revnote"});
+    rc.appendChild(h("b",{},[ic("alert",14), txt(" 修正指示")]));
+    rc.appendChild(h("p",{text:r.revisionNote}));
+    rn.appendChild(rc);
+    d.appendChild(rn);
   }
-  d.appendChild(s2);
+
+  /* Google Drive（§9.2：クライアント共通の2フォルダ） */
+  var db=driveButtons(c.client||r.client);
+  if(db){
+    var s2=h("div",{class:"dsec"});
+    s2.appendChild(db);
+    d.appendChild(s2);
+  }
 
   /* タブ */
   var tabs=h("div",{class:"dtabs",role:"tablist"});
@@ -1894,7 +1973,6 @@ function DetailPanel(){
     });
     sel.value=r.editor||"";
     lb.appendChild(sel); body.appendChild(lb);
-    body.appendChild(field(r,"Google Drive フォルダURL","drive","text","https://drive.google.com/..."));
     body.appendChild(field(r,"参考動画URL","url","text",""));
     body.appendChild(field(r,"備考／ブロッカー","note","area",""));
   } else if(DETAILTAB==="history"){
@@ -1913,16 +1991,15 @@ function DetailPanel(){
   }
   d.appendChild(body);
 
-  /* 操作 */
+  /* 操作（§8.2）。ボタンは具体的アクション名。確認中は 承認／要修正 の2択 */
   var foot=h("div",{class:"dfoot"});
-  var prev=STATUSES[STATUSES.indexOf(r.status)-1];
+  var prev=PREV_STATUS[r.status];
   var cur=r.status;
   if(prev) foot.appendChild(h("button",{class:"ghostbtn",disabled:!writable(),text:"1段戻す",
     title:"1段戻す（"+prev+"）",
     onclick:function(){ commit(newOp("status",r.id,{from:cur,to:prev,actor:ME})); }}));
-  var nx=nextStatus(r.status);
-  if(nx) foot.appendChild(h("button",{class:"cta",disabled:!writable(),text:ACTION_LABEL[r.status],
-    onclick:function(){ advance(r); }}));
+  var ab=actionButtons(r);
+  if(ab) foot.appendChild(ab);
   else foot.appendChild(h("div",{class:"helper",text:"この動画は投稿済みです。"}));
   d.appendChild(foot);
   return d;
@@ -1955,16 +2032,16 @@ function listKpiStrip(){
   var rows=rowsOfMonth();
   var all=rows.length, posted=0, dueToday=0, waiting=0, late=0;
   rows.forEach(function(r){
-    if(r.status==="投稿済"){ posted++; return; }
+    if(r.status==="投稿済み"){ posted++; return; }
     if(r.status==="投稿待ち") waiting++;
     if(r.planned<TODAY) late++;
     else if(r.planned===TODAY) dueToday++;
   });
-  var mine=scopeRows().filter(function(r){ return r.status!=="投稿済"; }).length;
+  var mine=scopeRows().filter(function(r){ return r.status!=="投稿済み"; }).length;
   var staff=!!STAFF_MAP[ME];
   var g=h("div",{class:"kpis"});
   g.appendChild(kpiCard("k1","全動画","film", all,"本",
-    ["投稿済 "+posted+"本・残り "+(all-posted)+"本"], pct(posted,all)));
+    ["投稿済み "+posted+"本・残り "+(all-posted)+"本"], pct(posted,all)));
   g.appendChild(kpiCard("k6", staff?"自分の未完了":"チームの未完了","clock", mine,"本",
     [staff?"自分の担当分のみ":"編集スタッフ全員の未完了"]));
   g.appendChild(kpiCard("k5","本日締切","calendar", dueToday,"本",
@@ -1980,7 +2057,7 @@ function listKpiStrip(){
 function priorityPicks(){
   var out=[], now=Date.now();
   scopeRows().forEach(function(r){
-    if(r.status==="投稿済") return;
+    if(r.status==="投稿済み") return;
     if(r.planned<TODAY){
       out.push({r:r, lv:"late", tone:"late", rank:0, k:daysSince(r.planned),
         why:"投稿予定 "+jpDate(r.planned)+" を "+daysSince(r.planned)+"日超過"});
@@ -2029,10 +2106,8 @@ function priorityCard(p){
     kv.appendChild(h("div",{},[x[0]+" ", h("b",{text:x[1]})]));
   });
   card.appendChild(kv);
-  if(nextStatus(r.status)){
-    card.appendChild(h("button",{class:"cta",disabled:!writable(),text:ACTION_LABEL[r.status],
-      onclick:function(e){ e.stopPropagation(); advance(r); }}));
-  }
+  var ab=actionButtons(r);
+  if(ab) card.appendChild(ab);
   return card;
 }
 function PriorityVideos(){
@@ -2103,7 +2178,7 @@ function filteredRows(){
   var rows=rowsOfMonth().slice();
   if(FILTER.editor==="__me__" && STAFF_MAP[ME]) rows=rows.filter(function(r){return r.editor===ME});
   else if(FILTER.editor!=="__me__" && FILTER.editor!=="__all__") rows=rows.filter(function(r){return r.editor===FILTER.editor});
-  if(FILTER.status==="open") rows=rows.filter(function(r){return r.status!=="投稿済"});
+  if(FILTER.status==="open") rows=rows.filter(function(r){return r.status!=="投稿済み"});
   else if(FILTER.status!=="all") rows=rows.filter(function(r){return r.status===FILTER.status});
   if(FILTER.client!=="__all__") rows=rows.filter(function(r){ return r.contractId===FILTER.client; });
   if(FILTER.q){
@@ -2118,8 +2193,8 @@ function filteredRows(){
     var ca=(contractById(a.contractId)||{}).display||a.client, cb=(contractById(b.contractId)||{}).display||b.client;
     return ca<cb?-1:ca>cb?1:byPlanned(a,b); });
   else if(FILTER.sort==="delay") rows.sort(function(a,b){
-    var la=(a.status!=="投稿済"&&a.planned<TODAY)?daysSince(a.planned):-1;
-    var lb=(b.status!=="投稿済"&&b.planned<TODAY)?daysSince(b.planned):-1;
+    var la=(a.status!=="投稿済み"&&a.planned<TODAY)?daysSince(a.planned):-1;
+    var lb=(b.status!=="投稿済み"&&b.planned<TODAY)?daysSince(b.planned):-1;
     return (lb-la) || byPlanned(a,b); });
   else rows.sort(byPlanned);
   return rows;
@@ -2133,7 +2208,7 @@ function listTable(){
   var pend={}; OPS.all().forEach(function(o){ pend[o.target]=1; });
   rows.forEach(function(r){
     var c=contractById(r.contractId)||{display:r.client};
-    var sel=(SELECTED===r.id), open=(r.status!=="投稿済");
+    var sel=(SELECTED===r.id), open=(r.status!=="投稿済み");
     var tr=h("tr",{class:"pick"+(open?"":" done"),tabindex:"0","aria-selected":sel?"true":"false",
       onclick:function(){ selectRow(r.id); },
       onkeydown:function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); selectRow(r.id); } }});
@@ -2159,10 +2234,8 @@ function listTable(){
     tr.appendChild(dd);
     tr.appendChild(h("td",{},[sBadge(r.status)]));
     var ad=h("td");
-    if(nextStatus(r.status)){
-      ad.appendChild(h("button",{class:"cta",disabled:!writable(),text:ACTION_LABEL[r.status],
-        onclick:function(e){ e.stopPropagation(); advance(r); }}));
-    }
+    var ab=actionButtons(r);
+    if(ab) ad.appendChild(ab);
     if(pend[r.id]) ad.appendChild(h("div",{class:"syncing",text:"同期中"}));
     tr.appendChild(ad);
     t.appendChild(tr);
@@ -2190,7 +2263,7 @@ function todayBuckets(){
   var rows=scopeRows();
   var b={over:[], now:[], nodate:[], done:[]};
   rows.forEach(function(r){
-    if(r.status==="投稿済"){
+    if(r.status==="投稿済み"){
       if(r.postedAt===TODAY) b.done.push(r);
       return;
     }
@@ -2207,7 +2280,7 @@ function todayKpiStrip(){
   var rows=scopeRows(), b=todayBuckets();
   var over=0, review=0, waiting=0, todo=0;
   rows.forEach(function(r){
-    if(r.status==="投稿済") return;
+    if(r.status==="投稿済み") return;
     if(r.planned<TODAY || r.due<TODAY) over++;
     if(r.status==="確認中") review++;
     else if(r.status==="投稿待ち") waiting++;
@@ -2228,7 +2301,7 @@ function todayKpiStrip(){
    動きを止めている環境（prefers-reduced-motion）では待たずに進める */
 function todayAdvance(r, rowEl){
   if(!writable()) return;
-  var last=(nextStatus(r.status)==="投稿済");
+  var last=(nextStatus(r.status)==="投稿済み");
   var reduce=false;
   try{ reduce=window.matchMedia("(prefers-reduced-motion:reduce)").matches; }catch(e){}
   if(reduce || !rowEl){ if(last) TODAY_DONE_OPEN=true; advance(r); return; }
@@ -2261,10 +2334,17 @@ function todayRow(r, done){
   when.appendChild(h("div",{},["編集完了希望 ", h("b",{class:lateD?"od":"",text:jpDate(r.due)})]));
   row.appendChild(when);
   if(done){
-    row.appendChild(h("div",{class:"pill",text:"投稿済 "+jpDate(r.postedAt)}));
+    row.appendChild(h("div",{class:"pill",text:"投稿済み "+jpDate(r.postedAt)}));
   } else if(nextStatus(r.status)){
-    row.appendChild(h("button",{class:"cta",disabled:!writable(),text:ACTION_LABEL[r.status],
+    /* 主アクションは完了アニメーション付き（todayAdvance）。
+       確認中のみ「要修正」を第2ボタンとして添える（§8.2） */
+    var wrap=h("div",{class:"actbtns"});
+    wrap.appendChild(h("button",{class:"cta",disabled:!writable(),text:ACTION_LABEL[r.status],
       onclick:function(e){ e.stopPropagation(); todayAdvance(r, row); }}));
+    if(r.status==="確認中")
+      wrap.appendChild(h("button",{class:"outbtn",disabled:!writable(),text:"要修正",
+        onclick:function(e){ e.stopPropagation(); doAction(r,"要修正"); }}));
+    row.appendChild(wrap);
   } else {
     row.appendChild(h("div",{class:"pill",text:"完了"}));
   }
@@ -2336,7 +2416,7 @@ function todayPos(days){
 function laneFor(rows, days){
   var lane=h("div",{class:"lane"},[h("div",{class:"lane-bg"})]);
   var w=100/days.length;
-  rows.filter(function(r){ return r.planned<TODAY && r.status!=="投稿済"; }).forEach(function(r){
+  rows.filter(function(r){ return r.planned<TODAY && r.status!=="投稿済み"; }).forEach(function(r){
     var x=axisPos(days,r.planned);
     var band=h("div",{class:"hatch"});
     band.style.left=(x-w/2)+"%"; band.style.width=w+"%";
@@ -2345,8 +2425,8 @@ function laneFor(rows, days){
   });
   rows.forEach(function(r){
     var x=axisPos(days,r.planned);
-    var cls = r.status==="投稿済" ? "c-posted"
-            : (r.status==="投稿待ち"||r.status==="承認済み"||r.status==="確認中") ? "c-ready" : "c-todo";
+    var cls = r.status==="投稿済み" ? "c-posted"
+            : (r.status==="投稿待ち"||r.status==="確認中"||r.status==="要修正") ? "c-ready" : "c-todo";
     var b=h("button",{class:"cell "+cls, tabindex:"-1",
       title:(r.title||"（タイトル未定）")+" / "+jpDate(r.planned)+" / "+r.status,
       "aria-label":r.client+" "+r.kind+" "+jpDate(r.planned)+" "+r.status,
@@ -2376,7 +2456,7 @@ function trackKpiStrip(){
   var target=0; cs.forEach(function(c){ target+=c.count; });
   var posted=0, waiting=0;
   rows.forEach(function(r){
-    if(r.status==="投稿済") posted++;
+    if(r.status==="投稿済み") posted++;
     else if(r.status==="投稿待ち") waiting++;
   });
   var risk=0; cs.forEach(function(c){ if(judge(rowsByContract(c.id),TODAY).level==="late") risk++; });
@@ -2446,7 +2526,7 @@ function panelStuck(){
     var rs=rowsByContract(c.id), j=judge(rs,TODAY);
     if(j.level==="ok") return;
     var by={};
-    rs.filter(function(r){ return r.planned<TODAY && r.status!=="投稿済"; }).forEach(function(r){
+    rs.filter(function(r){ return r.planned<TODAY && r.status!=="投稿済み"; }).forEach(function(r){
       var since = r.trans && r.trans[r.status] ? fromUTC(r.trans[r.status]) : r.planned;
       var d = bizBetween(range, since, TODAY);
       by[r.status]=by[r.status]||{n:0,max:0};
@@ -2466,14 +2546,14 @@ function panelStuck(){
 
 /* ---- ② 日別サマリ ---- */
 function panelDaily(){
-  var s=sectCard("日別サマリ","全契約の合算。塗り＝投稿済／枠＝未投稿");
+  var s=sectCard("日別サマリ","全契約の合算。塗り＝投稿済み／枠＝未投稿");
   var days=axisDays(), rows=rowsOfMonth();
   var byDay={}; days.forEach(function(d){ byDay[d]={p:0,o:0}; });
-  rows.forEach(function(r){ var b=byDay[r.planned]; if(!b) return; if(r.status==="投稿済") b.p++; else b.o++; });
+  rows.forEach(function(r){ var b=byDay[r.planned]; if(!b) return; if(r.status==="投稿済み") b.p++; else b.o++; });
   var max=1; days.forEach(function(d){ max=Math.max(max, byDay[d].p+byDay[d].o); });
   var wrap=h("div",{class:"daywrap"}), bars=h("div",{class:"daybars"});
   days.forEach(function(d){
-    var b=byDay[d], col=h("div",{class:"daybar",title:jpDate(d)+"：投稿済 "+b.p+" / 未投稿 "+b.o});
+    var b=byDay[d], col=h("div",{class:"daybar",title:jpDate(d)+"：投稿済み "+b.p+" / 未投稿 "+b.o});
     if(b.o){ var s1=h("div",{class:"seg s-open"}); s1.style.height=(b.o/max*92)+"px"; col.appendChild(s1); }
     if(b.p){ var s2=h("div",{class:"seg s-posted"}); s2.style.height=(b.p/max*92)+"px"; col.appendChild(s2); }
     bars.appendChild(col);
@@ -2514,7 +2594,7 @@ function loadOf(name){
   var rows=rowsOfMonth(), weekEnd=addDays(TODAY,7);
   var o={today:0, week:0, overdue:0, review:0, open:0, waiting:0, todo:0};
   rows.forEach(function(r){
-    if(r.editor!==name || r.status==="投稿済") return;
+    if(r.editor!==name || r.status==="投稿済み") return;
     o.open++;
     /* 「今日やる分」は超過ぶんも含む。1本を二重に数えない */
     if(r.planned<=TODAY || r.due<=TODAY) o.today++;
@@ -2584,7 +2664,7 @@ function weekBars(){
   if(!week.length) week=days.slice(0,7);
   var rows=rowsOfMonth(), byDay={};
   week.forEach(function(d){ byDay[d]=0; });
-  rows.forEach(function(r){ if(byDay[r.due]!=null && r.status!=="投稿済") byDay[r.due]++; });
+  rows.forEach(function(r){ if(byDay[r.due]!=null && r.status!=="投稿済み") byDay[r.due]++; });
   var vals=week.map(function(d){return byDay[d]}), max=Math.max(1,Math.max.apply(null,vals));
   var avg=vals.reduce(function(a,b){return a+b},0)/(week.length||1);
   var wrap=h("div",{class:"daywrap wk"}), bars=h("div",{class:"daybars"});
@@ -2631,7 +2711,7 @@ function panelLoad(){
 /* 経過時間は「今の工程になった時刻」で数える。無ければ前後の記録で代用する */
 function waitSince(r){
   var t=r.trans||{};
-  return t[r.status] || t["投稿待ち"] || t["承認済み"] || null;
+  return t[r.status] || t["投稿待ち"] || null;
 }
 function waitHours(r){
   var t=waitSince(r);
@@ -2672,8 +2752,8 @@ function pendingKpiStrip(rows){
 }
 function pendingCard(r){
   var c=contractById(r.contractId)||{display:r.client,poster:"-"};
-  var hrs=waitHours(r), sel=(SELECTED===r.id), ap=(r.status==="承認済み");
-  var cls="wcard"+(ap?" ap":hrs>=48?" h48":hrs>=24?" h24":"");
+  var hrs=waitHours(r), sel=(SELECTED===r.id);
+  var cls="wcard"+(hrs>=48?" h48":hrs>=24?" h24":"");
   var card=h("div",{class:cls,role:"option",tabindex:"0","aria-selected":sel?"true":"false",
     onclick:function(){ selectRow(r.id); },
     onkeydown:function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); selectRow(r.id); } }});
@@ -2697,21 +2777,10 @@ function pendingCard(r){
     text:"投稿予定日を "+daysSince(r.planned)+"日超過"})]));
   card.appendChild(meta);
   var act=h("div",{class:"act"});
-  var url=String(r.drive||"").trim();
-  if(/^https?:\/\//i.test(url)){
-    var a=h("a",{class:"drive",href:url,target:"_blank",rel:"noopener noreferrer",
-      onclick:function(e){ e.stopPropagation(); }});
-    a.appendChild(driveMark(16));
-    a.appendChild(h("span",{class:"grow",text:"Driveを開く"}));
-    act.appendChild(a);
-  } else {
-    var b=h("button",{class:"drive",disabled:true,onclick:function(e){ e.stopPropagation(); }});
-    b.appendChild(driveMark(16));
-    b.appendChild(h("span",{class:"grow",text:"Drive未設定"}));
-    act.appendChild(b);
-  }
-  act.appendChild(h("button",{class:"cta",disabled:!writable(),text:ACTION_LABEL[r.status],
-    onclick:function(e){ e.stopPropagation(); advance(r); }}));
+  var db=driveButtons((contractById(r.contractId)||{client:r.client}).client);
+  if(db) act.appendChild(db);
+  var ab=actionButtons(r);
+  if(ab) act.appendChild(ab);
   card.appendChild(act);
   return card;
 }
@@ -2727,7 +2796,6 @@ function panelPending(){
   if(!rows.length){
     var e=h("div",{class:"emptystate"});
     e.appendChild(h("b",{text:"投稿待ちはありません"}));
-    e.appendChild(h("p",{text:"承認済みのまま止まっている動画もありません。"}));
     s.bd.appendChild(e);
   } else {
     var g=h("div",{class:"wcards",role:"listbox","aria-label":"投稿待ちの動画"});
@@ -2735,16 +2803,6 @@ function panelPending(){
     s.bd.appendChild(g);
   }
   box.appendChild(s.card);
-
-  /* 承認済みで止まっている本も同じ画面で拾う。投稿待ちへ渡し忘れは事故になる */
-  var ap=rowsOfMonth().filter(function(r){ return r.status==="承認済み"; });
-  if(ap.length){
-    var a2=sectCard("承認済みのまま止まっている動画","「投稿待ちへ」を押すと上のリストに入ります");
-    var g2=h("div",{class:"wcards"});
-    ap.forEach(function(r){ g2.appendChild(pendingCard(r)); });
-    a2.bd.appendChild(g2);
-    box.appendChild(a2.card);
-  }
   return box;
 }
 
@@ -2758,6 +2816,97 @@ function modal(node){
 function closeModals(){ document.querySelectorAll(".modalbg").forEach(function(x){ x.remove(); }); }
 /* 行の詳細は全ビュー共通の右パネル（DetailPanel）に統一した。
    かつての行モーダル openRow は §6.1 に従って廃止（§MUST NOT：モーダルを多用しない）。*/
+
+/* ---- 要修正の入力（§8.3）。確定以外はワンクリック進行を崩さない ---- */
+function openReviseInput(r){
+  var c=contractById(r.contractId)||{display:r.client};
+  var name=r.title||(c.display+" "+r.kind);
+  var m=h("div",{class:"modal"});
+  m.appendChild(h("h3",{text:"修正内容を入力"}));
+  m.appendChild(h("p",{class:"sub",text:"「"+name+"」を要修正に戻します。直してほしい点を具体的に書いてください。担当スタッフの画面で強調表示されます。"}));
+  var ta=h("textarea",{class:"revta",rows:"5",
+    placeholder:"例：テロップ「産後ケア」を「産後サポート」に修正してください。"});
+  m.appendChild(ta);
+  var row=h("div",{class:"mrow"});
+  row.appendChild(h("button",{class:"ghostbtn",text:"キャンセル",onclick:closeModals}));
+  row.appendChild(h("button",{class:"cta",text:"要修正にする",onclick:function(){
+    var note=ta.value.trim();
+    if(!note){ ta.focus(); return; }
+    var from=r.status;
+    commit(newOp("status", r.id, {from:from, to:"要修正", actor:ME, on:TODAY}));
+    commit(newOp("field", r.id, {field:"revisionNote", value:note}));
+    closeModals();
+    showToast("「"+name+"」を要修正にしました");
+  }}));
+  m.appendChild(row);
+  modal(m);
+  ta.focus();
+}
+
+/* ---- クライアントの Google Drive（§9） ---- */
+function clientDrive(name){ return (STATE.clients||{})[name] || {}; }
+/* 2ボタン（文言は PC・スマホ共通 §9.2）。
+   未設定：社員には設定導線、スタッフには壊れたリンクを見せない */
+function driveButtons(clientName){
+  var cd=clientDrive(clientName);
+  var wrap=h("div",{class:"drivebtns"});
+  function link(label, url){
+    var a=h("a",{class:"drivebtn",href:url,target:"_blank",rel:"noopener noreferrer"});
+    a.appendChild(driveMark(16));
+    a.appendChild(h("span",{text:label}));
+    return a;
+  }
+  var mOk=/^https?:\/\//i.test(String(cd.material||"").trim());
+  var rOk=/^https?:\/\//i.test(String(cd.review||"").trim());
+  if(mOk) wrap.appendChild(link("素材を開く", cd.material));
+  if(rOk) wrap.appendChild(link("確認用にアップロード", cd.review));
+  if((!mOk||!rOk) && myRole()==="社員"){
+    wrap.appendChild(h("button",{class:"drivebtn unset",onclick:function(e){
+      e.stopPropagation(); openDriveSetup(clientName); }},
+      [driveMark(16), h("span",{text:"Drive未設定（設定する）"})]));
+  }
+  return wrap.childNodes.length ? wrap : null;
+}
+function openDriveSetup(clientName){
+  var cd=clientDrive(clientName);
+  var m=h("div",{class:"modal"});
+  m.appendChild(h("h3",{text:clientName+" の Google Drive"}));
+  m.appendChild(h("p",{class:"sub",text:"フォルダは Google Drive 側で作成済みのものを貼り付けてください（SOCIAL BASE からは作成しません）。一度登録したら、以後も同じフォルダを使い続けます。"}));
+  function urlField(label, ph, val){
+    var lb=h("label",{class:"field"});
+    lb.appendChild(h("span",{text:label}));
+    var inp=h("input",{type:"url",placeholder:ph});
+    inp.value=val||"";
+    lb.appendChild(inp);
+    m.appendChild(lb);
+    return inp;
+  }
+  var i1=urlField("未編集動画（素材置場）のURL","https://drive.google.com/...", cd.material);
+  var i2=urlField("確認用（編集済み動画置き場）のURL","https://drive.google.com/...", cd.review);
+  var row=h("div",{class:"mrow"});
+  row.appendChild(h("button",{class:"ghostbtn",text:"キャンセル",onclick:closeModals}));
+  row.appendChild(h("button",{class:"cta",text:"保存する",onclick:function(){
+    var v1=i1.value.trim(), v2=i2.value.trim();
+    if(v1!==(cd.material||"")) commit(newOp("client", clientName, {field:"material", value:v1}));
+    if(v2!==(cd.review||""))   commit(newOp("client", clientName, {field:"review",   value:v2}));
+    closeModals();
+    showToast(clientName+" の Drive 設定を保存しました");
+  }}));
+  m.appendChild(row);
+  modal(m);
+}
+
+/* ---- ステータス操作ボタン（§8.2）。確認中は 承認（主）／要修正（副）の2択 ---- */
+function actionButtons(r){
+  var acts=STATUS_ACTIONS[r.status]||[];
+  if(!acts.length) return null;
+  var wrap=h("div",{class:"actbtns"});
+  acts.forEach(function(a){
+    wrap.appendChild(h("button",{class:a==="要修正"?"outbtn":"cta",disabled:!writable(),text:a,
+      onclick:function(e){ e.stopPropagation(); doAction(r,a); }}));
+  });
+  return wrap;
+}
 function openWho(){
   var m=h("div",{class:"modal"});
   m.appendChild(h("h3",{text:"あなたは誰ですか？"}));
@@ -2946,7 +3095,7 @@ function seedSample(){
     seed=(seed*1103515245+12345)&0x7fffffff;
     var rnd=(seed>>>8)%100;
     if(r.planned < TODAY){
-      if(rnd<86){ r.status="投稿済"; r.postedAt=r.planned; r.trans={"投稿済":toUTC(r.planned)}; }
+      if(rnd<86){ r.status="投稿済み"; r.postedAt=r.planned; r.trans={"投稿済み":toUTC(r.planned)}; }
       else if(rnd<93){ r.status="投稿待ち"; r.trans={"投稿待ち":toUTC(addDays(r.planned,-1))}; }
       else { r.status="確認中"; r.trans={"確認中":toUTC(addDays(r.planned,-4))}; }
     } else if(r.planned===TODAY){
