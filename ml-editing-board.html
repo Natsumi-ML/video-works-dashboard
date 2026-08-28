@@ -940,8 +940,8 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
    ===================================================================== */
 .rolechip{font-size:12px;font-weight:700;color:var(--brand-blue);background:var(--surface-blue-soft);
   border:1px solid var(--brand-blue);border-radius:999px;padding:2px 10px}
-.clienttop{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:stretch}
-.clienttop .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+
+
 .card.attn{background:var(--critical-soft);border-color:var(--critical-border)}
 .card.attn .hd h3{display:flex;align-items:center;gap:6px;color:var(--critical);font-size:14px}
 .attnrow{display:flex;justify-content:space-between;align-items:center;background:var(--surface);
@@ -1009,6 +1009,109 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
   border:1px solid var(--border);border-radius:10px;padding:9px 11px;font-size:12px;
   color:var(--text-secondary);line-height:1.6}
 .matnote.late{background:var(--warning-soft);border-color:var(--warning-border);color:#7c4a03}
+/* ---- 06_client.png に合わせた配置（すべて .clientpage 配下に限定して他画面へ波及させない） ---- */
+/* 上段：左＝タイトル＋KPI4枚／右＝注意カード。参考実測（1448幅）：注意カード幅328・KPI高142 */
+.clientpage .clienthead{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,.395fr);
+  gap:16px;align-items:stretch}
+.clientpage .clienthead .clh{display:flex;flex-direction:column;gap:20px;min-width:0}
+.clientpage .clienthead .sect.page{margin:0}
+.clientpage .clienthead .sect.page h2{line-height:1.2}
+.clientpage .kpis.four{grid-template-columns:minmax(0,1.1fr) minmax(0,1.1fr) minmax(0,.92fr) minmax(0,.89fr);gap:16px}
+.clientpage .kpil{min-height:130px;padding:14px 16px 12px;display:flex;flex-direction:column}
+.clientpage .kpil .kic{width:38px;height:38px}
+.clientpage .kpil .lab{font-size:12.5px;line-height:1.3}
+.clientpage .kpil .val{margin:8px 0 2px}
+.clientpage .kpil .val .n{font-size:30px;line-height:1}
+.clientpage .kpil .sub{margin-top:auto;font-size:11.5px;line-height:1.4}
+.clientpage .kpil .prog{margin-top:7px;height:5px}
+/* 注意カード：縦長にせず、件数バッジを右端、最下部に「すべて見る」 */
+.clientpage .card.attn{display:flex;flex-direction:column}
+.clientpage .card.attn>.hd{padding:13px 16px 6px}
+.clientpage .card.attn>.bd{padding:0 16px 12px;display:flex;flex-direction:column;flex:1}
+.clientpage .attnrow{gap:8px;padding:8px 10px;margin-bottom:8px;font-size:12.5px}
+.clientpage .attnrow .al{flex:1;min-width:0}
+.clientpage .attnrow .num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.clientpage .attnrow .cnt{flex:none;min-width:22px;height:22px;border-radius:999px;
+  background:var(--critical);color:#fff;font-size:11.5px;font-weight:700;line-height:22px;
+  text-align:center;padding:0 5px}
+.clientpage .attnrow .cnt.zero{background:var(--neutral-soft);color:var(--text-muted)}
+.clientpage .attnmore{margin-top:auto;align-self:flex-end;display:flex;align-items:center;gap:4px;
+  background:none;border:0;cursor:pointer;padding:6px 2px 0;
+  font-size:12.5px;font-weight:700;color:var(--critical)}
+/* 下段：左一覧 約64% ／右詳細 約36%（指示書 §9） */
+.clientpage .clientmain{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(380px,1fr);
+  gap:16px;align-items:start}
+/* フィルタは左一覧カードの中（指示書 §10） */
+.clientpage .clfilter{padding:14px 16px;border-bottom:1px solid var(--border-soft)}
+.clientpage .clfilter .filters{margin:0;gap:10px;flex-wrap:nowrap}
+.clientpage .clfilter .calsel{font-size:12px;padding:7px 8px;max-width:none;flex:1 1 auto;min-width:0}
+.clientpage .clfilter .ghostbtn{height:36px;font-size:12px;flex:none;white-space:nowrap;padding:0 12px}
+.clientpage .card.clist>.hd{padding:13px 16px 2px;gap:10px}
+.clientpage .card.clist>.hd h3{font-size:15px}
+.clientpage .card.clist>.hd .allcnt{font-size:12.5px;color:var(--text-secondary)}
+.clientpage .card.clist>.bd{padding:0 16px 12px}
+.clientpage .card.clist>.bd>.sub{margin:0 0 10px;font-size:12px}
+.clientpage .clfoot{padding-top:10px;font-size:12.5px;color:var(--text-secondary)}
+/* テーブルは参考06の密度（行高52前後・見出し11px・本文12px） */
+.clientpage .clienttbl th{font-size:10px;padding:6px 4px;color:var(--text-muted);font-weight:600}
+.clientpage .clienttbl td{font-size:12px;padding:7px 4px}
+.clientpage .clienttbl .cli2{display:flex;align-items:center;gap:8px;min-width:0}
+.clientpage .clienttbl .cli2 span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+
+.clientpage .clienttbl .pbar{width:42px}
+.clientpage .clienttbl .pcv{margin-left:4px;font-size:10.5px}
+.clientpage .clienttbl .pchip,.clientpage .clienttbl .mchip{font-size:11px;padding:2px 7px}
+.clientpage .clienttbl tr.pick[aria-selected="true"]{background:#F3F8FF;box-shadow:inset 0 0 0 1px #8FC5FF}
+.clientpage .clientmain > *{min-width:0}
+/* 10列を左カラム幅に収める（横スクロール前提にしない：指示書 §43） */
+.clientpage .clienttbl{table-layout:fixed;width:100%;min-width:0}
+.clientpage .clienttbl th,.clientpage .clienttbl td{overflow:hidden;text-overflow:ellipsis}
+.clientpage .clienttbl th:nth-child(1),.clientpage .clienttbl td:nth-child(1){width:18.6%}
+.clientpage .clienttbl th:nth-child(2),.clientpage .clienttbl td:nth-child(2){width:8.2%}
+.clientpage .clienttbl th:nth-child(3),.clientpage .clienttbl td:nth-child(3){width:6.8%}
+.clientpage .clienttbl th:nth-child(4),.clientpage .clienttbl td:nth-child(4){width:11.1%}
+.clientpage .clienttbl th:nth-child(5),.clientpage .clienttbl td:nth-child(5){width:8.2%}
+.clientpage .clienttbl th:nth-child(6),.clientpage .clienttbl td:nth-child(6){width:6.8%}
+.clientpage .clienttbl th:nth-child(7),.clientpage .clienttbl td:nth-child(7){width:11.8%}
+.clientpage .clienttbl th:nth-child(8),.clientpage .clienttbl td:nth-child(8){width:9.7%}
+.clientpage .clienttbl th:nth-child(9),.clientpage .clienttbl td:nth-child(9){width:9%}
+.clientpage .clienttbl th:nth-child(10),.clientpage .clienttbl td:nth-child(10){width:9.8%}
+.clientpage .clienttbl th{height:34px;font-size:10px;letter-spacing:-.01em}
+.clientpage .clienttbl td{height:52px}
+/* 長い資料準備状況は参考06と同じく2行に折り返す */
+.clientpage .clienttbl .mchip{white-space:normal;line-height:1.25;text-align:center;
+  display:inline-block;max-width:100%}
+.clientpage .tblwrap{overflow-x:visible}
+/* 右詳細は主要カラム（指示書 §15）。スクロールに追従させる */
+.clientpage .clientdetail{position:sticky;top:16px}
+.clientpage .clientdetail>.hd{gap:10px;padding:14px 16px 10px}
+.clientpage .clientdetail>.hd h3{font-size:16px}
+.clientpage .clientdetail>.bd{padding:0 16px 16px}
+.clientpage .dsep{height:1px;background:var(--border-soft);margin:12px 0 10px}
+.clientpage .dslabel{margin:0 0 8px}
+.clientpage .dirow{display:flex;align-items:center;gap:9px;min-height:31px;font-size:12.5px}
+.clientpage .dirow .di{display:inline-flex;color:var(--text-muted);flex:none}
+.clientpage .dirow .dl{color:var(--text-secondary);flex:none;min-width:104px}
+.clientpage .dirow .dv{flex:1;min-width:0;display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.clientpage .dirow.wide .dl{min-width:96px}
+.clientpage .dinp{border:1px solid transparent;background:none;border-radius:7px;padding:3px 6px;
+  font-size:12.5px;font-weight:600;color:var(--text-primary);font-family:inherit;
+  text-align:right;min-width:0;cursor:pointer}
+.clientpage .dinp:hover:not([disabled]){border-color:var(--border)}
+.clientpage .dinp:focus{border-color:var(--accent);outline:none;background:var(--surface)}
+.clientpage .dinp.od{color:var(--late)}
+.clientpage .dinp[disabled]{cursor:default;opacity:.75}
+.clientpage .pbar.wide{width:96px}
+/* 詳細は画面内に収める（指示書 §43：画面外に残さない）。長い場合はパネル内スクロール */
+.clientpage .clientdetail{max-height:calc(100vh - 32px);overflow-y:auto}
+.clientpage .clientdetail .drrow{padding:8px 10px;margin-bottom:7px}
+.clientpage .clientdetail .linkbtn2{padding:4px 0;font-size:12px}
+.clientpage .dinpw{display:inline-flex}
+.clientpage .dinp.empty{color:var(--text-muted);font-weight:600}
+/* 資料準備フローは各ステップに補足を1行添える（参考06） */
+.clientpage .mstep{margin:4px 0 12px;gap:2px}
+.clientpage .ms em{font-style:normal;font-size:9.5px;color:var(--text-muted);line-height:1.35}
+.clientpage .ms.cur em{color:#B45309}
 
 /* =====================================================================
    レスポンシブ（Phase 1 は 1440〜1920px が最重要。1280px でドロワー）
@@ -1033,8 +1136,8 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
   .wcard{grid-template-columns:44px minmax(0,1fr) auto}
   .wcard .meta{grid-column:2/4}
   .calduo{grid-template-columns:minmax(0,1fr)}
-  .clienttop{grid-template-columns:minmax(0,1fr)}
-  .clienttop .kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .clientpage .clienthead{grid-template-columns:minmax(0,1fr)}
+  .clientpage .clientmain{grid-template-columns:minmax(0,1fr)}
   .todayduo{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
   .todayduo .queue{grid-column:1/3}
 }
@@ -1081,7 +1184,7 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
   .msearch{margin:8px 12px 0}
   .msub{display:flex;align-items:center;gap:8px;padding:8px 12px 0;flex-wrap:wrap}
   .wrap{padding:14px 12px 92px;gap:14px}
-  .kpis,.kpis.four,.kpis.three,.kpis.home5,.clienttop .kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .kpis,.kpis.four,.kpis.three,.kpis.home5,.clientpage .kpis.four{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
   .kpis.home5 .kpi{height:auto}
   /* 今日のKPI 3枚（2026-08-28 指示）：横並びにせず縦1列・全カード同幅・高さは約1/3に圧縮 */
   .kpis.today3{grid-template-columns:1fr;gap:10px}
@@ -1098,7 +1201,8 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
   .kpi{padding:13px 13px 11px}
   .kpi .val .n{font-size:27px}
   .kpi .lab{font-size:13px}
-  .duo,.todayduo,.calduo,.clienttop{display:flex;flex-direction:column;gap:14px}
+  .duo,.todayduo,.calduo{display:flex;flex-direction:column;gap:14px}
+  .clientpage .clienthead,.clientpage .clientmain{display:flex;flex-direction:column;gap:14px}
   .staffcards,.pcards,.sgs{grid-template-columns:1fr}
   /* KPIポップオーバーはインラインアコーディオンにする（§15.3 mobile） */
   .kpipop{position:static;margin-top:8px;max-width:none;min-width:0}
@@ -1834,6 +1938,7 @@ var ICON = {
   folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
   inbox:'<path d="M3 12h5l1.5 2.5h5L16 12h5"/><path d="M5.5 5h13l2.5 7v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6z"/>',
   search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/>',
+  users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
   building:'<rect x="4" y="3" width="12" height="18" rx="1"/><path d="M16 9h4a0 0 0 0 1 0 0v12"/><path d="M8 7h2M8 11h2M8 15h2M12 7h1M12 11h1M12 15h1M2 21h20"/>',
   sort:'<path d="M4 7h13M4 12h9M4 17h5"/><path d="m17 14 3 3 3-3"/>',
   menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',
@@ -4156,12 +4261,65 @@ function clientAlerts(){
   });
   return out;
 }
+/* 一覧に出すクライアント（フィルタ適用後）。表・カード・詳細で同じ結果を使う */
+function clientFiltered(aggs){
+  return aggs.filter(function(a){
+    if(CLFILTER.plan!=="__all__" && (a.cd.planningStatus||"未着手")!==CLFILTER.plan) return false;
+    if(CLFILTER.editor!=="__all__" && a.editors.indexOf(CLFILTER.editor)<0) return false;
+    if(CLFILTER.material!=="__all__" && (a.cd.materialStatus||"未依頼")!==CLFILTER.material) return false;
+    return true;
+  });
+}
+/* 右詳細に出すクライアント。未選択なら一覧の先頭（指示書 §15）。
+   CLSEL 自体は書き換えないので、選択状態の保存ロジックには触れない */
+function clientSel(list){
+  if(CLSEL && list.some(function(a){ return a.name===CLSEL; })) return CLSEL;
+  return list.length ? list[0].name : null;
+}
+/* 参考06のラベル体裁「ステータス すべて」。calSelect（カレンダーと共用）は触らない */
+function clSelect(label, value, opts, onch){
+  var sel=h("select",{class:"calsel","aria-label":label,onchange:function(e){ onch(e.target.value); }});
+  sel.appendChild(h("option",{value:"__all__",text:label+" すべて"}));
+  opts.forEach(function(o){ sel.appendChild(h("option",{value:o,text:label+" "+o})); });
+  sel.value=value;
+  return sel;
+}
+function clientFilterBar(){
+  var fb=h("div",{class:"filters calfb"});
+  fb.appendChild(clSelect("ステータス", CLFILTER.plan, PLAN_STATUSES,
+    function(v){ CLFILTER.plan=v; render(); }));
+  fb.appendChild(clSelect("担当者", CLFILTER.editor, Object.keys(STAFF_MAP),
+    function(v){ CLFILTER.editor=v; render(); }));
+  fb.appendChild(clSelect("資料準備状況", CLFILTER.material, MATERIAL_STEPS,
+    function(v){ CLFILTER.material=v; render(); }));
+  fb.appendChild(h("button",{class:"ghostbtn",onclick:function(){
+    CLFILTER={plan:"__all__",editor:"__all__",material:"__all__"}; render(); }},
+    [h("span",{text:"フィルターをクリア"})]));
+  return fb;
+}
+/* 注意が必要なクライアント（指示書 §8：KPIと同じ帯・件数バッジ右端・最下部にすべて見る） */
+function clientAttnCard(al){
+  var warn=h("div",{class:"card attn"});
+  warn.appendChild(h("div",{class:"hd"},[h("h3",{},[ic("alert",16), txt(" 注意が必要なクライアント")])]));
+  var wb=h("div",{class:"bd"});
+  function attnRow(label, list){
+    var row=h("div",{class:"attnrow"});
+    row.appendChild(h("span",{class:"al",text:label}));
+    row.appendChild(h("b",{class:"num"+(list.length?" bad":""),text:list.length+"社"}));
+    row.appendChild(h("span",{class:"cnt"+(list.length?"":" zero"),text:String(list.length)}));
+    return row;
+  }
+  wb.appendChild(attnRow("企画期限超過", al.planLate));
+  wb.appendChild(attnRow("投稿目標未達リスク", al.goalRisk));
+  wb.appendChild(attnRow("資料準備遅延", al.matLate));
+  wb.appendChild(h("button",{class:"attnmore",onclick:function(){
+    var el=document.querySelector(".clientmain"); if(el) el.scrollIntoView({block:"start",behavior:"smooth"}); }},
+    [h("span",{text:"すべて見る"}), ic("chevronRight",14)]));
+  warn.appendChild(wb);
+  return warn;
+}
 function panelClient(){
-  var box=h("div");
-  box.appendChild(h("div",{class:"sect page"},[
-    h("h2",{text:"クライアント管理"}),
-    h("span",{class:"rolechip",text:"社員のみ"})]));
-
+  var box=h("div",{class:"clientpage"});
   var names=clientNames(), aggs=names.map(clientAgg);
   var postedAll=0, goalAll=0, planning=0, matWork=0;
   aggs.forEach(function(a){
@@ -4169,63 +4327,45 @@ function panelClient(){
     if((a.cd.planningStatus||"")==="進行中") planning++;
     if((a.cd.materialStatus||"")==="分析・ハイライト作成中") matWork++;
   });
+  var list=clientFiltered(aggs), sel=clientSel(list);
 
-  /* KPI＋注意リスト（§29.2） */
-  /* KPI は淡色カード（完成イメージ 06。グラデにしない） */
-  var topg=h("div",{class:"clienttop"});
+  /* 上段（06_client.png）：左に［タイトル＋KPI4枚］、右に［注意が必要なクライアント］の1帯 */
+  var head=h("div",{class:"clienthead"});
+  var lh=h("div",{class:"clh"});
+  lh.appendChild(h("div",{class:"sect page"},[
+    h("h2",{text:"クライアント管理"}),
+    h("span",{class:"rolechip",text:"社員のみ"})]));
+  /* KPI は淡色カード4枚を1行（完成イメージ 06。グラデにしない） */
   var g=h("div",{class:"kpis four"});
   g.appendChild(kpiCardLight("blue","担当クライアント数","building", names.length,"社",["全社員で全社を閲覧できます"]));
   g.appendChild(kpiCardLight("teal","今月の投稿数（合計）","check", postedAll,"本",
     ["目標 "+goalAll+"本に対して "+pct(postedAll,goalAll)+"%"], pct(postedAll,goalAll)));
   g.appendChild(kpiCardLight("purple","企画進行中","film", planning,"社",["企画ステータスが進行中"]));
   g.appendChild(kpiCardLight("orange","資料準備中","clock", matWork,"社",["分析・ハイライト作成中"]));
-  topg.appendChild(g);
+  lh.appendChild(g);
+  head.appendChild(lh);
+  head.appendChild(clientAttnCard(clientAlerts()));
+  box.appendChild(head);
 
-  var al=clientAlerts();
-  var warn=h("div",{class:"card attn"});
-  warn.appendChild(h("div",{class:"hd"},[h("h3",{},[ic("alert",15), txt(" 注意が必要なクライアント")])]));
-  var wb=h("div",{class:"bd"});
-  function attnRow(label, list){
-    var row=h("div",{class:"attnrow"});
-    row.appendChild(h("span",{text:label}));
-    row.appendChild(h("b",{class:"num "+(list.length?"bad":""),text:list.length+"社"}));
-    return row;
-  }
-  wb.appendChild(attnRow("企画期限超過", al.planLate));
-  wb.appendChild(attnRow("投稿目標未達リスク", al.goalRisk));
-  wb.appendChild(attnRow("資料準備遅延", al.matLate));
-  warn.appendChild(wb);
-  topg.appendChild(warn);
-  box.appendChild(topg);
-
-  /* フィルタ */
-  var fb=h("div",{class:"filters calfb"});
-  fb.appendChild(calSelect("企画ステータス", CLFILTER.plan, PLAN_STATUSES,
-    function(v){ CLFILTER.plan=v; render(); }));
-  fb.appendChild(calSelect("担当者", CLFILTER.editor, Object.keys(STAFF_MAP),
-    function(v){ CLFILTER.editor=v; render(); }));
-  fb.appendChild(calSelect("資料準備状況", CLFILTER.material, MATERIAL_STEPS,
-    function(v){ CLFILTER.material=v; render(); }));
-  fb.appendChild(h("button",{class:"ghostbtn",onclick:function(){
-    CLFILTER={plan:"__all__",editor:"__all__",material:"__all__"}; render(); }},
-    [h("span",{text:"フィルタをクリア"})]));
-  box.appendChild(fb);
-
-  var duo=h("div",{class:"calduo"});
-  duo.appendChild(clientTable(aggs));
-  duo.appendChild(clientDetail());
-  box.appendChild(duo);
+  /* 下段：左＝フィルタ＋一覧カード／右＝常設の詳細パネル（指示書 §9・§10） */
+  var main=h("div",{class:"clientmain"});
+  main.appendChild(clientTable(list, sel, clientFilterBar()));
+  main.appendChild(clientDetail(sel));
+  box.appendChild(main);
   return box;
 }
 function fmtD(d){ return d ? (+d.slice(5,7))+"/"+(+d.slice(8)) : "未設定"; }
-function clientTable(aggs){
-  var s=sectCard("クライアント一覧","クライアント名をクリックすると、詳細が表示されます");
-  var list=aggs.filter(function(a){
-    if(CLFILTER.plan!=="__all__" && (a.cd.planningStatus||"未着手")!==CLFILTER.plan) return false;
-    if(CLFILTER.editor!=="__all__" && a.editors.indexOf(CLFILTER.editor)<0) return false;
-    if(CLFILTER.material!=="__all__" && (a.cd.materialStatus||"未依頼")!==CLFILTER.material) return false;
-    return true;
-  });
+/* フィルタ・見出し・表を1枚の白いカードにまとめる（指示書 §10・§11） */
+function clientTable(list, sel, fbar){
+  var s={card:h("div",{class:"card clist"})};
+  if(fbar) s.card.appendChild(h("div",{class:"clfilter"},[fbar]));
+  var chd=h("div",{class:"hd"});
+  chd.appendChild(h("h3",{text:"クライアント一覧"}));
+  chd.appendChild(h("span",{class:"allcnt",text:"全 "+list.length+" 社"}));
+  s.card.appendChild(chd);
+  s.bd=h("div",{class:"bd"});
+  s.bd.appendChild(h("p",{class:"sub",text:"クライアント名をクリックすると、詳細が表示されます"}));
+  s.card.appendChild(s.bd);
   /* モバイル（§42）はカード化 */
   if(mobile()){
     var box=h("div",{class:"vcards"});
@@ -4233,7 +4373,7 @@ function clientTable(aggs){
     list.forEach(function(a){
       var cd=a.cd;
       var card=h("div",{class:"vcard",role:"button",tabindex:"0",
-        "aria-selected":CLSEL===a.name?"true":"false",
+        "aria-selected":sel===a.name?"true":"false",
         onclick:function(){ CLSEL=a.name; render();
           var el=document.querySelector(".daypanel"); if(el) el.scrollIntoView({block:"start"}); },
         onkeydown:function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); this.click(); } }});
@@ -4272,11 +4412,11 @@ function clientTable(aggs){
   t.appendChild(hr);
   list.forEach(function(a){
     var cd=a.cd;
-    var tr=h("tr",{class:"pick",tabindex:"0","aria-selected":CLSEL===a.name?"true":"false",
+    var tr=h("tr",{class:"pick",tabindex:"0","aria-selected":sel===a.name?"true":"false",
       onclick:function(){ CLSEL=a.name; render(); },
       onkeydown:function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); CLSEL=a.name; render(); } }});
     tr.appendChild(h("td",{},[h("div",{class:"cli2"},[
-      tile(a.contractId, a.display.slice(0,2), 28, 20, 10), h("span",{text:a.name})])]));
+      tile(a.contractId, a.display.slice(0,2), 28, 28, 10), h("span",{text:a.name})])]));
     tr.appendChild(h("td",{text:fmtD(cd.nextShootDate)}));
     var pl=h("td",{text:fmtD(cd.planningDeadline)});
     if(cd.planningDeadline && cd.planningDeadline<TODAY && (cd.planningStatus||"")!=="完了")
@@ -4301,24 +4441,43 @@ function clientTable(aggs){
   if(!list.length) s.bd.appendChild(h("p",{class:"sub",text:"条件に合うクライアントがありません。"}));
   wrap.appendChild(t);
   s.bd.appendChild(wrap);
+  /* 参考06のカード下端：件数を左に置く（ページャは全件が収まるので出さない） */
+  s.bd.appendChild(h("div",{class:"clfoot",text:"全 "+list.length+" 社"}));
   return s.card;
 }
 /* クライアント詳細（§31）。編集は社員のみ＝このページ自体が社員のみ */
-function clientField(name, label, fieldKey, type, val){
-  var lb=h("label",{class:"field"});
-  lb.appendChild(h("span",{text:label}));
-  var inp=h("input",{type:type||"date"});
-  inp.value=val||"";
-  inp.addEventListener("change", function(){
-    commit(newOp("client", name, {field:fieldKey, value:inp.value}));
-  });
-  if(!writable()) inp.disabled=true;
-  lb.appendChild(inp);
-  return lb;
+/* 詳細パネルの1行：[icon] ラベル … 値（値は編集可能なまま。見た目だけ参考06に寄せる） */
+function dinfoRow(iconName, label, node, cls){
+  var r=h("div",{class:"dirow"+(cls?" "+cls:"")});
+  r.appendChild(h("span",{class:"di"},[ic(iconName,15)]));
+  r.appendChild(h("span",{class:"dl",text:label}));
+  var v=h("span",{class:"dv"});
+  (node instanceof Array ? node : [node]).forEach(function(n){ v.appendChild(n); });
+  r.appendChild(v);
+  return r;
 }
-function clientDetail(){
-  var p=h("div",{class:"daypanel card"});
-  var name=CLSEL;
+/* 日付は未設定のとき「年/月/日」ではなく「未設定」と出す（参考06の見え方）。
+   押すと date input に差し替わるので、入力・保存の経路は従来どおり */
+function clientDateInput(name, fieldKey, val, cls){
+  var wrap=h("span",{class:"dinpw"});
+  function mkInput(focus){
+    var inp=h("input",{type:"date",class:"dinp"+(cls?" "+cls:"")});
+    inp.value=val||"";
+    inp.addEventListener("change", function(){
+      commit(newOp("client", name, {field:fieldKey, value:inp.value}));
+    });
+    if(!writable()) inp.disabled=true;
+    while(wrap.firstChild) wrap.removeChild(wrap.firstChild);
+    wrap.appendChild(inp);
+    if(focus){ inp.focus(); if(inp.showPicker){ try{ inp.showPicker(); }catch(e){} } }
+  }
+  if(val) mkInput(false);
+  else wrap.appendChild(h("button",{class:"dinp empty"+(cls?" "+cls:""),disabled:!writable(),
+    text:"未設定",onclick:function(){ mkInput(true); }}));
+  return wrap;
+}
+function clientDetail(name){
+  var p=h("div",{class:"daypanel card clientdetail"});
   if(!name){
     p.appendChild(h("div",{class:"hd"},[h("h3",{text:"クライアントを選択"})]));
     p.appendChild(h("div",{class:"bd"},[
@@ -4327,7 +4486,7 @@ function clientDetail(){
   }
   var a=clientAgg(name), cd=a.cd;
   var hd=h("div",{class:"hd"});
-  hd.appendChild(tile(a.contractId, a.display.slice(0,2), 40, 28, 13));
+  hd.appendChild(tile(a.contractId, a.display.slice(0,2), 36, 36, 13));
   hd.appendChild(h("h3",{text:name}));
   hd.appendChild(h("div",{class:"spacer"}));
   hd.appendChild(h("button",{class:"iconbtn","aria-label":"詳細を閉じる",
@@ -4358,26 +4517,35 @@ function clientDetail(){
   bd.appendChild(h("button",{class:"linkbtn2",onclick:function(){ openDriveSetup(name); }},
     [h("span",{text:"フォルダURLを設定・変更する"}), ic("chevronRight",14)]));
 
-  /* 基本情報（§31.3） */
-  bd.appendChild(h("div",{class:"dslabel",text:"基本情報"}));
-  bd.appendChild(clientField(name,"次回撮影日","nextShootDate","date",cd.nextShootDate));
-  bd.appendChild(clientField(name,"企画期限","planningDeadline","date",cd.planningDeadline));
-  var lb=h("label",{class:"field"});
-  lb.appendChild(h("span",{text:"企画ステータス"}));
-  var sel=h("select",{disabled:!writable(),onchange:function(e){
+  /* 基本情報（§31.3／指示書 §16）。参考06にならい［icon｜ラベル｜値］の行にする。
+     値は date input / select のままなので編集機能は落ちていない */
+  bd.appendChild(h("div",{class:"dsep"}));
+  var late=(cd.planningDeadline && cd.planningDeadline<TODAY && (cd.planningStatus||"")!=="完了");
+  bd.appendChild(dinfoRow("calendar","次回撮影日",
+    clientDateInput(name,"nextShootDate",cd.nextShootDate)));
+  bd.appendChild(dinfoRow("calendar","企画期限",
+    clientDateInput(name,"planningDeadline",cd.planningDeadline, late?"od":null)));
+  var sel=h("select",{class:"dinp",disabled:!writable(),onchange:function(e){
     commit(newOp("client", name, {field:"planningStatus", value:e.target.value})); }});
   PLAN_STATUSES.forEach(function(x){ sel.appendChild(h("option",{value:x,text:x})); });
   sel.value=cd.planningStatus||"未着手";
-  lb.appendChild(sel); bd.appendChild(lb);
-  bd.appendChild(clientField(name,"次回定例MTG","nextRegularMeeting","date",cd.nextRegularMeeting));
-  var kv=h("div",{class:"mini",style:"margin:8px 0 0"});
-  kv.appendChild(h("div",{},[txt("今月の投稿状況　"), h("b",{class:"num",text:a.posted+" / "+a.goal+"本（"+a.pct+"%）"})]));
-  kv.appendChild(h("div",{},[txt("担当編集スタッフ　"), h("b",{text:a.editors.join("・")||"未割当"})]));
-  bd.appendChild(kv);
+  bd.appendChild(dinfoRow("film","企画ステータス", sel));
+  var pbar=h("div",{class:"pbar wide"}); var pi=h("i"); pi.style.width=Math.min(100,a.pct)+"%";
+  if(a.late>0) pi.style.background="var(--warning)";
+  pbar.appendChild(pi);
+  bd.appendChild(dinfoRow("clock","今月の投稿状況",
+    [h("b",{class:"num",text:a.posted+"本 / "+a.goal+"本"}), pbar, h("span",{class:"pcv",text:a.pct+"%"})],"wide"));
+  bd.appendChild(dinfoRow("calendar","次回 定例MTG",
+    clientDateInput(name,"nextRegularMeeting",cd.nextRegularMeeting)));
+  bd.appendChild(dinfoRow("users","担当編集スタッフ",
+    h("b",{text:a.editors.join("・")||"未割当"})));
 
   /* 資料準備フロー（§33：4段階。分析・ハイライトは分けない） */
+  bd.appendChild(h("div",{class:"dsep"}));
   bd.appendChild(h("div",{class:"dslabel",text:"資料準備フロー"}));
   var cur=MATERIAL_STEPS.indexOf(cd.materialStatus||"未依頼");
+  /* 各ステップの補足（参考06）。日付は仕様が定めているのが「毎月12日」だけなので、他は文言のみ */
+  var MSTEP_CAP=["事務局への依頼前","目標：毎月12日まで","ハイライト内容の確認・修正待ち","資料完成・納品完了"];
   var stp=h("div",{class:"mstep"});
   MATERIAL_STEPS.forEach(function(st,i){
     var b=h("button",{class:"ms"+(i===cur?" cur":i<cur?" done":""),disabled:!writable(),
@@ -4385,6 +4553,7 @@ function clientDetail(){
       onclick:function(){ commit(newOp("client", name, {field:"materialStatus", value:st})); }});
     b.appendChild(h("i",{text:i<cur?"●":i===cur?"●":"○"}));
     b.appendChild(h("span",{text:st}));
+    b.appendChild(h("em",{text:MSTEP_CAP[i]}));
     stp.appendChild(b);
   });
   bd.appendChild(stp);
