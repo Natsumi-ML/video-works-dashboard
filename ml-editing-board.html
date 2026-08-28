@@ -950,6 +950,10 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
   .ev{gap:3px} .ev i{width:7px;height:7px} .ev span{display:none}
   .evmore{font-size:10px}
   .calfb .calsel{flex:1 1 44%;max-width:none}
+  /* 今日の作業キュー行 → 2段組（横に詰め込まない） */
+  .trow2{grid-template-columns:44px minmax(0,1fr);grid-auto-rows:auto;gap:8px 12px}
+  .trow2 .when{grid-column:2;text-align:left;display:flex;gap:12px}
+  .trow2 .actbtns,.trow2 .pill{grid-column:1/3}
   /* 固定ボトムナビ（§36） */
   .bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:60;display:flex;background:var(--surface);
     border-top:1px solid var(--border);padding:4px 4px calc(4px + env(safe-area-inset-bottom))}
@@ -2192,82 +2196,6 @@ function MyTasksCard(){
 /* ---------------------------------------------------------------
    契約別 進捗サマリー
    --------------------------------------------------------------- */
-function gauge(p, tok){
-  var box=h("div",{class:"gauge"});
-  var C=2*Math.PI*22;
-  var s=svgEl("svg",{viewBox:"0 0 52 52",width:"52",height:"52","aria-hidden":"true"});
-  var bg=svgEl("circle",{cx:"26",cy:"26",r:"22",fill:"none","stroke-width":"5"});
-  bg.style.stroke="#eef2f7";
-  var fg=svgEl("circle",{cx:"26",cy:"26",r:"22",fill:"none","stroke-width":"5","stroke-linecap":"round",
-    "stroke-dasharray":C.toFixed(1),
-    "stroke-dashoffset":(C*(1-Math.max(0,Math.min(1,p/100)))).toFixed(1),
-    transform:"rotate(-90 26 26)"});
-  fg.style.stroke="var("+tok+")";
-  s.appendChild(bg); s.appendChild(fg);
-  box.appendChild(s);
-  box.appendChild(h("div",{class:"pc",text:p+"%"}));
-  return box;
-}
-function cnums(need, post, wait, late){
-  var g=h("div",{class:"cnums"});
-  function cell(k, v, cls){
-    var d=h("div");
-    d.appendChild(h("span",{class:"k",text:k}));
-    var s=h("span",{class:"v "+(v===0&&cls!=="v-need"?"v-zero":cls)});
-    s.appendChild(txt(String(v))); s.appendChild(h("u",{text:"本"}));
-    d.appendChild(s); g.appendChild(d);
-  }
-  cell("必要本数",need,"v-need"); cell("投稿済み",post,"v-post");
-  cell("投稿待ち",wait,"v-wait"); cell("遅延",late,"v-late");
-  return g;
-}
-function contractRow(c){
-  var rs=rowsByContract(c.id), j=judge(rs,TODAY), p=pct(j.done,c.count);
-  var tok = j.level==="late" ? "--late" : j.level==="warn" ? "--warn" : "--ok";
-  var row=h("button",{class:"crow"+(j.level==="ok"?"":" "+j.level),
-    "aria-selected":SELECTEDC===c.id?"true":"false",
-    title:c.client+" "+c.kind,
-    "aria-label":c.client+" "+c.kind+"：必要"+c.count+"本、投稿済み"+j.done+"本、投稿待ち"+j.ready+"本、遅延"+j.late+"本",
-    onclick:function(){
-      SELECTEDC=c.id; POP=false;
-      var cand=rs.filter(function(r){ return r.status!=="投稿済み"; })
-                 .sort(function(a,b){ return a.planned<b.planned?-1:1; })[0];
-      if(cand){ SELECTED=cand.id; DETAILTAB="detail"; if(narrow()) DRAWER=true; }
-      render();
-    }});
-  row.appendChild(h("div",{class:"nm"},[
-    h("b",{text:c.display}),
-    h("span",{text:(+MONTH.slice(5,7))+"月・"+c.kind})]));
-  row.appendChild(gauge(p, tok));
-  row.appendChild(cnums(c.count, j.done, j.ready, j.late));
-  return row;
-}
-function ContractPanel(){
-  var card=h("div",{class:"card"});
-  var hd=h("div",{class:"hd"});
-  hd.appendChild(h("h3",{text:"契約別 進捗状況"}));
-  var sp=h("div"); sp.style.flex="1"; hd.appendChild(sp);
-  if(hasView("track")) hd.appendChild(h("button",{class:"ghostbtn",
-    onclick:function(){ VIEW="track"; render(); },text:"進行トラックへ"}));
-  card.appendChild(hd);
-
-  var sc=h("div",{class:"cscroll"});
-  var T={need:0,post:0,wait:0,late:0};
-  contractsOf().forEach(function(c){
-    var j=judge(rowsByContract(c.id),TODAY);
-    T.need+=c.count; T.post+=j.done; T.wait+=j.ready; T.late+=j.late;
-    sc.appendChild(contractRow(c));
-  });
-  card.appendChild(sc);
-
-  var tot=h("div",{class:"crow total"});
-  tot.appendChild(h("div",{class:"nm"},[h("b",{text:"合計 / 平均"}), h("span",{text:contractsOf().length+"契約"})]));
-  tot.appendChild(gauge(pct(T.post,T.need),"--ok"));
-  tot.appendChild(cnums(T.need,T.post,T.wait,T.late));
-  card.appendChild(tot);
-
-  return card;
-}
 
 /* ---------------------------------------------------------------
    工程カンバン（6列。投稿待ちだけ強く出す）
@@ -2290,54 +2218,6 @@ function stallAlerts(){
     if(d>=th) alerts.push({r:r,c:c,d:d,th:th});
   });
   return alerts.sort(function(a,b){ return b.d-a.d; });
-}
-function Kanban(){
-  var box=h("div");
-  box.appendChild(h("div",{class:"sect"},[h("h2",{text:"工程カンバン"}),h("span",{text:"（全体・全契約の合算）"})]));
-  var rows=rowsOfMonth(), by={};
-  STATUSES.forEach(function(s){ by[s]=[]; });
-  rows.forEach(function(r){ (by[r.status]=by[r.status]||[]).push(r); });
-
-  var kan=h("div",{class:"kan"});
-  STATUSES.forEach(function(st){
-    var list=by[st]||[], m=sv(st), hot=(st==="投稿待ち" && list.length>0);
-    var col=h("div",{class:"kcol"+(hot?" hot":"")});
-    if(hot) col.appendChild(h("div",{class:"kflag",text:"要対応！"}));
-    var kh=h("div",{class:"kh"});
-    kh.style.background="var("+m.tint+")"; kh.style.color="var("+m.ink+")";
-    kh.appendChild(dot(m.v,8)); kh.appendChild(h("span",{text:st}));
-    col.appendChild(kh);
-    var kb=h("div",{class:"kb"});
-    var n=h("div",{class:"kn"}); n.appendChild(txt(String(list.length))); n.appendChild(h("u",{text:"本"}));
-    kb.appendChild(n);
-    /* 6列になった分だけタイルを小さく・少なくする。
-       1440px でも折り返しが2段までに収まる寸法（3枚＋残数） */
-    var tiles=h("div",{class:"ktiles"});
-    list.slice(0,3).forEach(function(r){
-      var c=contractById(r.contractId)||{display:r.client};
-      tiles.appendChild(tile(r.contractId, shortName(c), 30, 22, 11));
-    });
-    if(list.length>3){
-      var mo=h("div",{class:"kmore",text:"+"+(list.length-3)});
-      mo.style.width="30px"; mo.style.height="22px"; tiles.appendChild(mo);
-    }
-    kb.appendChild(tiles);
-    if(st==="確認中"){
-      var al=stallAlerts();
-      if(al.length){
-        var note=h("div",{class:"knote"});
-        note.appendChild(ic("alert",13));
-        note.appendChild(h("span",{text:"閾値超 "+al.length+"本（最長"+al[0].d+"営業日）",
-          title:al.slice(0,6).map(function(a){ return a.c.display+" "+a.d+"営業日"; }).join("・")}));
-        kb.appendChild(note);
-      }
-    }
-    col.appendChild(kb);
-    kan.appendChild(col);
-  });
-  box.appendChild(kan);
-
-  return box;
 }
 
 /* ---------------------------------------------------------------
@@ -3177,184 +3057,13 @@ function axisPos(days, d){
   if(i<0){ i=0; while(i<days.length && days[i]<d) i++; }
   return (i+0.5)/days.length*100;
 }
-function todayPos(days){
-  if(monthOf(TODAY)!==MONTH) return TODAY<MONTH+"-01" ? -1 : 101;
-  var i=0; while(i<days.length && days[i]<TODAY) i++;
-  return i/days.length*100;
-}
-function laneFor(rows, days){
-  var lane=h("div",{class:"lane"},[h("div",{class:"lane-bg"})]);
-  var w=100/days.length;
-  rows.filter(function(r){ return r.planned<TODAY && r.status!=="投稿済み"; }).forEach(function(r){
-    var x=axisPos(days,r.planned);
-    var band=h("div",{class:"hatch"});
-    band.style.left=(x-w/2)+"%"; band.style.width=w+"%";
-    band.style.backgroundImage="repeating-linear-gradient(45deg,var(--late) 0 1px,transparent 1px 3px)";
-    lane.appendChild(band);
-  });
-  rows.forEach(function(r){
-    var x=axisPos(days,r.planned);
-    var cls = r.status==="投稿済み" ? "c-posted"
-            : (r.status==="投稿待ち"||r.status==="確認中"||r.status==="要修正") ? "c-ready" : "c-todo";
-    var b=h("button",{class:"cell "+cls, tabindex:"-1",
-      title:(r.title||"（タイトル未定）")+" / "+jpDate(r.planned)+" / "+r.status,
-      "aria-label":r.client+" "+r.kind+" "+jpDate(r.planned)+" "+r.status,
-      onclick:function(ev){ ev.stopPropagation(); selectRow(r.id); }},[h("i")]);
-    b.style.left=(x-w/2+w*0.10)+"%"; b.style.width=(w*0.80)+"%";
-    lane.appendChild(b);
-  });
-  var tp=todayPos(days);
-  if(tp>=0 && tp<=100){
-    var tl=h("div",{class:"todayline"},[h("div",{class:"todaycap"})]);
-    tl.style.left=tp+"%"; lane.appendChild(tl);
-  }
-  return lane;
-}
-function axisFor(days){
-  var ax=h("div",{class:"axis"});
-  days.forEach(function(d,i){
-    var x=(i+0.5)/days.length*100;
-    var t=h("i"); t.style.left=x+"%"; ax.appendChild(t);
-    if(dow(d)===1 || i===0){ var s=h("span",{text:jpDate(d)}); s.style.left=x+"%"; ax.appendChild(s); }
-  });
-  return ax;
-}
 /* §11.2 の5枚。数字はすべて当月の行から算出する */
-function trackKpiStrip(){
-  var rows=rowsOfMonth(), cs=contractsOf();
-  var target=0; cs.forEach(function(c){ target+=c.count; });
-  var posted=0, waiting=0;
-  rows.forEach(function(r){
-    if(r.status==="投稿済み") posted++;
-    else if(r.status==="投稿待ち") waiting++;
-  });
-  var risk=0; cs.forEach(function(c){ if(judge(rowsByContract(c.id),TODAY).level==="late") risk++; });
-  var g=h("div",{class:"kpis"});
-  g.appendChild(kpiCard("k1","今月必要","calendar", target,"本",
-    ["生成済み "+rows.length+"本"], pct(posted,target)));
-  g.appendChild(kpiCard("k2","投稿済み","check", posted,"本",["消化 "+pct(posted,target)+"%"]));
-  g.appendChild(kpiCard("k6","残り","film", Math.max(0,target-posted),"本",["今月分の未投稿"]));
-  g.appendChild(kpiCard("k3","投稿待ち","upload", waiting,"本",["投稿すれば完了します"]));
-  g.appendChild(kpiCard("k4","危険契約","alertCircle", risk,"契約",
-    ["遅延2本以上・全"+cs.length+"契約"]));
-  return g;
-}
-function panelTrack(){
-  var s=sectCard("クライアント別トラック","1マス＝動画1本。投稿予定日の位置に置く。縦線より左の未投稿が遅延。マスを押すと右に詳細が出ます");
-  var days=axisDays();
-  if(!days.length){ s.bd.appendChild(h("p",{class:"sub",text:"この月の営業日が取得できません。"})); return s.card; }
-
-  var wrap=h("div",{class:"trackwrap"});
-  var tbl=h("table",{class:"tracktable"});
-  var chipDone=false;
-  contractsOf().forEach(function(c){
-    var rs=rowsByContract(c.id), j=judge(rs,TODAY);
-    var tr=h("tr",{class:"rowfocus",tabindex:"0",
-      onkeydown:function(ev){ if(ev.key==="Enter"){ ev.preventDefault(); FILTER.q=c.display; VIEW="list"; render(); } },
-      onclick:function(){ FILTER.q=c.display; VIEW="list"; render(); }});
-    tr.appendChild(h("td",{class:"tname",title:c.client+" "+c.kind,
-      text:c.display+" "+(c.kind==="静止画"?"静":"動")}));
-    var laneCell=h("td");
-    var lane=laneFor(rs,days);
-    if(!chipDone){
-      var tp=todayPos(days);
-      if(tp>=0&&tp<=100){
-        var chip=h("div",{class:"todaychip",text:"今日 "+jpDate(TODAY)});
-        chip.style.left=tp+"%"; lane.appendChild(chip); chipDone=true;
-      }
-    }
-    laneCell.appendChild(lane); tr.appendChild(laneCell);
-
-    var right=h("td",{class:"tright"});
-    right.appendChild(txt("残り")); right.appendChild(num(c.count-j.done)); right.appendChild(txt("本 ・ "));
-    var lateSpan=h("span",{class:j.late?"":"muted"});
-    lateSpan.appendChild(txt("遅れ"));
-    var ln=num(j.late); if(j.late) ln.style.color="var(--late)";
-    lateSpan.appendChild(ln); lateSpan.appendChild(txt("本"));
-    right.appendChild(lateSpan); right.appendChild(txt(" "));
-    right.appendChild(statusPill(j.level));
-    tr.appendChild(right);
-    tbl.appendChild(tr);
-  });
-  var axRow=h("tr");
-  axRow.appendChild(h("td",{class:"tname"}));
-  var axCell=h("td"); axCell.appendChild(axisFor(days)); axRow.appendChild(axCell);
-  axRow.appendChild(h("td",{class:"tright"}));
-  tbl.appendChild(axRow);
-  wrap.appendChild(tbl);
-  s.bd.appendChild(wrap);
-  s.bd.appendChild(h("div",{class:"axisnote",text:"横軸は営業日（土日祝を除く）　■ベタ＝投稿済　■枠＋下半分＝編集済・未投稿　□破線＝未着手"}));
-  return s.card;
-}
 
 /* ---- ⑧ 止まっている契約 ---- */
-function panelStuck(){
-  var s=sectCard("止まっている契約","遅延している契約と、その動画がどの工程で何営業日止まっているか（自動生成）");
-  var range=bizRange(monthMinus(MONTH,1),3), items=[];
-  contractsOf().forEach(function(c){
-    var rs=rowsByContract(c.id), j=judge(rs,TODAY);
-    if(j.level==="ok") return;
-    var by={};
-    rs.filter(function(r){ return r.planned<TODAY && r.status!=="投稿済み"; }).forEach(function(r){
-      var since = r.trans && r.trans[r.status] ? fromUTC(r.trans[r.status]) : r.planned;
-      var d = bizBetween(range, since, TODAY);
-      by[r.status]=by[r.status]||{n:0,max:0};
-      by[r.status].n++; by[r.status].max=Math.max(by[r.status].max,d);
-    });
-    Object.keys(by).forEach(function(st){
-      var label = st==="確認中" ? (c.steps===4 ? "確認中（先方含む）" : "確認中（社内）") : st;
-      items.push(c.display+" "+c.kind+"："+by[st].n+"本が"+label+" "+by[st].max+"営業日");
-    });
-  });
-  if(!items.length){ s.bd.appendChild(h("p",{class:"sub",text:"止まっている契約はありません。"})); return s.card; }
-  var ul=h("ul",{class:"plain"});
-  items.forEach(function(t){ ul.appendChild(h("li",{text:t})); });
-  s.bd.appendChild(ul);
-  return s.card;
-}
 
 /* ---- ② 日別サマリ ---- */
-function panelDaily(){
-  var s=sectCard("日別サマリ","全契約の合算。塗り＝投稿済み／枠＝未投稿");
-  var days=axisDays(), rows=rowsOfMonth();
-  var byDay={}; days.forEach(function(d){ byDay[d]={p:0,o:0}; });
-  rows.forEach(function(r){ var b=byDay[r.planned]; if(!b) return; if(r.status==="投稿済み") b.p++; else b.o++; });
-  var max=1; days.forEach(function(d){ max=Math.max(max, byDay[d].p+byDay[d].o); });
-  var wrap=h("div",{class:"daywrap"}), bars=h("div",{class:"daybars"});
-  days.forEach(function(d){
-    var b=byDay[d], col=h("div",{class:"daybar",title:jpDate(d)+"：投稿済み "+b.p+" / 未投稿 "+b.o});
-    if(b.o){ var s1=h("div",{class:"seg s-open"}); s1.style.height=(b.o/max*92)+"px"; col.appendChild(s1); }
-    if(b.p){ var s2=h("div",{class:"seg s-posted"}); s2.style.height=(b.p/max*92)+"px"; col.appendChild(s2); }
-    bars.appendChild(col);
-  });
-  var tp=todayPos(days);
-  if(tp>=0&&tp<=100){ var tl=h("div",{class:"todayline"}); tl.style.left=tp+"%"; bars.appendChild(tl); }
-  wrap.appendChild(bars); wrap.appendChild(axisFor(days));
-  s.bd.appendChild(wrap);
-  return s.card;
-}
 
 /* ---- ④ 工程別の滞留 ---- */
-function panelStages(){
-  var s=sectCard("工程別の滞留","確認中の閾値は案件のステップ数で分ける（社内のみ2営業日／先方を含む5営業日）");
-  var rows=rowsOfMonth(), counts={}, max=1;
-  STATUSES.forEach(function(x){ counts[x]=0; });
-  rows.forEach(function(r){ counts[r.status]=(counts[r.status]||0)+1; });
-  STATUSES.forEach(function(x){ max=Math.max(max,counts[x]); });
-  var bars=h("div",{class:"bars"});
-  STATUSES.forEach(function(x){
-    var row=h("div",{class:"barrow"});
-    row.appendChild(h("div",{},[sBadge(x)]));
-    var tr=h("div",{class:"bartrack"}), fl=h("div",{class:"barfill"});
-    fl.style.width=(counts[x]/max*100)+"%";
-    fl.style.background="var("+sv(x).v+")";
-    tr.appendChild(fl); row.appendChild(tr);
-    var n=h("div",{class:"barnum"}); n.appendChild(num(counts[x])); n.appendChild(txt("本"));
-    row.appendChild(n); bars.appendChild(row);
-  });
-  s.bd.appendChild(bars);
-  return s.card;
-}
 
 /* ---- ⑤ チーム負荷（§12：工数入力なしで偏りだけを見る） ---- */
 
@@ -3563,102 +3272,7 @@ function panelLoad(){
 /* ---- ⑨ 投稿待ち（§13：承認は済んでいるのに公開されていない本） ---- */
 
 /* 経過時間は「今の工程になった時刻」で数える。無ければ前後の記録で代用する */
-function waitSince(r){
-  var t=r.trans||{};
-  return t[r.status] || t["投稿待ち"] || null;
-}
-function waitHours(r){
-  var t=waitSince(r);
-  return t ? Math.floor((Date.now()-t)/3600000) : 0;
-}
 /* 2日を超えたら「時間」では大きすぎて読めない。日に丸める */
-function waitLabel(hrs){ return hrs<48 ? hrs+"時間" : Math.floor(hrs/24)+"日"; }
-function pendingRows(){
-  var rows=rowsOfMonth().filter(function(r){ return r.status==="投稿待ち"; });
-  /* §13.4 の既定並び：48h超 → 期限超過 → 本日期限 → 24h超 → その他 */
-  function rank(r){
-    var hrs=waitHours(r);
-    if(hrs>=48) return 0;
-    if(r.planned<TODAY) return 1;
-    if(r.planned===TODAY) return 2;
-    if(hrs>=24) return 3;
-    return 4;
-  }
-  return rows.sort(function(a,b){
-    var d=rank(a)-rank(b); if(d) return d;
-    d=waitHours(b)-waitHours(a); if(d) return d;
-    return a.planned<b.planned?-1:1;
-  });
-}
-function pendingKpiStrip(rows){
-  var todayN=0, h24=0, h48=0;
-  rows.forEach(function(r){
-    if(r.planned===TODAY) todayN++;
-    var hrs=waitHours(r);
-    if(hrs>=48) h48++; else if(hrs>=24) h24++;
-  });
-  var g=h("div",{class:"kpis four"});
-  g.appendChild(kpiCard("k3","投稿待ち","upload", rows.length,"本",["投稿すれば完了します"]));
-  g.appendChild(kpiCard("k5","本日期限","calendar", todayN,"本",["投稿予定日が今日"]));
-  g.appendChild(kpiCard("k1","24時間以上","clock", h24,"本",["投稿待ちのまま1日以上"]));
-  g.appendChild(kpiCard("k4","48時間以上","alertCircle", h48,"本",["投稿待ちのまま2日以上。要対応"]));
-  return g;
-}
-function pendingCard(r){
-  var c=contractById(r.contractId)||{display:r.client,poster:"-"};
-  var hrs=waitHours(r), sel=(SELECTED===r.id);
-  var cls="wcard"+(hrs>=48?" h48":hrs>=24?" h24":"");
-  var card=h("div",{class:cls,role:"option",tabindex:"0","aria-selected":sel?"true":"false",
-    onclick:function(){ selectRow(r.id); },
-    onkeydown:function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); selectRow(r.id); } }});
-  card.appendChild(tile(r.contractId, shortName(c), 44, 32, 13));
-  var mid=h("div",{class:"mid"});
-  mid.appendChild(h("div",{class:"ttl",text:r.title||"（タイトル未定）"}));
-  var cli=h("div",{class:"cli"});
-  cli.appendChild(sBadge(r.status));
-  cli.appendChild(h("span",{text:c.display+"・"+r.kind}));
-  mid.appendChild(cli);
-  card.appendChild(mid);
-  var meta=h("div",{class:"meta"});
-  var st=waitSince(r);
-  meta.appendChild(h("div",{},[r.status+"にした ", h("b",{text:st?fmtStamp(st):"—"})]));
-  meta.appendChild(h("div",{},["投稿予定 ", h("b",{text:jpDate(r.planned)}),
-    "　投稿担当 ", h("b",{text:c.poster||"-"})]));
-  var elCls = hrs>=48 ? "el late" : hrs>=24 ? "el warn" : "el";
-  meta.appendChild(h("div",{},[h("span",{class:elCls,
-    text: st ? (r.status+"のまま "+waitLabel(hrs)) : "経過時間は記録がありません"})]));
-  if(r.planned<TODAY) meta.appendChild(h("div",{},[h("span",{class:"el late",
-    text:"投稿予定日を "+daysSince(r.planned)+"日超過"})]));
-  card.appendChild(meta);
-  var act=h("div",{class:"act"});
-  var db=driveButtons((contractById(r.contractId)||{client:r.client}).client);
-  if(db) act.appendChild(db);
-  var ab=actionButtons(r);
-  if(ab) act.appendChild(ab);
-  card.appendChild(act);
-  return card;
-}
-function panelPending(){
-  var box=h("div");
-  var rows=pendingRows();
-  box.appendChild(h("div",{class:"sect"},[
-    h("h2",{text:"投稿待ち"}),
-    h("span",{text:"（承認は済んでいるのに、まだ投稿していない動画）"})]));
-  box.appendChild(pendingKpiStrip(rows));
-  var s=sectCard("投稿待ちの動画",
-    "経過時間の長い順・投稿予定日を過ぎたものを先に出します。投稿したらこの画面から消えます");
-  if(!rows.length){
-    var e=h("div",{class:"emptystate"});
-    e.appendChild(h("b",{text:"投稿待ちはありません"}));
-    s.bd.appendChild(e);
-  } else {
-    var g=h("div",{class:"wcards",role:"listbox","aria-label":"投稿待ちの動画"});
-    rows.forEach(function(r){ g.appendChild(pendingCard(r)); });
-    s.bd.appendChild(g);
-  }
-  box.appendChild(s.card);
-  return box;
-}
 
 /* =====================================================================
    投稿カレンダー（§27）。新設ページ
