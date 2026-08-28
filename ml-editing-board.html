@@ -1035,7 +1035,7 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
   /* KPIポップオーバーはインラインアコーディオンにする（§15.3 mobile） */
   .kpipop{position:static;margin-top:8px;max-width:none;min-width:0}
   /* My Tasks 行 → タスクカード（§37）。desktop の grid をカードに戻す */
-  .tthead{display:none}
+  .tthead,.sthead{display:none}
   .taskscroll{max-height:none}
   .trow{display:flex;flex-wrap:wrap;align-items:center;min-height:0;padding:12px 13px;gap:9px}
   .trow .mid{flex:1 1 46%}
@@ -4413,10 +4413,11 @@ function render(){
   if(VIEW==="home"){
     /* モバイルは My Tasks を最上段に（§37：編集スタッフが最短で作業開始できる順） */
     if(mob){
-      /* モバイルのホームは「最優先」カード → My Tasks のみ（2026-08-28 指示）。
-         他のKPI・停滞中カードは出さない */
+      /* モバイルのホームは「最優先」カード → My Tasks → 停滞中の動画（2026-08-28 指示）。
+         他のKPIカードは出さない */
       wrap.appendChild(homePriorityCard());
       wrap.appendChild(MyTasksCard());
+      wrap.appendChild(homeStalled());
     } else {
       /* 完成イメージ01：KPI全幅 → 左（My Tasks＋停滞中）／右（動画詳細カード） */
       wrap.appendChild(homeKpis());
