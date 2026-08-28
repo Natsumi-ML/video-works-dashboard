@@ -155,20 +155,6 @@ svg{flex:none}
 .nav .soon{margin-left:auto;flex:none;font-size:11px;font-weight:600;color:#7b8ba0;
   border:1px solid rgba(255,255,255,.13);border-radius:5px;padding:0 6px;line-height:18px}
 .sidesec{margin:17px 16px 7px;font-size:12px;color:#7b8ba0;letter-spacing:.06em;font-weight:600}
-/* 月ナビ・お知らせはトップバーではなくサイドバー下部に置く（完成イメージのヘッダーは4要素のみ） */
-.sidectl{margin:14px 12px 0;display:flex;align-items:center;gap:8px}
-.sidectl .mnav{flex:1;justify-content:center;background:rgba(255,255,255,.08);
-  border-color:rgba(255,255,255,.14);box-shadow:none}
-.sidectl .mnav b{color:#fff}
-.sidectl .mnav .iconbtn{color:rgba(255,255,255,.7)}
-.sidectl .mnav .iconbtn:hover:not([disabled]){background:rgba(255,255,255,.12);color:#fff}
-.sidectl .chipbtn{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.14);
-  box-shadow:none;color:rgba(255,255,255,.85)}
-.sidectl .chipbtn.warn{background:rgba(255,179,43,.16);border-color:rgba(255,179,43,.4);color:#FFD9A4}
-.sidectl .chipbtn .n{background:rgba(255,255,255,.16);color:#fff}
-.sidectl .chipbtn.warn .n{background:rgba(255,179,43,.3);color:#FFEAC8}
-/* サイドバーは overflow のためポップオーバーは固定位置で右に出す */
-.sidectl .pop{position:fixed;left:calc(var(--side-w) + 10px);right:auto;top:auto;bottom:24px}
 .sidehr{height:1px;background:var(--border-dark);margin:12px 16px 0}
 .sidefoot{margin-top:auto;padding-top:10px}
 /* サイドバー下部の案内カード（完成イメージ） */
@@ -1983,45 +1969,13 @@ function Sidebar(){
     side.appendChild(g2);
   }
 
-  /* 月ナビ・お知らせ（desktop）。Top bar を完成イメージの4要素に保つためここに置く。
-     モバイルは MobileHeader の msub 行が同じ機能を持つので出さない */
-  if(!mobile()){
-    var ctl=h("div",{class:"sidectl"});
-    var months=monthList(), mi=months.indexOf(MONTH);
-    var mn=h("div",{class:"mnav"});
-    mn.appendChild(h("button",{class:"iconbtn","aria-label":"前の月",disabled:mi<=0,
-      onclick:function(){ MONTH=months[mi-1]; SELECTED=null; SELECTEDC=null; render(); }},[ic("chevronLeft",16)]));
-    mn.appendChild(h("b",{text:MONTH.replace("-","年")+"月"}));
-    mn.appendChild(h("button",{class:"iconbtn","aria-label":"次の月",disabled:mi>=months.length-1,
-      onclick:function(){ MONTH=months[mi+1]; SELECTED=null; SELECTEDC=null; render(); }},[ic("chevronRight",16)]));
-    ctl.appendChild(mn);
-    var ns=notices(), bad=ns.filter(function(x){ return x.lv!=="ok"; }).length;
-    var rel=h("div",{class:"rel"});
-    rel.appendChild(h("button",{class:"chipbtn sm"+(bad?" warn":""),"aria-expanded":POP?"true":"false",
-      "aria-label":"お知らせ "+ns.length+"件",
-      onclick:function(e){ e.stopPropagation(); POP=!POP; render(); }},
-      [ic(bad?"alert":"info",15), h("span",{class:"n",text:String(ns.length)})]));
-    if(POP){
-      var np=noticePop(ns);
-      /* 最終更新と未同期は必ず並記する（片方だけだと「保存された」と誤読される） */
-      var stamp=h("div",{class:"stamp",style:"padding:4px 10px 8px;border-bottom:1px solid var(--border-soft)"});
-      stamp.appendChild(h("div",{text:"最終更新 "+(STATE.lastUpdated?fmtStamp(STATE.lastUpdated):"—")
-        +"　／　未同期 "+OPS.all().length+"件"}));
-      np.insertBefore(stamp, np.firstChild);
-      rel.appendChild(np);
-    }
-    ctl.appendChild(rel);
-  }
-
+  /* 最下部は「翌月を生成」だけ（ユーザー指示 2026-08-29）。
+     月ナビ・お知らせ・退避（コピー用）・ヘルプはサイドバーから外した。
+     月の切替は動画一覧ヘッダーの月セレクト、モバイルは MobileHeader の msub 行が持つ */
   var foot=h("div",{class:"sidefoot"});
-  /* 月ナビ・お知らせは最下部クラスタの先頭（ナビ直下の空間は参考どおり空けておく） */
-  if(ctl){ ctl.style.margin="0 12px 10px"; foot.appendChild(ctl); }
   var fn=h("div",{class:"nav"});
   if(myRole()==="社員") fn.appendChild(h("button",{onclick:openGenerate},[ic("plus",18), h("span",{text:"翌月を生成"})]));
-  fn.appendChild(h("button",{onclick:openBackup},[ic("save",18), h("span",{text:"退避（コピー用）"})]));
-  fn.appendChild(h("button",{onclick:function(){ showToast("困ったときは なつみさん・友美さんへ。"); }},
-    [ic("help",18), h("span",{text:"ヘルプ"})]));
-  foot.appendChild(fn);
+  if(fn.childNodes.length) foot.appendChild(fn);
   foot.appendChild(h("div",{class:"sidehr"}));
   /* 案内カードは最下部（完成イメージ01）。クライアント管理だけは社員限定である旨を出す（§3.2） */
   var si2=h("div",{class:"sideinfo"});
@@ -4417,6 +4371,8 @@ function openWho(){
   m.appendChild(p);
   modal(m);
 }
+/* 退避（コピー用）。2026-08-29 にサイドバーから項目を外したため、現在どこからも呼ばれていない。
+   戻す場合は sideBar() の foot に onclick:openBackup のボタンを足すだけでよい */
 function openBackup(){
   var m=h("div",{class:"modal"});
   m.appendChild(h("h3",{text:"退避（コピー用）"}));
