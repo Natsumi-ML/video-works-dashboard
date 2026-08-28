@@ -218,6 +218,10 @@ svg{flex:none}
 /* ホーム上段（参考実測：列幅 287/273/175/187/183 ≒ 1.6fr 1.5fr 1fr 1fr 1fr、高さ220） */
 .kpis.home5{grid-template-columns:1.6fr 1.5fr 1fr 1fr 1fr}
 .kpis.home5 .kpi{height:220px}
+/* 今日の上段3枚（参考実測02：高さ248で揃える。3行入るカードに合わせ内訳行を締める） */
+.kpis.today3 .kpi{min-height:248px}
+.kpis.today3 .kbreak{gap:6px}
+.kpis.today3 .kbreak > div{min-height:40px;padding:4px 14px}
 .kpi{border-radius:16px;padding:18px 18px 12px;color:#fff;min-width:0;
   display:flex;flex-direction:column;
   box-shadow:var(--shadow-card);transition:transform .12s ease,box-shadow .12s ease}
@@ -268,6 +272,8 @@ svg{flex:none}
 .kpimore{display:flex;align-items:center;justify-content:center;gap:4px;background:none;border:0;
   border-top:1px solid var(--border);margin-top:5px;padding:9px 8px 4px;cursor:pointer;
   font-size:12.5px;font-weight:700;color:var(--brand-blue)}
+/* 最優先タスクカード内のリンクは赤（完成イメージ02） */
+.card.stalled .kpimore{color:var(--critical);border-top:0}
 /* 停滞中の動画（§18：白地＋critical の淡い警告カード。My Tasks と同じ濃色にしない） */
 .card.stalled{background:var(--critical-soft);border-color:var(--critical-border)}
 .card.stalled .hd h3{display:flex;align-items:center;gap:7px;color:var(--critical)}
@@ -288,9 +294,10 @@ svg{flex:none}
 .strow .sbadge{width:98px;justify-content:center}
 .strow .days{flex:none;width:66px;text-align:right;font-size:18px;font-weight:800;color:var(--critical);font-variant-numeric:tabular-nums}
 /* ---- 今日（§19.2）。下段はすべて白/淡色カード、濃色にしない ---- */
-.todayduo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) minmax(0,1fr);
-  gap:18px;align-items:start}
-.todayright{display:flex;flex-direction:column;gap:18px;min-width:0}
+/* 参考実測(02)：左277 / 中473 / 右395 = 1fr : 1.71fr : 1.43fr、gap16 */
+.todayduo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.71fr) minmax(0,1.43fr);
+  gap:16px;align-items:start}
+.todayright{display:flex;flex-direction:column;gap:16px;min-width:0}
 .prcard{background:var(--surface);border:1px solid var(--critical-border);border-radius:10px;
   padding:10px 12px;margin-bottom:9px;display:flex;flex-direction:column;gap:7px}
 .prcard .top{display:flex;gap:9px;align-items:center;min-width:0}
@@ -312,7 +319,10 @@ svg{flex:none}
   background:none;border:0;padding:3px 0;cursor:pointer;font-size:12.5px;color:var(--text-secondary);
   text-align:left;min-width:0}
 .rvline span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rvline i{font-style:normal;flex:none;color:var(--brand-blue);font-weight:700}
+/* 参考(02)：行アクションはオレンジ枠のチップボタン */
+.rvline i{font-style:normal;flex:none;color:#B45309;font-weight:700;font-size:12px;
+  border:1px solid var(--warning);border-radius:8px;padding:2px 10px;background:var(--surface)}
+.rvline:hover i{background:var(--warning-soft)}
 .rvline:hover span{color:var(--text-primary)}
 .card.memo{background:var(--surface-blue-soft)}
 .card.memo .hd h3{display:flex;align-items:center;gap:7px}
@@ -676,21 +686,27 @@ table.list tr.pick:focus-visible{outline:2px solid var(--accent);outline-offset:
 .tsec>h4 .c{background:#eef2f7;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:700;
   color:var(--text-secondary);font-variant-numeric:tabular-nums}
 .tsec>h4 .lead{font-size:12px;font-weight:500;color:var(--text-secondary)}
-.trow2{display:grid;grid-template-columns:40px minmax(0,1fr) auto auto auto;gap:13px;align-items:center;
+/* 参考実測(02)：行高約72・タイル44。日付列はdesktopでは出さない（詳細パネルで見る） */
+.trow2{display:grid;grid-template-columns:44px minmax(0,1fr) auto auto;gap:10px;align-items:center;
   background:var(--bg-panel);border:1px solid var(--border-soft);border-radius:var(--radius-md);
-  padding:12px 14px;margin-bottom:9px;cursor:pointer;box-shadow:var(--shadow-card)}
+  padding:10px 13px;margin-bottom:7px;cursor:pointer;box-shadow:var(--shadow-card)}
 .trow2:hover{border-color:#c7d7f5}
 .trow2[aria-selected="true"]{border-color:var(--accent);background:#f7faff;box-shadow:inset 3px 0 0 var(--accent)}
 .trow2 .mid{min-width:0}
-.trow2 .ttl{font-size:14px;font-weight:700;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.trow2 .cli{font-size:12px;color:var(--text-secondary);display:flex;align-items:center;gap:8px;
-  flex-wrap:wrap;margin-bottom:2px}
-.trow2 .who{display:flex;align-items:center;gap:7px;font-size:12.5px;white-space:nowrap}
+.trow2 .ttl{font-size:14.5px;font-weight:700;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trow2 .cli{font-size:12.5px;color:var(--text-secondary);display:flex;align-items:center;gap:8px;
+  flex-wrap:nowrap;margin-bottom:2px;min-width:0}
+.trow2 .cli > span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trow2 .who{display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap}
 .trow2 .who i{font-style:normal;color:var(--text-secondary);font-size:11.5px}
-.trow2 .when{font-size:12px;color:var(--text-secondary);text-align:right;white-space:nowrap;line-height:1.5}
+.trow2 .when{display:none;font-size:12px;color:var(--text-secondary);text-align:right;white-space:nowrap;line-height:1.5}
 .trow2 .when b{font-variant-numeric:tabular-nums;color:var(--text-primary)}
 .trow2 .when .od{color:var(--late);font-weight:700}
 .trow2.done{opacity:.72;box-shadow:none}
+/* 行内ボタンはコンパクトに（参考02：承認・要修正は小ぶり） */
+.trow2 .cta{min-width:0;height:34px;padding:0 13px;font-size:12.5px}
+.trow2 .outbtn{height:34px;padding:0 11px;font-size:12.5px}
+.trow2 .actbtns{gap:6px;flex-wrap:nowrap}
 /* 完了の手ざわり（§10.6）。派手にはしない。
    投稿済み → 右へ抜けて「完了済み」へ移る／途中の工程 → その場で一瞬光る */
 @keyframes rowfinish{
@@ -972,6 +988,7 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
   .detail.open{transform:none}
   .kpis,.kpis.home5{grid-template-columns:repeat(3,minmax(0,1fr))}
   .kpis.home5 .kpi{height:auto}
+  .kpis.today3 .kpi{min-height:0}
   .duo,.homeduo{grid-template-columns:minmax(0,1fr)}
   .kan{grid-template-columns:repeat(3,minmax(0,1fr))}
   .pcards{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -1027,6 +1044,7 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
   .wrap{padding:14px 12px 92px;gap:14px}
   .kpis,.kpis.four,.kpis.three,.kpis.home5,.clienttop .kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
   .kpis.home5 .kpi{height:auto}
+  .kpis.today3 .kpi{min-height:0}
   .kpi{padding:13px 13px 11px}
   .kpi .val .n{font-size:27px}
   .kpi .lab{font-size:13px}
@@ -1048,7 +1066,7 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
   .dark .drivebtn{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.22);color:#fff}
   .dark .drivebtn:hover{background:rgba(255,255,255,.16)}
   .actbtns{width:100%}
-  .cta,.outbtn{height:44px}
+  .cta,.outbtn,.trow2 .cta,.trow2 .outbtn{height:44px;font-size:13px}
   .actbtns .cta,.actbtns .outbtn{flex:1;min-width:0}
   /* 動画詳細 → ボトムシート（§38）。ドロワーCSSより詳細度を上げて上書きする */
   .shell.mob .detail{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;max-width:none;max-height:90vh;
@@ -1067,7 +1085,7 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
   .evmore{font-size:10px}
   .calfb .calsel{flex:1 1 44%;max-width:none}
   /* 今日の作業キュー行 → 2段組（横に詰め込まない） */
-  .trow2{grid-template-columns:40px minmax(0,1fr);grid-auto-rows:auto;gap:8px 12px}
+  .trow2{grid-template-columns:44px minmax(0,1fr);grid-auto-rows:auto;gap:8px 12px}
   .trow2 .who{grid-column:2}
   .trow2 .when{grid-column:2;text-align:left;display:flex;gap:12px;flex-wrap:wrap}
   .trow2 .actbtns,.trow2 .pill{grid-column:1/3}
@@ -1616,7 +1634,8 @@ var ICON = {
   building:'<rect x="4" y="3" width="12" height="18" rx="1"/><path d="M16 9h4a0 0 0 0 1 0 0v12"/><path d="M8 7h2M8 11h2M8 15h2M12 7h1M12 11h1M12 15h1M2 21h20"/>',
   sort:'<path d="M4 7h13M4 12h9M4 17h5"/><path d="m17 14 3 3 3-3"/>',
   menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',
-  list:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>'
+  list:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  clipboard:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1H9zM9 11h6M9 15h6"/>'
 };
 function ic(name, size){
   var s=svgEl("svg",{viewBox:"0 0 24 24",width:String(size||18),height:String(size||18),
@@ -3079,13 +3098,20 @@ function todayReview(){
 function todayKpiStrip(b, rv){
   var revise=scopeRows().filter(function(r){ return r.status==="要修正"; });
   var prio=b.over.length + revise.filter(function(r){ return b.over.indexOf(r)<0; }).length;
-  var g=h("div",{class:"kpis three"});
-
+  var g=h("div",{class:"kpis three today3"});
+  /* 完成イメージ02：各カード下端に「すべて見る」。押した先は既存の実機能に接続する */
+  function foot(k, fn){
+    k.appendChild(h("div",{class:"kfoot"},[h("span",{text:"すべて見る"}), ic("chevronRight",14)]));
+    k.classList.add("click"); k.setAttribute("role","button"); k.setAttribute("tabindex","0");
+    k.addEventListener("click", fn);
+    k.addEventListener("keydown", function(e){ if(e.key==="Enter") fn(); });
+  }
   var k1=kpiCardInline("g-critical","最優先","alertCircle", prio,"件");
   var bk1=h("div",{class:"kbreak"});
   bk1.appendChild(h("div",{},[h("span",{text:"期限超過"}), h("b",{class:"num",text:b.over.length+"件"})]));
   bk1.appendChild(h("div",{},[h("span",{text:"要修正"}), h("b",{class:"num",text:revise.length+"件"})]));
   k1.appendChild(bk1);
+  foot(k1, function(){ FILTER.sort="delay"; FILTER.status="open"; FILTER.editor="__all__"; VIEW="list"; render(); });
   g.appendChild(k1);
 
   var k2=kpiCardInline("g-blue","今日やること","clock", b.over.length+b.now.length,"件");
@@ -3093,6 +3119,7 @@ function todayKpiStrip(b, rv){
   bk2.appendChild(h("div",{},[h("span",{text:"期限超過"}), h("b",{class:"num",text:b.over.length+"件"})]));
   bk2.appendChild(h("div",{},[h("span",{text:"本日対応予定"}), h("b",{class:"num",text:b.now.length+"件"})]));
   k2.appendChild(bk2);
+  foot(k2, function(){ var el=document.querySelector(".card.queue"); if(el) el.scrollIntoView({block:"start",behavior:"smooth"}); });
   g.appendChild(k2);
 
   var k3=kpiCardInline("g-orange","要確認","alert", rv.drive.length+rv.title.length+rv.squeezed.length,"件");
@@ -3101,6 +3128,7 @@ function todayKpiStrip(b, rv){
   bk3.appendChild(h("div",{},[h("span",{text:"タイトル未入力"}), h("b",{class:"num",text:rv.title.length+"本"})]));
   bk3.appendChild(h("div",{},[h("span",{text:"編集期間不足"}), h("b",{class:"num",text:rv.squeezed.length+"本"})]));
   k3.appendChild(bk3);
+  foot(k3, function(){ var el=document.querySelector(".card.review"); if(el) el.scrollIntoView({block:"start",behavior:"smooth"}); });
   g.appendChild(k3);
   return g;
 }
@@ -3128,7 +3156,7 @@ function todayRow(r, done){
     "aria-selected":sel?"true":"false",
     onclick:function(){ selectRow(r.id); },
     onkeydown:function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); selectRow(r.id); } }});
-  row.appendChild(tile(r.contractId, shortName(c), 40, 40, 13));
+  row.appendChild(tile(r.contractId, shortName(c), 44, 44, 13));
   var mid=h("div",{class:"mid"});
   var cli=h("div",{class:"cli"});
   cli.appendChild(h("span",{text:c.client}));
@@ -3140,7 +3168,7 @@ function todayRow(r, done){
   var who=h("div",{class:"who"});
   if(r.editor){
     var wav=h("span",{class:"avatar",text:r.editor.slice(0,1),"aria-hidden":"true"});
-    wav.style.cssText="width:24px;height:24px;font-size:11px";
+    wav.style.cssText="width:22px;height:22px;font-size:10.5px";
     wav.style.background=tileBg(r.editor);
     who.appendChild(wav);
   }
@@ -3168,10 +3196,10 @@ function todayRow(r, done){
   }
   return row;
 }
-function todaySection(title, lead, rows){
+function todaySection(title, lead, rows, countAll){
   if(!rows.length) return null;
   var box=h("div",{class:"tsec"});
-  var hd=h("h4",{},[title, h("span",{class:"c",text:String(rows.length)+"件"})]);
+  var hd=h("h4",{},[title, h("span",{class:"c",text:String(countAll!=null?countAll:rows.length)+"件"})]);
   if(lead) hd.appendChild(h("span",{class:"lead",text:lead}));
   box.appendChild(hd);
   rows.forEach(function(r){ box.appendChild(todayRow(r)); });
@@ -3188,7 +3216,8 @@ function todayPrioCard(){
   if(!items.length){
     bd.appendChild(h("p",{class:"sub",style:"margin:4px 0 12px",text:"最優先のタスクはありません。"}));
   }
-  items.slice(0,4).forEach(function(r){
+  /* 完成イメージ02：カードは3枚まで。残りは下のリンクから */
+  items.slice(0,3).forEach(function(r){
     var c=contractById(r.contractId)||{display:r.client};
     var el=h("div",{class:"prcard"});
     var top=h("div",{class:"top"});
@@ -3214,7 +3243,7 @@ function todayPrioCard(){
     }
     bd.appendChild(el);
   });
-  if(items.length>4) bd.appendChild(h("button",{class:"kpimore",onclick:function(){
+  if(items.length) bd.appendChild(h("button",{class:"kpimore",style:"width:100%",onclick:function(){
     FILTER.sort="delay"; FILTER.status="open"; FILTER.editor="__all__"; VIEW="list"; render(); }},
     [h("span",{text:"すべての最優先タスクを見る"}), ic("chevronRight",14)]));
   card.appendChild(bd);
@@ -3288,10 +3317,7 @@ function todayMemoCard(){
 }
 function panelToday(){
   var box=h("div");
-  var staff=!!STAFF_MAP[ME];
-  box.appendChild(h("div",{class:"sect page"},[
-    h("h2",{text:"今日"}),
-    h("span",{text:"（"+jpFull(TODAY)+"・"+(staff?"自分の担当分":"編集スタッフ全員")+"）"})]));
+  /* 完成イメージ02にページタイトル行は無い。KPIを最上段に置く */
   var b0=todayBuckets(), rv=todayReview();
   box.appendChild(todayKpiStrip(b0, rv));
 
@@ -3308,6 +3334,11 @@ function panelToday(){
 function todayQueue(){
   var b=todayBuckets();
   var s=sectCard("今日やること");
+  /* 完成イメージ02：見出しはアイコン＋青（.card.queue .hd h3） */
+  var qh=s.card.querySelector(".hd h3");
+  qh.textContent="";
+  qh.appendChild(ic("clipboard",16));
+  qh.appendChild(txt(" 今日やること"));
   if(!b.over.length && !b.now.length && !b.nodate.length){
     /* §10.7 空状態。黙って今週を出すと「今日やることが無い」ことが伝わらない */
     var e=h("div",{class:"emptystate"});
@@ -3317,10 +3348,19 @@ function todayQueue(){
       VIEW="list"; FILTER.status="open"; POP=false; render(); }}));
     s.bd.appendChild(e);
   } else {
-    [todaySection("今日の優先","締切を過ぎています。ここから片付けます", b.over),
-     todaySection("今日中","今日が投稿予定日または編集完了希望日", b.now),
-     todaySection("期限なし","投稿予定日か編集完了希望が入っていません", b.nodate)
+    /* 完成イメージ02：表示は8件まで。残りは下の「すべての今日やることを見る」から */
+    var LIMIT=8, used=0;
+    var total=b.over.length+b.now.length+b.nodate.length;
+    function take(rows){ var t=rows.slice(0, Math.max(0, LIMIT-used)); used+=t.length; return t; }
+    [todaySection("今日の優先","締切を過ぎています。ここから片付けます", take(b.over), b.over.length),
+     todaySection("今日中","今日が投稿予定日または編集完了希望日", take(b.now), b.now.length),
+     todaySection("期限なし","投稿予定日か編集完了希望が入っていません", take(b.nodate), b.nodate.length)
     ].forEach(function(x){ if(x) s.bd.appendChild(x); });
+    if(total>LIMIT){
+      s.bd.appendChild(h("button",{class:"kpimore",style:"width:100%",onclick:function(){
+        VIEW="list"; FILTER.status="open"; FILTER.editor="__all__"; POP=false; render(); }},
+        [h("span",{text:"すべての今日やることを見る（他"+(total-LIMIT)+"件）"}), ic("chevronRight",14)]));
+    }
   }
   /* 完了済みは折りたたみ。押した本が消えたように見えないための置き場 */
   if(b.done.length){
