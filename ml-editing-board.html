@@ -1038,7 +1038,7 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 }
 
 /* =====================================================================
-   モバイル（§36〜42：0–767px）。PC版の縮小ではなく専用レイアウト
+   Tablet & Mobile（0–1199px）。PC版の縮小ではなく専用レイアウト（レスポンシブ指示書 §4・§5）
    ===================================================================== */
 /* 共有部品（モバイル以外では出ない・出さない） */
 .taskdrive{display:none}
@@ -1057,20 +1057,23 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .vcard .actbtns{width:100%}
 .vcard .actbtns .cta,.vcard .actbtns .outbtn{flex:1;min-width:0}
 
-@media (max-width:767px){
+@media (max-width:1199px){
   .shell,.shell.nodetail{display:block}
   /* サイドバー → ハンバーガードロワー（§36） */
-  .side{position:fixed;left:0;top:0;bottom:0;width:264px;z-index:70;height:100vh;
+  /* ドロワー幅は 78–84vw・最大320px（指示書 §10）。中身が長いときはドロワー内でスクロール */
+  .side{position:fixed;left:0;top:0;bottom:0;width:min(84vw,320px);z-index:70;height:100vh;overflow-y:auto;
     transform:translateX(-103%);transition:transform 160ms ease}
   .side.open{transform:none}
   .brand{position:relative;padding-right:52px}
   .brand .close{position:absolute;right:8px;top:-4px;color:#fff}
   /* モバイルヘッダー（§36：56px程度） */
-  .mhead{display:flex;align-items:center;gap:6px;padding:8px 12px;min-height:56px;
+  .mhead{display:flex;align-items:center;gap:6px;padding:6px 12px;min-height:56px;
     background:var(--surface);border-bottom:1px solid var(--border);
     position:sticky;top:0;z-index:50}
   .iconbtn.mh{width:44px;height:44px;color:var(--text-primary)}
   .mlogo{display:flex;align-items:center;gap:7px}
+  .mlogo .mword{font-size:16.5px;font-weight:800;letter-spacing:.02em;color:var(--text-primary);
+    white-space:nowrap}
   .avbtn{background:none;border:0;padding:0;cursor:pointer;min-width:44px;min-height:44px;
     display:flex;align-items:center;justify-content:center}
   .msearch{margin:8px 12px 0}
@@ -1133,6 +1136,11 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
   /* モバイルはカード型に戻し、区分見出しも出す（§37） */
   .tsec{margin-top:6px}
   .tsec>h4{display:flex}
+  /* 区分見出しは「タイトル＋件数」を1行、説明文は折り返して次行に置く */
+  .tsec>h4{flex-wrap:wrap;gap:5px 9px}
+  .tsec>h4 .tl{white-space:nowrap}
+  .tsec>h4 .c{flex:none;white-space:nowrap}
+  .tsec>h4 .lead{flex:1 0 100%;line-height:1.45}
   .trow2{grid-template-columns:44px minmax(0,1fr);grid-auto-rows:auto;gap:8px 12px;
     background:var(--bg-panel);border:1px solid var(--border-soft);border-radius:var(--radius-md);
     padding:12px 13px;margin-bottom:9px;box-shadow:var(--shadow-card)}
@@ -1154,6 +1162,87 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
   /* モーダルはほぼ全幅 */
   .modal{max-width:calc(100vw - 28px)}
   .mstep .ms{font-size:9.5px}
+  /* ================= 今日画面 Tablet/Mobile（レスポンシブ指示書 §4・§5） ================= */
+  /* KPIは縦積み・内容ぶんの高さ。desktopの height:251px を必ず解除する */
+  .kpis.today3 .kpi{height:auto}
+  .kpis.today3 .kpi .lab{font-size:15px}
+  .kpis.today3 .kpi .iln{font-size:17px}
+  .kpis.today3 .kbreak{flex:none;gap:6px;margin:8px 0 2px}
+  .kpis.today3 .kbreak > div{min-height:34px;padding:4px 12px;font-size:12.5px}
+  .kpis.today3 .kbreak > div b{font-size:13px}
+  .kpis.today3 .kfoot{min-height:40px;display:flex;align-items:center;justify-content:center;
+    font-size:12.5px;padding:0;margin-top:2px}
+  /* ヘッダー直下は［月セレクタ｜Google Drive］の2列（§4.2・§5.2：高さ44以上） */
+  .msub{display:flex;align-items:stretch;gap:8px;padding:8px 12px 0;flex-wrap:nowrap}
+  .msub .mnav{flex:0 0 57%;justify-content:center;min-height:44px;min-width:0;padding:0}
+  .msub .drivecta{flex:1 1 auto;justify-content:center;min-height:44px;min-width:0}
+  .msub .drivecta span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* 月ナビの ‹ › も 44px タップ領域にする（§13） */
+  .msub .mnav .iconbtn{width:44px;height:44px}
+  /* ボトムシートの閉じるボタンも44px（§13） */
+  .dh .iconbtn{width:44px;height:44px}
+  /* 指示書 §13：ボタン・リンク行のタップ領域はすべて44px以上 */
+  .kpimore{min-height:44px}
+  .drivebtn{height:44px}
+  .tdone{min-height:44px}
+  .dfoot .ghostbtn,.dfoot .cta,.dfoot .outbtn{height:44px}
+  .linkbtn2,.rvline{min-height:44px}
+  /* ヘッダーのお知らせベル（§4.1・§5.1） */
+  .mhead .rel{position:relative;display:flex}
+  .iconbtn.mh .nb{position:absolute;top:4px;right:4px;min-width:16px;height:16px;border-radius:999px;
+    background:var(--brand-blue);color:#fff;font-size:10px;font-weight:700;line-height:16px;padding:0 4px}
+  .iconbtn.mh.warn{color:var(--late)}
+  .iconbtn.mh.warn .nb{background:var(--late)}
+  .mhead .pop{position:fixed;left:12px;right:12px;top:60px;max-width:none;min-width:0}
+  /* トップバーが無いぶん「動画追加」はドロワーに置く */
+  .sidecta{padding:6px 14px 2px}
+  .sidecta .cta{width:100%;justify-content:center;height:44px}
+  /* 下段の詳細セクション → アコーディオン（§4.4・§6） */
+  .tacc{display:flex;flex-direction:column;gap:10px}
+  .tsecacc{display:flex;flex-direction:column;gap:10px}
+  .tacch{display:flex;align-items:center;gap:9px;width:100%;min-height:48px;
+    background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    padding:10px 14px;cursor:pointer;text-align:left;box-shadow:var(--shadow-card)}
+  .tacch .tt{font-size:15px;font-weight:700;color:var(--text-primary)}
+  .tacch .ti{display:inline-flex;flex:none}
+  .tacch .ti.crit{color:var(--critical)}
+  .tacch .ti.blue{color:var(--brand-blue)}
+  .tacch .ti.warn{color:#B45309}
+  .tacch .ti.memo{color:var(--text-secondary)}
+  .tacch .c{font-size:12.5px;font-weight:700;color:var(--text-secondary);font-variant-numeric:tabular-nums}
+  .tacch .spacer{flex:1}
+  .tacch .cv{display:inline-flex;flex:none;color:var(--text-secondary)}
+  .tsecacc .card{margin:0}
+  .accfoot{display:flex;justify-content:flex-end;gap:8px;padding-top:10px}
+  .taccb{animation:accopen 170ms ease}
+  /* 固定ボトムナビは 64–72px（§9）。各itemのタップ領域を44px以上に保つ */
+  .bottomnav{padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+  .bottomnav button{min-height:52px;gap:3px;font-size:11px}
+  .bottomnav button[aria-current="page"]{background:var(--surface-blue-soft)}
+}
+@keyframes accopen{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+/* =====================================================================
+   Tablet（768–1199px）。Mobileと同じ構造のまま、余白と文字を一段大きくする
+   （レスポンシブ指示書 §4・§12）
+   ===================================================================== */
+@media (min-width:768px) and (max-width:1199px){
+  .wrap{padding:16px 16px 100px;gap:16px}
+  .mhead{min-height:60px;padding:8px 16px}
+  .msub{padding:10px 16px 0}
+  .msearch{margin:8px 16px 0}
+  .kpis.today3{gap:12px}
+  .kpis.today3 .kpi{padding:14px 18px 10px}
+  .kpis.today3 .kpi .lab{font-size:16.5px}
+  .kpis.today3 .kpi .iln{font-size:19px}
+  .kpis.today3 .kpi .kic{width:32px;height:32px}
+  .kpis.today3 .kbreak > div{min-height:38px;padding:5px 14px;font-size:13.5px}
+  .kpis.today3 .kbreak > div b{font-size:14px}
+  .kpis.today3 .kfoot{font-size:13.5px;min-height:44px}
+  .tacch{min-height:52px;padding:12px 16px;border-radius:12px}
+  .tacch .tt{font-size:17px}
+  .tacch .c{font-size:13px}
+  .bottomnav button{min-height:56px;font-size:12px}
+  .card>.hd h3{font-size:17px}
 }
 </style>
 
@@ -1815,7 +1904,10 @@ function writable(){ return CAN_WRITE && !STATE.maintenance && !isPast(); }
 function daysSince(d){ return Math.floor((toUTC(TODAY)-toUTC(d))/86400000); }
 function narrow(){ try{ return window.matchMedia("(max-width:1279px)").matches; }catch(e){ return false; } }
 /* モバイル（§35.1：0–767px）。PCの縮小ではなく専用レイアウトに切り替える */
-function mobile(){ try{ return window.matchMedia("(max-width:767px)").matches; }catch(e){ return false; } }
+/* 仕様書 §2：Mobile 0-767 / Tablet 768-1199 / Desktop 1200-。
+   Tablet も sidebar を drawer 化しボトムナビを出すので、シェルの判定は 1199 以下でまとめる。
+   0–767 と 768–1199 の差はCSSのメディアクエリ側で吸収する */
+function mobile(){ try{ return window.matchMedia("(max-width:1199px)").matches; }catch(e){ return false; } }
 var MNAV=false, MSEARCH=false;   /* ハンバーガードロワー／検索オーバーレイ */
 var WD=["日","月","火","水","木","金","土"];
 function jpFull(s){ var a=s.split("-"); return (+a[0])+"年"+(+a[1])+"月"+(+a[2])+"日（"+WD[dow(s)]+"）"; }
@@ -1937,6 +2029,10 @@ function Sidebar(){
       onclick:function(){ MNAV=false; render(); }},[ic("x",20)]));
   }
   side.appendChild(brand);
+  /* Tablet/Mobile はトップバーが無いので「動画追加」をドロワーに置く（desktopは従来どおりトップバー） */
+  if(mobile() && writable())
+    side.appendChild(h("div",{class:"sidecta"},[h("button",{class:"cta",
+      onclick:function(){ MNAV=false; openAddVideo(); }},[ic("plus",18), h("span",{text:"動画追加"})])]));
 
   /* ---- ナビゲーション（§14）。ルートは3群に分ける ----
      制作＝毎日開く画面 / 管理＝社員だけの画面 / 要対応＝件数から入る導線。
@@ -1998,13 +2094,22 @@ function MobileHeader(){
   var top=h("div",{class:"mhead"});
   top.appendChild(h("button",{class:"iconbtn mh","aria-label":"メニューを開く",
     onclick:function(){ MNAV=true; render(); }},[ic("menu",22)]));
-  /* ヘッダーが白地のため、白いワードマーク画像は置かずマークのみ（§4.2：狭い場合はロゴマークのみ） */
-  top.appendChild(h("div",{class:"mlogo"},[sbMark(30)]));
+  /* ワードマーク画像は白抜きで白地に置けないため、ここだけテキストで組む（指示書 §4.1・§5.1） */
+  top.appendChild(h("div",{class:"mlogo"},[sbMark(28), h("span",{class:"mword",text:"SOCIAL BASE"})]));
   top.appendChild(h("div",{class:"spacer"}));
   top.appendChild(h("button",{class:"iconbtn mh","aria-label":"検索",
     "aria-expanded":MSEARCH?"true":"false",
     onclick:function(){ MSEARCH=!MSEARCH; render();
       var el=document.querySelector(".msearch input"); if(el) el.focus(); }},[ic("search",20)]));
+  /* お知らせベル（指示書 §4.1・§5.1：[☰][logo][🔍][🔔][avatar]） */
+  var ns=notices(), bad=ns.filter(function(x){ return x.lv!=="ok"; }).length;
+  var rel=h("div",{class:"rel"});
+  rel.appendChild(h("button",{class:"iconbtn mh"+(bad?" warn":""),"aria-expanded":POP?"true":"false",
+    "aria-label":"お知らせ "+ns.length+"件",
+    onclick:function(e){ e.stopPropagation(); POP=!POP; render(); }},
+    [ic(bad?"alert":"info",20), h("span",{class:"nb",text:String(ns.length)})]));
+  if(POP) rel.appendChild(noticePop(ns));
+  top.appendChild(rel);
   var av=h("div",{class:"avatar",text:(ME||"？").slice(0,1),"aria-hidden":"true"});
   av.style.cssText="width:34px;height:34px;font-size:13px";
   av.style.background=tileBg(ME||"?");
@@ -2026,7 +2131,8 @@ function MobileHeader(){
     box.appendChild(sb);
   }
 
-  /* 月ナビとお知らせは1行に畳む */
+  /* ヘッダー直下は［‹ 2026年08月 ›｜Google Drive］の2列（指示書 §4.2・§5.2）。
+     「動画追加」はトップバーが無いぶんドロワー側に置く */
   var sub=h("div",{class:"msub"});
   var months=monthList(), mi=months.indexOf(MONTH);
   var mn=h("div",{class:"mnav"});
@@ -2036,23 +2142,16 @@ function MobileHeader(){
   mn.appendChild(h("button",{class:"iconbtn","aria-label":"次の月",disabled:mi>=months.length-1,
     onclick:function(){ MONTH=months[mi+1]; SELECTED=null; SELECTEDC=null; render(); }},[ic("chevronRight",16)]));
   sub.appendChild(mn);
-  var ns=notices(), bad=ns.filter(function(x){ return x.lv!=="ok"; }).length;
-  var rel=h("div",{class:"rel"});
-  rel.appendChild(h("button",{class:"chipbtn"+(bad?" warn":""),"aria-expanded":POP?"true":"false",
-    "aria-label":"お知らせ "+ns.length+"件",
-    onclick:function(e){ e.stopPropagation(); POP=!POP; render(); }},
-    [ic(bad?"alert":"info",16), h("span",{class:"n",text:String(ns.length)})]));
-  if(POP) rel.appendChild(noticePop(ns));
-  sub.appendChild(rel);
-  if(writable()) sub.appendChild(h("button",{class:"cta",style:"min-width:0;margin-left:auto",
-    onclick:openAddVideo},[ic("plus",16), h("span",{text:"動画追加"})]));
+  sub.appendChild(h("button",{class:"chipbtn drivecta",onclick:openDriveHub},
+    [driveMark(20), h("span",{text:"Google Drive"})]));
   box.appendChild(sub);
   return box;
 }
 /* 固定ボトムナビ（§36）。共通5画面。クライアント管理はドロワー内のみ */
 function BottomNav(){
   var bn=h("nav",{class:"bottomnav","aria-label":"主要ページ"});
-  var SHORT={"投稿カレンダー":"カレンダー","チーム負荷":"チーム","動画一覧":"動画"};
+  /* 指示書 §9：ホーム／今日／動画一覧／チーム負荷／カレンダー */
+  var SHORT={"投稿カレンダー":"カレンダー"};
   visibleViews().filter(function(v){ return v[0]!=="client"; }).forEach(function(v){
     bn.appendChild(h("button",{"aria-current":VIEW===v[0]?"page":null,
       onclick:function(){ if(VIEW!==v[0]) SELECTED=null; VIEW=v[0]; POP=false; DRAWER=false; MNAV=false; render(); }},
@@ -3142,7 +3241,8 @@ function todayKpiStrip(b, rv){
   bk1.appendChild(h("div",{},[h("span",{text:"期限超過"}), h("b",{class:"num",text:b.over.length+"件"})]));
   bk1.appendChild(h("div",{},[h("span",{text:"要修正"}), h("b",{class:"num",text:revise.length+"件"})]));
   k1.appendChild(bk1);
-  foot(k1, function(){ FILTER.sort="delay"; FILTER.status="open"; FILTER.editor="__all__"; VIEW="list"; render(); });
+  foot(k1, function(){ if(mobile()) return openTodayAcc("prio");
+    FILTER.sort="delay"; FILTER.status="open"; FILTER.editor="__all__"; VIEW="list"; render(); });
   g.appendChild(k1);
 
   var k2=kpiCardInline("g-blue","今日やること","clock", b.over.length+b.now.length,"件");
@@ -3150,7 +3250,8 @@ function todayKpiStrip(b, rv){
   bk2.appendChild(h("div",{},[h("span",{text:"期限超過"}), h("b",{class:"num",text:b.over.length+"件"})]));
   bk2.appendChild(h("div",{},[h("span",{text:"本日対応予定"}), h("b",{class:"num",text:b.now.length+"件"})]));
   k2.appendChild(bk2);
-  foot(k2, function(){ var el=document.querySelector(".card.queue"); if(el) el.scrollIntoView({block:"start",behavior:"smooth"}); });
+  foot(k2, function(){ if(mobile()) return openTodayAcc("queue");
+    var el=document.querySelector(".card.queue"); if(el) el.scrollIntoView({block:"start",behavior:"smooth"}); });
   g.appendChild(k2);
 
   var k3=kpiCardInline("g-orange","要確認","alert", rv.drive.length+rv.title.length+rv.squeezed.length,"件");
@@ -3162,7 +3263,8 @@ function todayKpiStrip(b, rv){
   }
   bk3.appendChild(h("div",{},[h("span",{text:"編集期間不足"}), h("b",{class:"num",text:rv.squeezed.length+"本"})]));
   k3.appendChild(bk3);
-  foot(k3, function(){ var el=document.querySelector(".card.review"); if(el) el.scrollIntoView({block:"start",behavior:"smooth"}); });
+  foot(k3, function(){ if(mobile()) return openTodayAcc("review");
+    var el=document.querySelector(".card.review"); if(el) el.scrollIntoView({block:"start",behavior:"smooth"}); });
   g.appendChild(k3);
   return g;
 }
@@ -3234,7 +3336,7 @@ function todayRow(r, done){
 function todaySection(title, lead, rows, countAll){
   if(!rows.length) return null;
   var box=h("div",{class:"tsec"});
-  var hd=h("h4",{},[title, h("span",{class:"c",text:String(countAll!=null?countAll:rows.length)+"件"})]);
+  var hd=h("h4",{},[h("span",{class:"tl",text:title}), h("span",{class:"c",text:String(countAll!=null?countAll:rows.length)+"件"})]);
   if(lead) hd.appendChild(h("span",{class:"lead",text:lead}));
   box.appendChild(hd);
   rows.forEach(function(r){ box.appendChild(todayRow(r)); });
@@ -3354,11 +3456,65 @@ function todayMemoCard(){
   card.appendChild(bd);
   return card;
 }
+/* Tablet/Mobile の下段はアコーディオン（レスポンシブ指示書 §4.4・§6）。
+   初期状態はすべて閉じる。KPIカードを押すと該当セクションだけ開いてスクロールする */
+var TODAY_ACC={prio:false,queue:false,review:false,memo:false};
+function openTodayAcc(key){
+  TODAY_ACC[key]=true; POP=false; render();
+  requestAnimationFrame(function(){
+    var el=document.querySelector('.tsecacc[data-k="'+key+'"]');
+    if(el) el.scrollIntoView({block:"start",behavior:"smooth"});
+  });
+}
+/* アコーディオン内ではカード自身の見出しは重複するので外す。
+   見出し行にボタン（例：今日のメモの「編集する」）が残る場合は行だけ残す */
+function stripCardHead(card){
+  var hd=card.querySelector(":scope > .hd");
+  if(!hd) return card;
+  /* 見出し行にあったボタン（今日のメモの「編集する」等）は本文の下に移す（指示書 §8） */
+  var btns=[].slice.call(hd.querySelectorAll("button"));
+  hd.parentNode.removeChild(hd);
+  if(btns.length){
+    var bd=card.querySelector(":scope > .bd") || card;
+    var ft=h("div",{class:"accfoot"});
+    btns.forEach(function(b){ ft.appendChild(b); });
+    bd.appendChild(ft);
+  }
+  return card;
+}
+/* 見出しは［icon｜セクション名｜chevron］の3要素のみ（指示書 §6・参考08）。件数はKPIカード側で出す */
+function todayAcc(key, title, iconName, tone, build){
+  var open=!!TODAY_ACC[key];
+  var wrap=h("div",{class:"tsecacc","data-k":key});
+  var hd=h("button",{class:"tacch","aria-expanded":open?"true":"false",
+    onclick:function(){ TODAY_ACC[key]=!TODAY_ACC[key]; render(); }},
+    [h("span",{class:"ti "+tone},[ic(iconName,17)]), h("span",{class:"tt",text:title})]);
+  hd.appendChild(h("div",{class:"spacer"}));
+  hd.appendChild(h("span",{class:"cv"},[ic(open?"chevronDown":"chevronRight",18)]));
+  wrap.appendChild(hd);
+  if(open){
+    var body=h("div",{class:"taccb"});
+    body.appendChild(stripCardHead(build()));
+    wrap.appendChild(body);
+  }
+  return wrap;
+}
 function panelToday(){
   var box=h("div");
   /* 完成イメージ02にページタイトル行は無い。KPIを最上段に置く */
   var b0=todayBuckets(), rv=todayReview();
   box.appendChild(todayKpiStrip(b0, rv));
+
+  /* Tablet/Mobile：3カラムをやめて4つのアコーディオンにする（指示書 §4.4・§6） */
+  if(mobile()){
+    var acc=h("div",{class:"tacc"});
+    acc.appendChild(todayAcc("prio","最優先タスク","alertCircle","crit", todayPrioCard));
+    acc.appendChild(todayAcc("queue","今日やること","clipboard","blue", todayQueue));
+    acc.appendChild(todayAcc("review","要確認","alert","warn", function(){ return todayReviewCard(rv); }));
+    acc.appendChild(todayAcc("memo","今日のメモ","info","memo", todayMemoCard));
+    box.appendChild(acc);
+    return box;
+  }
 
   var duo=h("div",{class:"todayduo"});
   duo.appendChild(todayPrioCard());
