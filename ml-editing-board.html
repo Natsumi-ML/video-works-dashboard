@@ -1,55 +1,90 @@
-<title>編集進行ボード</title>
+<title>SOCIAL BASE</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap">
 <style>
 /* =====================================================================
-   デザイントークン（HOME_DASHBOARD_SPEC.md §4.2 準拠）
-   仕様書の見た目に一本化する。ダーク分岐は持たない（§15 MUST NOT：
-   sidebar をライトテーマに変更しない）。body の地は明示的に塗る。
+   デザイントークン（SOCIAL_BASE_UI_IMPLEMENTATION_SPEC.md §6 準拠）
+   新トークンを正とし、旧名称は別名として残して段階移行する。
+   body の地は明示的に塗る。ダーク分岐は持たない。
    ===================================================================== */
 :root{
   color-scheme:light;
-  --bg-app:#f6f8fb; --bg-panel:#ffffff;
-  --bg-sidebar:#101c2d; --bg-sidebar-elev:#17263a;
-  --bg-dark-card:#16263a; --bg-dark-row:#1b2d43;
-  --text-primary:#0f172a; --text-secondary:#64748b; --text-muted:#94a3b8;
-  --text-on-dark:#f8fafc; --text-on-dark-muted:#b8c3d1;
-  --border-soft:#e5eaf0; --border-dark:rgba(255,255,255,.09);
 
-  /* 工程色。面と枠に使い、文字には -ink を使う（白地で 4.5:1 以上） */
-  --st-todo:#3b82f6;    --st-todo-ink:#1d4ed8;    --st-todo-tint:rgba(59,130,246,.12);
-  --st-editing:#14a3a3; --st-editing-ink:#0f766e; --st-editing-tint:rgba(20,163,163,.14);
-  --st-review:#f59e0b;  --st-review-ink:#b45309;  --st-review-tint:rgba(245,158,11,.16);
-  /* 承認済み：仕様書 §3.2 は緑を指定するが、投稿済（緑）と隣り合うと
-     「承認済み＝完了」に読み違える。§1.1 MUST NOT（ホームと異なる
-     ステータス色を使わない）に従い投稿待ちの赤は動かさず、空いている
-     紫を承認済みに割り当てる */
-  --st-approved:#8b5cf6;--st-approved-ink:#6d28d9;--st-approved-tint:rgba(139,92,246,.14);
-  --st-waiting:#ef4444; --st-waiting-ink:#b91c1c; --st-waiting-tint:rgba(239,68,68,.12);
-  --st-posted:#18a777;  --st-posted-ink:#0a7d59;  --st-posted-tint:rgba(24,167,119,.14);
+  /* Brand（§6） */
+  --brand-teal:#00AFB5; --brand-cyan:#10CFE0;
+  --brand-blue:#1677F2; --brand-deep-blue:#0C58D8;
 
-  --ok:#0a7d59; --warn:#b45309; --late:#dc2626;
-  --accent:#4f46e5; --accent-hover:#4338ca;
-  --track:#2563eb;
+  /* App surfaces */
+  --app-bg:#F6F8FC; --surface:#FFFFFF;
+  --surface-soft:#F9FBFE; --surface-blue-soft:#F2F8FF;
 
-  /* KPIカード：虹を同じ「深さ」に揃えた面。文字は全カード白で統一し、
-     いずれも白に対して 4.8:1 以上を確保している（黄は白文字が乗らないので使わない）。
-     割り当ては §2.1／§9.3／§13.2 の指定どおり：投稿待ち＝紫、本日＝橙、遅延＝赤。
-     確認待ちだけ仕様書の琥珀を採らず、青緑にしている（茶に寄って濁るため） */
-  --kpi-planned:linear-gradient(135deg,#1a2f4a,#26527f);   /* 藍：合計・母数 */
-  --kpi-mine:   linear-gradient(135deg,#1e3a8a,#2557c7);   /* 青：自分・残り・未着手 */
-  --kpi-review: linear-gradient(135deg,#0b5c62,#10767d);   /* 青緑：確認待ち */
-  --kpi-posted: linear-gradient(135deg,#06643f,#0a7a52);   /* 緑：完了 */
-  --kpi-waiting:linear-gradient(135deg,#46256e,#5d33a0);   /* 紫：投稿待ち */
-  --kpi-today:  linear-gradient(135deg,#a3350a,#c2410c);   /* 橙：今日・本日期限 */
-  --kpi-risk:   linear-gradient(135deg,#9b1239,#c01c45);   /* 赤：遅延・危険 */
+  /* Sidebar */
+  --sidebar-top:#03152F; --sidebar-mid:#07346C; --sidebar-bottom:#0B5BE8;
+
+  /* Text */
+  --text-primary:#0B1F46; --text-secondary:#52647F;
+  --text-muted:#8795AA; --text-inverse:#FFFFFF;
+
+  /* Border */
+  --border:#DCE4F0; --border-strong:#CBD6E5;
+
+  /* Critical / Warning / Success / Purple / Neutral */
+  --critical:#FF315F; --critical-2:#FF685E;
+  --critical-soft:#FFF2F5; --critical-border:#FFC6D0;
+  --warning:#FF8A00; --warning-2:#FFB32B;
+  --warning-soft:#FFF7E9; --warning-border:#FFD9A4;
+  --success:#13A978; --success-soft:#EAF9F3;
+  --purple:#8A4BE8; --purple-2:#B154E8; --purple-soft:#F4ECFF;
+  --neutral-soft:#EEF2F7; --neutral-text:#60718A;
+
+  /* Calendar */
+  --calendar-offday-bg:#E9EDF2; --calendar-grid:#D6DEE9;
+
+  /* Dark work panel（My Tasks 専用） */
+  --work-dark-1:#061D3C; --work-dark-2:#0D3159;
+
+  /* KPIグラデーション（§6.1） */
+  --gradient-critical:linear-gradient(135deg,#FF315F 0%,#FF685E 100%);
+  --gradient-blue:linear-gradient(135deg,#10BFE6 0%,#1677F2 100%);
+  --gradient-teal:linear-gradient(135deg,#12CFC3 0%,#00A5AE 100%);
+  --gradient-purple:linear-gradient(135deg,#B154E8 0%,#7043E4 100%);
+  --gradient-orange:linear-gradient(135deg,#FFB32B 0%,#FF7900 100%);
+  --gradient-nav:linear-gradient(135deg,#10C7D6 0%,#0F83F5 100%);
+
+  /* ステータス色（§7.2）。チップ＝薄背景 tint ＋ 文字 ink。
+     -ink は白地 4.5:1 を切らないよう主色より一段濃い値を採る */
+  --st-todo:#D97706;    --st-todo-ink:#B45309;    --st-todo-tint:#FFF3DE;
+  --st-editing:#1677F2; --st-editing-ink:#0C58D8; --st-editing-tint:#EAF3FF;
+  --st-revise:#F43F5E;  --st-revise-ink:#E11D48;  --st-revise-tint:#FFF0F3;
+  --st-review:#00A5AE;  --st-review-ink:#00757C;  --st-review-tint:#E8F9FA;
+  --st-waiting:#8A4BE8; --st-waiting-ink:#7C3AED; --st-waiting-tint:#F4ECFF;
+  --st-posted:#139A72;  --st-posted-ink:#0E7D5D;  --st-posted-tint:#E9F8F2;
+
+  /* ---- 旧トークン別名（移行用。値はすべて新トークンへ委譲） ---- */
+  --bg-app:var(--app-bg); --bg-panel:var(--surface);
+  --bg-sidebar:var(--sidebar-top); --bg-sidebar-elev:rgba(255,255,255,.10);
+  --bg-dark-card:var(--work-dark-1); --bg-dark-row:rgba(255,255,255,.06);
+  --text-on-dark:#F6FAFF; --text-on-dark-muted:#AFC2DD;
+  --border-soft:var(--border); --border-dark:rgba(255,255,255,.12);
+  --st-approved:var(--st-waiting); --st-approved-ink:var(--st-waiting-ink);
+  --st-approved-tint:var(--st-waiting-tint);
+  --ok:var(--success); --warn:#B45309; --late:#E11D48;
+  --accent:var(--brand-blue); --accent-hover:var(--brand-deep-blue);
+  --track:var(--brand-blue);
+  --kpi-planned:var(--gradient-blue);
+  --kpi-mine:   var(--gradient-blue);
+  --kpi-review: var(--gradient-teal);
+  --kpi-posted: var(--gradient-teal);
+  --kpi-waiting:var(--gradient-purple);
+  --kpi-today:  var(--gradient-orange);
+  --kpi-risk:   var(--gradient-critical);
   --on-kpi-sub:rgba(255,255,255,.93);
 
-  --radius-sm:8px; --radius-md:12px; --radius-lg:16px;
-  --shadow-card:0 6px 18px rgba(15,23,42,.08);
-  --shadow-elev:0 12px 32px rgba(15,23,42,.12);
+  --radius-sm:8px; --radius-md:12px; --radius-lg:16px; --radius-xl:18px;
+  --shadow-card:0 8px 24px rgba(20,45,80,.07);
+  --shadow-elev:0 14px 34px rgba(20,45,80,.14);
 
-  --today:#0f172a;
-  --side-w:208px; --detail-w:344px;
+  --today:#0B1F46;
+  --side-w:216px; --detail-w:344px;
 }
 
 *{box-sizing:border-box}
@@ -60,7 +95,8 @@ body{margin:0;background:var(--bg-app);color:var(--text-primary);
 button,input,select,textarea{font:inherit;color:inherit}
 /* 数値だけを包む。和文グリフの無い書体を文全体に当てない */
 .num{font-family:Inter,ui-sans-serif,sans-serif;font-weight:600;font-variant-numeric:tabular-nums}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+:focus-visible{outline:2px solid var(--brand-teal);outline-offset:2px;border-radius:6px;
+  box-shadow:0 0 0 3px rgba(0,175,181,.20)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 svg{flex:none}
 
@@ -71,34 +107,41 @@ svg{flex:none}
   min-height:100vh;background:var(--bg-app);align-items:start}
 .shell.nodetail{grid-template-columns:var(--side-w) minmax(0,1fr)}
 
-/* ---- サイドバー ---- */
-.side{background:var(--bg-sidebar);color:var(--text-on-dark);
+/* ---- サイドバー（§10.1：上→下の濃紺グラデ・216px） ---- */
+.side{background:linear-gradient(180deg,var(--sidebar-top) 0%,var(--sidebar-mid) 62%,var(--sidebar-bottom) 130%);
+  color:var(--text-on-dark);
   position:sticky;top:0;height:100vh;overflow-y:auto;
-  display:flex;flex-direction:column;padding:18px 0 14px;border-right:1px solid var(--border-dark)}
-.brand{display:flex;align-items:center;gap:9px;padding:0 16px 16px}
-.brand .mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#3b82f6,#7c3aed);
-  display:flex;align-items:center;justify-content:center;color:#fff;flex:none}
-.brand b{display:block;font-size:14px;font-weight:700;letter-spacing:.02em;line-height:1.25}
-.brand span{display:block;font-size:12px;color:var(--text-on-dark-muted);line-height:1.3}
-.uprof{display:flex;align-items:center;gap:10px;margin:0 10px 14px;padding:9px 10px;
-  border-radius:var(--radius-md);background:var(--bg-sidebar-elev);border:0;width:calc(100% - 20px);
-  cursor:pointer;text-align:left;color:inherit}
-.uprof:hover{background:#1d2f47}
+  display:flex;flex-direction:column;padding:18px 0 14px}
+/* ロゴ（§4.2：マーク＋ワードマーク、高さ30–34px、左右余白18–22px） */
+.brand{display:flex;align-items:center;gap:10px;padding:2px 20px 18px}
+.brand .wordmark{font-size:15.5px;font-weight:800;letter-spacing:.06em;line-height:1;
+  color:#fff;white-space:nowrap;position:relative}
+.brand .wordmark i{font-style:normal;position:relative}
+.brand .wordmark i::after{content:"";position:absolute;left:50%;bottom:1.5px;transform:translateX(-50%);
+  width:3px;height:3px;border-radius:50%;background:var(--brand-cyan)}
 .avatar{width:36px;height:36px;border-radius:50%;flex:none;display:flex;align-items:center;
   justify-content:center;font-weight:700;font-size:14px;color:#fff}
-.uprof .un{flex:1;min-width:0}
-.uprof .un b{display:block;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.uprof .un span{display:block;font-size:12px;color:var(--text-on-dark-muted)}
-.nav{display:flex;flex-direction:column;gap:2px;padding:0 10px}
-/* 行数が増えたので 44→40。3群＋フッターが 900px 前後の高さに収まる寸法 */
-.nav button{display:flex;align-items:center;gap:9px;width:100%;text-align:left;background:none;
-  border:0;padding:0 10px;height:40px;border-radius:var(--radius-sm);cursor:pointer;
-  color:var(--text-on-dark-muted);font-size:13px;font-weight:500}
+/* Top bar 右端の利用者カード（§10.1） */
+.usercard{display:flex;align-items:center;gap:9px;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--radius-md);padding:6px 11px;cursor:pointer;
+  box-shadow:var(--shadow-card);text-align:left;color:var(--text-primary)}
+.usercard:hover{border-color:var(--border-strong)}
+.usercard .avatar{width:32px;height:32px;font-size:13px}
+.usercard .un{min-width:0}
+.usercard .un b{display:block;font-size:13px;font-weight:700;line-height:1.35;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.usercard .un span{display:block;font-size:11.5px;color:var(--text-secondary);line-height:1.3}
+.nav{display:flex;flex-direction:column;gap:3px;padding:0 10px}
+/* ナビ行は §10.1 の指定（高さ48–52px・選択行の角丸10–12px） */
+.nav button{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:none;
+  border:0;padding:0 12px;height:48px;border-radius:11px;cursor:pointer;
+  color:rgba(255,255,255,.78);font-size:13.5px;font-weight:500}
 /* 伸びるのはラベルだけ。バッジと「準備中」チップは実寸のまま右端に置く */
 .nav button > span:not(.badge):not(.soon){flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.nav button:hover{background:rgba(255,255,255,.06);color:var(--text-on-dark)}
-.nav button[aria-current="page"]{background:rgba(255,255,255,.10);color:var(--text-on-dark);font-weight:700}
-.nav .badge{margin-left:auto;background:#ef4444;color:#fff;border-radius:999px;min-width:20px;height:20px;
+.nav button:hover{background:rgba(255,255,255,.08);color:#fff}
+.nav button[aria-current="page"]{background:var(--gradient-nav);color:#fff;font-weight:700;
+  box-shadow:0 6px 16px rgba(15,131,245,.35)}
+.nav .badge{margin-left:auto;background:var(--critical);color:#fff;border-radius:999px;min-width:20px;height:20px;
   display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;padding:0 6px}
 .nav .badge.dim{background:rgba(255,255,255,.16);color:var(--text-on-dark)}
 /* 将来ルート：空ページへ遷移させない（§14.2）。押せないことを見た目で示す */
@@ -110,12 +153,17 @@ svg{flex:none}
 .sidehr{height:1px;background:var(--border-dark);margin:12px 16px 0}
 .sidefoot{margin-top:auto;padding-top:10px}
 
-/* ---- ヘッダー ---- */
+/* ---- ヘッダー（§10.1：Search 左 / ボタン右） ---- */
 .main{min-width:0;display:flex;flex-direction:column}
-.topbar{display:flex;align-items:flex-start;gap:18px;flex-wrap:wrap;padding:22px 26px 0}
-.greet h1{margin:0;font-size:24px;font-weight:700;line-height:1.35}
-.greet p{margin:2px 0 0;font-size:13px;color:var(--text-secondary)}
+.topbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:16px 26px 0;min-height:60px}
 .topbar .spacer{flex:1}
+.searchbox{display:flex;align-items:center;gap:10px;flex:1 1 300px;max-width:560px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);
+  padding:0 14px;height:44px;box-shadow:var(--shadow-card);color:var(--text-muted)}
+.searchbox input{flex:1;min-width:0;border:0;background:none;outline:none;font-size:13.5px;
+  color:var(--text-primary)}
+.searchbox input::placeholder{color:var(--text-muted)}
+.searchbox:focus-within{border-color:var(--brand-blue)}
 .toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-top:4px}
 .tbox{display:flex;align-items:center;gap:8px;background:var(--bg-panel);border:1px solid var(--border-soft);
   border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;font-weight:500;box-shadow:var(--shadow-card)}
@@ -158,6 +206,10 @@ svg{flex:none}
 .kpi.k3{background:var(--kpi-waiting)} .kpi.k4{background:var(--kpi-risk)}
 .kpi.k5{background:var(--kpi-today)} .kpi.k6{background:var(--kpi-mine)}
 .kpi.k7{background:var(--kpi-review)}
+/* 新設の意味クラス（§6.1）。以後の画面はこちらを使う */
+.kpi.g-critical{background:var(--gradient-critical)} .kpi.g-blue{background:var(--gradient-blue)}
+.kpi.g-teal{background:var(--gradient-teal)} .kpi.g-purple{background:var(--gradient-purple)}
+.kpi.g-orange{background:var(--gradient-orange)}
 /* KPIは4枚の画面もある（§12.2・§13.2） */
 .kpis.four{grid-template-columns:repeat(4,minmax(0,1fr))}
 .kpi .top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
@@ -178,8 +230,9 @@ svg{flex:none}
 .card>.bd{padding:0 18px 16px}
 .card .foot{border-top:1px solid var(--border-soft);padding:10px 18px}
 
-/* ---- My Tasks（ダーク） ---- */
-.dark{background:var(--bg-dark-card);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius-md);
+/* ---- My Tasks（ダーク。§16.1：My Tasks のみ濃色背景） ---- */
+.dark{background:linear-gradient(180deg,var(--work-dark-1),var(--work-dark-2));
+  border:1px solid rgba(255,255,255,.06);border-radius:var(--radius-lg);
   color:var(--text-on-dark);box-shadow:var(--shadow-elev);overflow:hidden}
 .dark .hd{display:flex;align-items:center;gap:12px;padding:14px 18px 0;flex-wrap:wrap}
 .dark .hd h3{margin:0;font-size:16px;font-weight:700;flex:1}
@@ -210,9 +263,10 @@ svg{flex:none}
 .prio.high{background:rgba(239,68,68,.20);color:#fca5a5}
 .prio.med{background:rgba(245,158,11,.20);color:#fcd34d}
 .prio.low{background:rgba(255,255,255,.10);color:var(--text-on-dark-muted)}
-.cta{background:var(--accent);color:#fff;border:0;border-radius:var(--radius-sm);height:35px;min-width:100px;
-  padding:0 13px;cursor:pointer;font-size:13px;font-weight:700;white-space:nowrap;flex:none}
-.cta:hover:not([disabled]){background:var(--accent-hover)}
+.cta{background:var(--gradient-nav);color:#fff;border:0;border-radius:10px;height:38px;min-width:100px;
+  padding:0 14px;cursor:pointer;font-size:13px;font-weight:700;white-space:nowrap;flex:none;
+  transition:box-shadow 160ms ease,transform 160ms ease}
+.cta:hover:not([disabled]){box-shadow:0 6px 16px rgba(15,131,245,.35);transform:translateY(-1px)}
 .cta[disabled]{background:#33455c;color:#8b9bb0;cursor:not-allowed;font-weight:500}
 .emptybox{padding:34px 18px;text-align:center;font-size:13px;color:var(--text-on-dark-muted)}
 .emptybox b{display:block;color:var(--text-on-dark);font-size:14px;margin-bottom:4px}
@@ -1062,6 +1116,35 @@ function ic(name, size){
   s.innerHTML = ICON[name]||"";
   return s;
 }
+/* SOCIAL BASE 正式ロゴマーク（rogo.png を基準に透過SVGで再現。§4）
+   上下のS流線形＋中央の再生三角。シアン→ブルーのグラデ。色・比率は変更しない */
+function sbMark(size){
+  var s=svgEl("svg",{viewBox:"0 0 48 48",width:String(size||32),height:String(size||32),"aria-hidden":"true"});
+  s.innerHTML =
+   '<defs>'+
+    '<linearGradient id="sbg1" x1="0" y1="0" x2="1" y2="1">'+
+     '<stop offset="0" stop-color="#2BE8D9"/><stop offset="1" stop-color="#1677F2"/>'+
+    '</linearGradient>'+
+    '<linearGradient id="sbg2" x1="1" y1="1" x2="0" y2="0">'+
+     '<stop offset="0" stop-color="#10CFE0"/><stop offset="1" stop-color="#0C58D8"/>'+
+    '</linearGradient>'+
+    '<linearGradient id="sbg3" x1="0" y1="0" x2="1" y2="1">'+
+     '<stop offset="0" stop-color="#10CFE0"/><stop offset="1" stop-color="#1677F2"/>'+
+    '</linearGradient>'+
+   '</defs>'+
+   /* 上側の流線形（左端が下へ折れ、右上へ流れる） */
+   '<path d="M9 25 L9 15.5 Q9 7 17.5 7 L31 7 Q39 7 39 15" fill="none" stroke="url(#sbg1)" stroke-width="8" stroke-linecap="round"/>'+
+   /* 下側の流線形（右端が上へ折れ、左下へ流れる） */
+   '<path d="M39 23 L39 32.5 Q39 41 30.5 41 L17 41 Q9 41 9 33" fill="none" stroke="url(#sbg2)" stroke-width="8" stroke-linecap="round"/>'+
+   /* 中央の再生三角 */
+   '<path d="M20 17.2 Q20 15.6 21.5 16.4 L31.5 22.6 Q33 23.5 31.5 24.4 L21.5 30.6 Q20 31.4 20 29.8 Z" fill="url(#sbg3)"/>';
+  return s;
+}
+/* ワードマーク：SOCIAL BASE（白・BASEのA下部にシアンのドット） */
+function sbWordmark(){
+  return h("span",{class:"wordmark","aria-label":"SOCIAL BASE"},
+    [txt("SOCIAL B"), h("i",{text:"A"}), txt("SE")]);
+}
 /* Google ドライブのマーク（リンク先の製品を示すラベルとして使う） */
 function driveMark(size){
   var s=svgEl("svg",{viewBox:"0 0 87.3 78",width:String(size||20),height:String(Math.round((size||20)*78/87.3)),"aria-hidden":"true"});
@@ -1274,19 +1357,7 @@ function noticePop(ns){
 function Sidebar(){
   var side=h("div",{class:"side"});
 
-  var mark=h("div",{class:"mark"});
-  var pl=svgEl("svg",{viewBox:"0 0 24 24",width:"15",height:"15","aria-hidden":"true"});
-  pl.innerHTML='<path d="M7 4.5 19 12 7 19.5Z" fill="currentColor"/>';
-  mark.appendChild(pl);
-  side.appendChild(h("div",{class:"brand"},[mark,
-    h("div",{},[h("b",{text:"編集進行ボード"}), h("span",{text:"メイクリード"})])]));
-
-  var av=h("div",{class:"avatar",text:(ME||"？").slice(0,1),"aria-hidden":"true"});
-  av.style.background=tileBg(ME||"?");
-  side.appendChild(h("button",{class:"uprof","aria-label":"利用者を切り替える",onclick:openWho},[
-    av,
-    h("div",{class:"un"},[h("b",{text:ME||"未選択"}), h("span",{text:myRole()})]),
-    ic("chevronDown",16)]));
+  side.appendChild(h("div",{class:"brand"},[sbMark(32), sbWordmark()]));
 
   /* ---- ナビゲーション（§14）。ルートは3群に分ける ----
      制作＝毎日開く画面 / 管理＝社員だけの画面 / 要対応＝件数から入る導線。
@@ -1361,16 +1432,29 @@ function Sidebar(){
    --------------------------------------------------------------- */
 function Header(){
   var top=h("div",{class:"topbar"});
-  /* 挨拶はホームだけ。他ビューでは各カードのH3が見出しになる */
-  if(VIEW==="home"){
-    top.appendChild(h("div",{class:"greet"},[
-      h("h1",{text:(ME ? ME+"さん" : "みなさん")+"、こんにちは！"}),
-      h("p",{text:"今日も素晴らしい作品を届けましょう。"})]));
-  }
+
+  /* グローバル検索（§47）。対象＝クライアント名・動画タイトル。
+     入力を確定（Enter）すると動画一覧へ検索済み状態で遷移する */
+  var sb=h("div",{class:"searchbox"});
+  sb.appendChild(ic("search",18));
+  var si=h("input",{type:"search",placeholder:"動画やクライアント名で検索",
+    value:FILTER.q||"","aria-label":"動画やクライアント名で検索"});
+  si.addEventListener("keydown",function(e){
+    if(e.key==="Enter"){
+      FILTER.q=si.value.trim();
+      if(FILTER.q) FILTER.status="all";   /* 検索時は工程で隠さない */
+      VIEW="list"; SELECTED=null; render();
+    }
+  });
+  si.addEventListener("input",function(){
+    /* 動画一覧を開いている間は打鍵で即絞り込む（DOM再構築はしない） */
+    if(VIEW==="list"){ FILTER.q=si.value.trim(); renderListOnly(); }
+  });
+  sb.appendChild(si);
+  top.appendChild(sb);
   top.appendChild(h("div",{class:"spacer"}));
 
   var tb=h("div",{class:"toolbar"});
-  tb.appendChild(h("div",{class:"tbox"},[ic("calendar",16), h("span",{text:jpFull(TODAY)})]));
 
   var months=monthList(), mi=months.indexOf(MONTH);
   var mn=h("div",{class:"mnav"});
@@ -1396,6 +1480,14 @@ function Header(){
   stamp.appendChild(h("div",{text:"最終更新 "+(STATE.lastUpdated?fmtStamp(STATE.lastUpdated):"—")}));
   stamp.appendChild(h("div",{text:"未同期 "+OPS.all().length+"件"}));
   tb.appendChild(stamp);
+
+  /* 利用者カード（§10.1：Top bar 右端）。切り替えは従来どおり openWho */
+  var av=h("div",{class:"avatar",text:(ME||"？").slice(0,1),"aria-hidden":"true"});
+  av.style.background=tileBg(ME||"?");
+  tb.appendChild(h("button",{class:"usercard","aria-label":"利用者を切り替える",onclick:openWho},[
+    av,
+    h("div",{class:"un"},[h("b",{text:ME||"未選択"}), h("span",{text:myRole()})]),
+    ic("chevronDown",14)]));
 
   top.appendChild(tb);
   return top;
