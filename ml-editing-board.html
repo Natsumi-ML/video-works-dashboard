@@ -85,7 +85,8 @@
   --shadow-elev:0 14px 34px rgba(20,45,80,.14);
 
   --today:#0B1F46;
-  --side-w:216px; --detail-w:344px;
+  /* 参考画像 01_home.png 実測：サイドバー223px・コンテンツ左右24px */
+  --side-w:224px; --detail-w:344px;
 }
 
 *{box-sizing:border-box}
@@ -120,20 +121,24 @@ svg{flex:none}
 .avatar{width:36px;height:36px;border-radius:50%;flex:none;display:flex;align-items:center;
   justify-content:center;font-weight:700;font-size:14px;color:#fff}
 /* Top bar 右端の利用者カード（§10.1） */
-.usercard{display:flex;align-items:center;gap:9px;background:var(--surface);
-  border:1px solid var(--border);border-radius:var(--radius-md);padding:6px 11px;cursor:pointer;
+.usercard{display:flex;align-items:center;gap:10px;background:var(--surface);
+  border:1px solid var(--border);border-radius:12px;padding:0 14px;height:54px;cursor:pointer;
   box-shadow:var(--shadow-card);text-align:left;color:var(--text-primary)}
 .usercard:hover{border-color:var(--border-strong)}
-.usercard .avatar{width:32px;height:32px;font-size:13px}
+.usercard .avatar{width:38px;height:38px;font-size:14px}
 .usercard .un{min-width:0}
-.usercard .un b{display:block;font-size:13px;font-weight:700;line-height:1.35;
+.usercard .un b{display:block;font-size:14px;font-weight:700;line-height:1.35;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.usercard .un span{display:block;font-size:11.5px;color:var(--text-secondary);line-height:1.3}
-.nav{display:flex;flex-direction:column;gap:3px;padding:0 10px}
-/* ナビ行は §10.1 の指定（高さ48–52px・選択行の角丸10–12px） */
-.nav button{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:none;
-  border:0;padding:0 12px;height:48px;border-radius:11px;cursor:pointer;
-  color:rgba(255,255,255,.78);font-size:13.5px;font-weight:500}
+.usercard .un span{display:block;font-size:12px;color:var(--text-secondary);line-height:1.3}
+/* ヘッダー専用の大型ボタン（参考 h54） */
+.cta.lg{height:54px;border-radius:12px;font-size:15px;padding:0 20px}
+.chipbtn.lg{height:54px;border-radius:12px;font-size:15px;font-weight:600;padding:0 18px;
+  color:var(--text-primary)}
+.nav{display:flex;flex-direction:column;gap:6px;padding:0 12px}
+/* ナビ行（参考実測：行高52-54・文字約16px・アイコン22px・角丸12） */
+.nav button{display:flex;align-items:center;gap:13px;width:100%;text-align:left;background:none;
+  border:0;padding:0 14px;height:52px;border-radius:12px;cursor:pointer;
+  color:rgba(255,255,255,.78);font-size:15.5px;font-weight:500}
 /* 伸びるのはラベルだけ。バッジと「準備中」チップは実寸のまま右端に置く */
 .nav button > span:not(.badge):not(.soon){flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nav button:hover{background:rgba(255,255,255,.08);color:#fff}
@@ -158,12 +163,13 @@ svg{flex:none}
 
 /* ---- ヘッダー（§10.1：Search 左 / ボタン右） ---- */
 .main{min-width:0;display:flex;flex-direction:column}
-.topbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:16px 26px 0;min-height:60px}
+/* 参考実測：検索 h58×w570・ボタン h54（01_home.png y21-80） */
+.topbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:20px 24px 0;min-height:78px}
 .topbar .spacer{flex:1}
-.searchbox{display:flex;align-items:center;gap:10px;flex:1 1 300px;max-width:560px;
-  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);
-  padding:0 14px;height:44px;box-shadow:var(--shadow-card);color:var(--text-muted)}
-.searchbox input{flex:1;min-width:0;border:0;background:none;outline:none;font-size:13.5px;
+.searchbox{display:flex;align-items:center;gap:12px;flex:99 1 300px;max-width:570px;
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:0 18px;height:58px;box-shadow:var(--shadow-card);color:var(--text-muted)}
+.searchbox input{flex:1;min-width:0;border:0;background:none;outline:none;font-size:15px;
   color:var(--text-primary)}
 .searchbox input::placeholder{color:var(--text-muted)}
 .searchbox:focus-within{border-color:var(--brand-blue)}
@@ -173,9 +179,10 @@ svg{flex:none}
 .toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-top:4px}
 .tbox{display:flex;align-items:center;gap:8px;background:var(--bg-panel);border:1px solid var(--border-soft);
   border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;font-weight:500;box-shadow:var(--shadow-card)}
-.mnav{display:flex;align-items:center;gap:2px;background:var(--bg-panel);border:1px solid var(--border-soft);
-  border-radius:var(--radius-sm);padding:3px;box-shadow:var(--shadow-card)}
-.mnav b{font-size:13px;padding:0 8px;font-weight:600}
+.mnav{display:flex;align-items:center;gap:0;background:var(--bg-panel);border:1px solid var(--border-soft);
+  border-radius:var(--radius-sm);padding:2px;box-shadow:var(--shadow-card)}
+.mnav b{font-size:12.5px;padding:0 5px;font-weight:600;white-space:nowrap}
+.mnav .iconbtn{width:26px;height:26px}
 .iconbtn{background:none;border:0;border-radius:6px;width:30px;height:30px;cursor:pointer;
   display:flex;align-items:center;justify-content:center;color:var(--text-secondary)}
 .iconbtn:hover:not([disabled]){background:#eef2f7;color:var(--text-primary)}
@@ -189,7 +196,7 @@ svg{flex:none}
 .chipbtn.warn .n{background:#fde9c9;color:var(--warn)}
 .stamp{font-size:12px;color:var(--text-muted);white-space:nowrap;line-height:1.4}
 
-.wrap{padding:16px 26px 20px;display:flex;flex-direction:column;gap:18px;min-width:0}
+.wrap{padding:24px 24px 16px;display:flex;flex-direction:column;gap:16px;min-width:0}
 .sect{margin:0 0 8px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .sect h2{margin:0;font-size:18px;font-weight:700}
 .sect span{font-size:13px;color:var(--text-secondary)}
@@ -207,8 +214,12 @@ svg{flex:none}
   padding:5px 12px;cursor:pointer;font-size:12px;font-weight:600}
 
 /* ---- KPIカード ---- */
-.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
-.kpi{border-radius:14px;padding:14px 16px 12px;color:#fff;min-width:0;
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px}
+/* ホーム上段（参考実測：列幅 287/273/175/187/183 ≒ 1.6fr 1.5fr 1fr 1fr 1fr、高さ220） */
+.kpis.home5{grid-template-columns:1.6fr 1.5fr 1fr 1fr 1fr}
+.kpis.home5 .kpi{height:220px}
+.kpi{border-radius:16px;padding:18px 18px 12px;color:#fff;min-width:0;
+  display:flex;flex-direction:column;
   box-shadow:var(--shadow-card);transition:transform .12s ease,box-shadow .12s ease}
 .kpi:hover{transform:translateY(-1px);box-shadow:var(--shadow-elev)}
 .kpi.k1{background:var(--kpi-planned)} .kpi.k2{background:var(--kpi-posted)}
@@ -221,27 +232,31 @@ svg{flex:none}
 .kpi.g-orange{background:var(--gradient-orange)}
 /* KPIは4枚の画面もある（§12.2・§13.2） */
 .kpis.four{grid-template-columns:repeat(4,minmax(0,1fr))}
-.kpi .top{display:flex;align-items:center;gap:9px}
-.kpi .kic{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.24);
+.kpi .top{display:flex;align-items:center;gap:10px}
+.kpi .kic{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.24);
   display:flex;align-items:center;justify-content:center;flex:none}
-.kpi .lab{font-size:15px;font-weight:700;line-height:1.4}
-.kpi .iln{font-size:19px;font-weight:800;margin-left:2px}
-.kpi .val{display:flex;align-items:baseline;gap:6px;margin:6px 0 8px}
-.kpi .val .n{font-size:36px;font-weight:700;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-.kpi .val .u{font-size:15px;font-weight:600}
-.kpi .sub{font-size:13px;color:var(--on-kpi-sub);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
-.kpi .prog{height:6px;border-radius:999px;background:rgba(255,255,255,.26);margin-top:7px;overflow:hidden}
+.kpi .lab{font-size:17px;font-weight:700;line-height:1.4}
+.kpi .iln{font-size:20px;font-weight:800;margin-left:2px}
+.kpi .val{display:flex;align-items:baseline;gap:7px;margin:6px 0 6px}
+.kpi .val .n{font-size:46px;font-weight:700;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.kpi .val .u{font-size:16px;font-weight:600}
+.kpi .sub{font-size:13px;color:var(--on-kpi-sub);display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:0}
+.kpi .prog{height:8px;border-radius:999px;background:rgba(255,255,255,.26);margin-top:7px;overflow:hidden}
 .kpi .prog i{display:block;height:100%;background:#fff;border-radius:999px}
 .kpi.click{cursor:pointer}
-/* KPI内の内訳行（最優先カードの 期限超過/要修正 など） */
-.kbreak{display:flex;flex-direction:column;gap:5px;margin:2px 0 8px}
-.kbreak > div{display:flex;justify-content:space-between;align-items:center;gap:8px;
-  background:rgba(255,255,255,.16);border-radius:8px;padding:5px 10px;font-size:12.5px;font-weight:600}
-/* KPIカードの下端リンク行 */
-.kfoot{display:flex;align-items:center;justify-content:center;gap:4px;margin-top:9px;
-  padding-top:8px;border-top:1px solid rgba(255,255,255,.22);font-size:12.5px;font-weight:700}
+/* KPI内の内訳行。参考実測：不透明白bg・濃色文字・数字は赤・行高44 */
+.kbreak{display:flex;flex-direction:column;gap:8px;margin:12px 0 8px}
+.kbreak > div{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:44px;
+  background:rgba(255,255,255,.95);color:var(--text-primary);
+  border-radius:10px;padding:5px 14px;font-size:13.5px;font-weight:600}
+.kbreak > div b{color:var(--critical);font-size:15px}
+/* KPIカードの下端リンク行（参考：罫線なし・カード下端に寄せる） */
+.kfoot{display:flex;align-items:center;justify-content:center;gap:4px;margin-top:auto;
+  padding-top:6px;font-size:13.5px;font-weight:700}
+.kfoot.right{justify-content:flex-end}
 /* カード直下ポップオーバー（§15.3） */
-.kpiwrap{position:relative;min-width:0}
+.kpiwrap{position:relative;min-width:0;display:flex}
+.kpiwrap .kpi{flex:1}
 .kpipop{position:absolute;top:calc(100% + 8px);left:0;min-width:250px;max-width:320px;z-index:60;
   background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);
   box-shadow:var(--shadow-elev);padding:8px;display:flex;flex-direction:column;gap:2px}
@@ -256,17 +271,22 @@ svg{flex:none}
 /* 停滞中の動画（§18：白地＋critical の淡い警告カード。My Tasks と同じ濃色にしない） */
 .card.stalled{background:var(--critical-soft);border-color:var(--critical-border)}
 .card.stalled .hd h3{display:flex;align-items:center;gap:7px;color:var(--critical)}
-.card.stalled .hd{padding-top:13px}
+.card.stalled .hd{padding-top:10px}
+.card.stalled>.bd{padding-bottom:10px}
 .seeall{display:flex;align-items:center;gap:4px;background:none;border:0;cursor:pointer;
   font-size:12.5px;font-weight:700;color:var(--critical)}
+/* 参考実測：列ヘッダー付き・チップ幅110・日数18px赤 */
+.sthead{display:grid;grid-template-columns:minmax(0,1fr) 110px 78px;gap:11px;
+  padding:2px 6px 8px;font-size:12.5px;color:var(--text-secondary)}
 .strow{display:flex;align-items:center;gap:11px;width:100%;background:var(--surface);
-  border:1px solid var(--critical-border);border-radius:10px;padding:9px 12px;margin:0 0 8px;
-  cursor:pointer;text-align:left;color:var(--text-primary);min-width:0}
+  border:1px solid var(--critical-border);border-radius:10px;padding:6px 12px;margin:0 0 6px;
+  cursor:pointer;text-align:left;color:var(--text-primary);min-width:0;min-height:50px}
 .strow:hover{border-color:var(--critical)}
 .strow .mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
-.strow .mid b{font-size:12px;color:var(--text-secondary);font-weight:600}
-.strow .mid span{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.strow .days{flex:none;font-size:16px;font-weight:800;color:var(--critical);font-variant-numeric:tabular-nums}
+.strow .mid b{font-size:12.5px;color:var(--text-secondary);font-weight:600;line-height:1.4}
+.strow .mid span{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.45}
+.strow .sbadge{width:98px;justify-content:center}
+.strow .days{flex:none;width:66px;text-align:right;font-size:18px;font-weight:800;color:var(--critical);font-variant-numeric:tabular-nums}
 /* ---- 今日（§19.2）。下段はすべて白/淡色カード、濃色にしない ---- */
 .todayduo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) minmax(0,1fr);
   gap:18px;align-items:start}
@@ -328,6 +348,21 @@ svg{flex:none}
 
 /* ---- 2カラム ---- */
 .duo{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr);gap:22px;align-items:start}
+/* ホーム下段（参考実測：左598 / 右564 = 1.06fr:1fr、gap16。詳細はカードとして置く） */
+.homeduo{display:grid;grid-template-columns:minmax(0,1.06fr) minmax(0,1fr);gap:16px;align-items:start}
+.homeleft{display:flex;flex-direction:column;gap:16px;min-width:0}
+.detail.incard{position:static;height:auto;min-height:0;border:1px solid var(--border);
+  border-radius:16px;box-shadow:var(--shadow-card);transform:none;overflow:hidden}
+.detail.incard .dh{position:static;padding:14px 28px 0;border-bottom:0}
+.detail.incard .dh h3{font-size:16px;line-height:1.5}
+.detail.incard .dh .iconbtn{display:none}   /* ホーム常設カラムに×は置かない（参考） */
+.detail.incard .dfoot{display:none}          /* 操作は My Tasks 行側（参考にボタン列は無い） */
+.detail.incard .dsec{padding:10px 28px;border-bottom:0}
+.detail.incard .dttl{font-size:22px;margin:10px 0 0;padding-bottom:10px;
+  border-bottom:1px solid var(--border)}
+.detail.incard .kv{grid-template-columns:130px minmax(0,1fr);gap:12px 12px;font-size:14px;margin-top:12px}
+.detail.incard .kv .k{font-size:14px}
+.detail.incard .dsec.dmemo{border-top:1px solid var(--border);margin-top:6px;padding-top:18px}
 .card{background:var(--bg-panel);border:1px solid var(--border-soft);border-radius:var(--radius-md);
   box-shadow:var(--shadow-card)}
 .card>.hd{display:flex;align-items:center;gap:12px;padding:11px 18px;flex-wrap:wrap}
@@ -339,36 +374,36 @@ svg{flex:none}
 .dark{background:linear-gradient(180deg,var(--work-dark-1),var(--work-dark-2));
   border:1px solid rgba(255,255,255,.06);border-radius:var(--radius-lg);
   color:var(--text-on-dark);box-shadow:var(--shadow-elev);overflow:hidden}
-.dark .hd{display:flex;align-items:center;gap:12px;padding:14px 18px 0;flex-wrap:wrap}
-.dark .hd h3{margin:0;font-size:16px;font-weight:700;flex:1}
-.tabs{display:flex;gap:16px;padding:12px 18px 0;border-bottom:1px solid var(--border-dark);flex-wrap:wrap}
-.tabs button{background:none;border:0;padding:0 0 10px;cursor:pointer;font-size:13px;font-weight:600;
+.dark .hd{display:flex;align-items:center;gap:12px;padding:16px 20px 0;flex-wrap:wrap}
+.dark .hd h3{margin:0;font-size:20px;font-weight:700;flex:1;line-height:1.4}
+.tabs{display:flex;gap:16px;padding:4px 18px 0;border-bottom:1px solid var(--border-dark);flex-wrap:wrap}
+.tabs button{background:none;border:0;padding:0 0 7px;cursor:pointer;font-size:13px;font-weight:600;
   color:var(--text-on-dark-muted);border-bottom:2px solid transparent;display:flex;align-items:center;gap:7px}
 .tabs button:hover{color:var(--text-on-dark)}
 .tabs button[aria-selected="true"]{color:#fff;border-bottom-color:#60a5fa}
 .tabs .c{background:rgba(255,255,255,.14);border-radius:999px;padding:0 7px;font-size:12px;font-weight:700;
   min-width:20px;text-align:center}
 .tabs button[aria-selected="true"] .c{background:#3b82f6;color:#fff}
-.taskscroll{max-height:300px;overflow-y:auto}
-/* 完成イメージ：desktop は表形式（§16.2）。列＝icon｜クライアント/タイトル｜ステータス｜期限｜アクション */
-.tthead{display:grid;grid-template-columns:40px minmax(0,1fr) 104px 132px 190px;gap:12px;
-  align-items:center;padding:11px 16px 8px;font-size:11.5px;color:var(--text-on-dark-muted);
+.taskscroll{max-height:332px;overflow-y:auto}
+/* 参考実測：行高70・タイル44・タイトル15px・期限は1行bold */
+.tthead{display:grid;grid-template-columns:44px minmax(0,1fr) 86px 98px 140px;gap:12px;
+  align-items:center;padding:8px 18px 7px;font-size:12px;color:var(--text-on-dark-muted);
   border-bottom:1px solid var(--border-dark)}
-.trow{display:grid;grid-template-columns:40px minmax(0,1fr) 104px 132px 190px;gap:12px;
-  align-items:center;padding:11px 16px;cursor:pointer;
-  border-bottom:1px solid rgba(255,255,255,.05);min-height:64px;width:100%;background:none;
+.trow{display:grid;grid-template-columns:44px minmax(0,1fr) 86px 98px 140px;gap:12px;
+  align-items:center;padding:10px 18px;cursor:pointer;
+  border-bottom:1px solid rgba(255,255,255,.05);min-height:66px;width:100%;background:none;
   border-left:0;border-right:0;border-top:0;text-align:left;color:inherit}
 .trow:hover{background:var(--bg-dark-row)}
 .trow[aria-selected="true"]{background:var(--bg-dark-row);box-shadow:inset 3px 0 0 #60a5fa}
-.tile{border-radius:8px;flex:none;display:flex;align-items:center;justify-content:center;
+.tile{border-radius:10px;flex:none;display:flex;align-items:center;justify-content:center;
   font-weight:700;color:#fff;letter-spacing:.02em;overflow:hidden}
 .trow .mid{min-width:0}
-.trow .cli{font-size:11.5px;color:var(--text-on-dark-muted);
+.trow .cli{font-size:13px;color:var(--text-on-dark-muted);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.trow .ttl{font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.55}
+.trow .ttl{font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.55}
 .trow .tst{min-width:0}
 .trow .due{font-size:11.5px;white-space:nowrap;line-height:1.5;color:var(--text-on-dark-muted)}
-.trow .due b{display:block;font-size:13px;color:var(--text-on-dark);font-weight:700}
+.trow .due b{display:block;font-size:15px;color:var(--text-on-dark);font-weight:700}
 .trow .due.od b{color:#fca5a5}
 .trow .tact{display:flex;align-items:center;gap:8px;justify-content:flex-end;min-width:0}
 .trow .tact .actbtns{width:100%;flex-wrap:nowrap}
@@ -384,13 +419,21 @@ svg{flex:none}
   transition:box-shadow 160ms ease,transform 160ms ease}
 .cta:hover:not([disabled]){box-shadow:0 6px 16px rgba(15,131,245,.35);transform:translateY(-1px)}
 .cta[disabled]{background:#33455c;color:#8b9bb0;cursor:not-allowed;font-weight:500}
+/* 承認は teal（完成イメージ01） */
+.cta.ok{background:var(--gradient-teal)}
+.cta.ok:hover:not([disabled]){box-shadow:0 6px 16px rgba(0,165,174,.35)}
+/* ダーク行内の枠線ボタンは透明地＋白枠（完成イメージ01） */
+.trow .outbtn{background:transparent;border-color:rgba(255,255,255,.40);color:#fff}
+.trow .outbtn:hover:not([disabled]){background:rgba(255,255,255,.10)}
+.trow .outbtn[disabled]{color:rgba(255,255,255,.4);border-color:rgba(255,255,255,.2)}
 .emptybox{padding:34px 18px;text-align:center;font-size:13px;color:var(--text-on-dark-muted)}
 .emptybox b{display:block;color:var(--text-on-dark);font-size:14px;margin-bottom:4px}
 .darkfoot{display:flex;justify-content:space-between;align-items:center;gap:10px;
   padding:12px 18px;border-top:1px solid var(--border-dark);font-size:12px;color:var(--text-on-dark-muted)}
-.linkbtn{background:rgba(255,255,255,.10);border:0;color:var(--text-on-dark);border-radius:var(--radius-sm);
-  padding:7px 13px;cursor:pointer;font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px}
-.linkbtn:hover{background:rgba(255,255,255,.18)}
+/* 参考：透明地＋白枠のボタン（My Tasks「すべて見る」相当） */
+.linkbtn{background:none;border:1px solid rgba(255,255,255,.30);color:var(--text-on-dark);border-radius:10px;
+  padding:7px 14px;cursor:pointer;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
+.linkbtn:hover{background:rgba(255,255,255,.10)}
 
 /* ---- 工程バッジ ---- */
 .sbadge{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 10px;
@@ -492,24 +535,32 @@ svg{flex:none}
   white-space:nowrap;flex:none;transition:background 160ms ease}
 .outbtn:hover:not([disabled]){background:var(--surface-blue-soft)}
 .outbtn[disabled]{color:var(--text-muted);border-color:var(--border);cursor:not-allowed}
-/* 横型ステッパー（§17.5） */
-.hstep{display:flex;gap:0;margin:2px 0 0}
-.hseg{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;position:relative;min-width:0}
-.hseg::before{content:"";position:absolute;top:6px;left:-50%;width:100%;height:2px;background:var(--border)}
+/* 横型ステッパー（参考実測：ラベルが上・ドット22pxが下・線3px・済みはチェック） */
+.hstep{display:flex;gap:0;margin:6px 0 2px}
+.hseg{flex:1;display:flex;flex-direction:column;align-items:center;gap:9px;position:relative;min-width:0}
+.hseg::before{content:"";position:absolute;bottom:10px;left:-50%;width:100%;height:3px;background:var(--border)}
 .hseg:first-child::before{display:none}
-.hseg i{width:14px;height:14px;border-radius:50%;background:var(--surface);
-  border:2px solid var(--border-strong);z-index:1}
-.hseg span{font-size:10.5px;color:var(--text-muted);white-space:nowrap}
+.hseg i{order:2;width:22px;height:22px;border-radius:50%;background:var(--surface);
+  border:2px solid var(--border-strong);z-index:1;
+  display:flex;align-items:center;justify-content:center;color:#fff}
+.hseg span{order:1;font-size:12.5px;color:var(--text-muted);white-space:nowrap}
 .hseg.done i{background:var(--success);border-color:var(--success)}
 .hseg.done::before{background:var(--success)}
 .hseg.done span{color:var(--text-secondary)}
-.hseg.cur i{background:var(--brand-blue);border-color:var(--brand-blue);
-  box-shadow:0 0 0 4px rgba(22,119,242,.18)}
+.hseg.cur i{background:var(--surface);border-color:var(--brand-blue)}
+.hseg.cur i::after{content:"";width:10px;height:10px;border-radius:50%;background:var(--brand-blue)}
 .hseg.cur::before{background:var(--success)}
 .hseg.cur span{color:var(--text-primary);font-weight:700}
-.hseg.cur.rev i{background:var(--critical);border-color:var(--critical);
-  box-shadow:0 0 0 4px rgba(255,49,95,.18)}
+.hseg.cur.rev i{border-color:var(--critical)}
+.hseg.cur.rev i::after{background:var(--critical)}
 .hseg.cur.rev span{color:var(--critical)}
+/* 要修正のときは通過済みも赤で描く（参考 01_home.png） */
+.hstep.rev .hseg.done i{background:var(--critical);border-color:var(--critical)}
+.hstep.rev .hseg.done::before,.hstep.rev .hseg.cur::before{background:var(--critical)}
+/* Google Drive 行（参考：ラベル左＋ボタン2個を1行に） */
+.dsec.ddrive{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.dsec.ddrive .dslabel{margin:0;flex:none;font-size:14px}
+.drivebtn{height:40px}
 /* モーダル（幅広） */
 .modal.wide{max-width:560px}
 /* 要修正の入力欄（§8.3：薄い critical 背景＋critical 枠。赤くしすぎない） */
@@ -910,24 +961,18 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 /* =====================================================================
    レスポンシブ（Phase 1 は 1440〜1920px が最重要。1280px でドロワー）
    ===================================================================== */
+/* 参考画像は1448px幅で撮影されているため、この帯域でも基準値を縮めない */
 @media (max-width:1535px){
-  :root{--side-w:192px;--detail-w:312px}
-  .kpis{gap:13px}
-  .kpi{padding:15px 14px 13px}
-  .kpi .val .n{font-size:34px}
-  .kpi .lab{font-size:14px}
-  .duo{gap:16px}
   .kan{gap:10px}
-  .wrap{padding:18px 20px 30px;gap:18px}
-  .topbar{padding:18px 20px 0}
 }
 @media (max-width:1279px){
   .shell,.shell.nodetail{grid-template-columns:var(--side-w) minmax(0,1fr)}
   .detail{position:fixed;top:0;right:0;bottom:0;width:340px;max-width:88vw;z-index:40;
     box-shadow:var(--shadow-elev);transform:translateX(102%);transition:transform .16s ease}
   .detail.open{transform:none}
-  .kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .duo{grid-template-columns:minmax(0,1fr)}
+  .kpis,.kpis.home5{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .kpis.home5 .kpi{height:auto}
+  .duo,.homeduo{grid-template-columns:minmax(0,1fr)}
   .kan{grid-template-columns:repeat(3,minmax(0,1fr))}
   .pcards{grid-template-columns:repeat(2,minmax(0,1fr))}
   .kpis.four{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -980,7 +1025,8 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
   .msearch{margin:8px 12px 0}
   .msub{display:flex;align-items:center;gap:8px;padding:8px 12px 0;flex-wrap:wrap}
   .wrap{padding:14px 12px 92px;gap:14px}
-  .kpis,.kpis.four,.kpis.three,.clienttop .kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .kpis,.kpis.four,.kpis.three,.kpis.home5,.clienttop .kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .kpis.home5 .kpi{height:auto}
   .kpi{padding:13px 13px 11px}
   .kpi .val .n{font-size:27px}
   .kpi .lab{font-size:13px}
@@ -1569,7 +1615,8 @@ var ICON = {
   search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/>',
   building:'<rect x="4" y="3" width="12" height="18" rx="1"/><path d="M16 9h4a0 0 0 0 1 0 0v12"/><path d="M8 7h2M8 11h2M8 15h2M12 7h1M12 11h1M12 15h1M2 21h20"/>',
   sort:'<path d="M4 7h13M4 12h9M4 17h5"/><path d="m17 14 3 3 3-3"/>',
-  menu:'<path d="M4 6h16M4 12h16M4 18h16"/>'
+  menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',
+  list:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>'
 };
 function ic(name, size){
   var s=svgEl("svg",{viewBox:"0 0 24 24",width:String(size||18),height:String(size||18),
@@ -1640,9 +1687,13 @@ function sBadge(st, onDark){
   var m=sv(st);
   var b=h("span",{class:"sbadge"+(onDark?" on-dark":"")});
   b.appendChild(txt(st));
-  /* 完成イメージ：ダーク面はステータス色のソリッド＋白文字、
+  /* 完成イメージ01：ダーク面はステータス色の半透明tint＋色文字＋淡い枠、
      ライト面は薄背景＋濃文字（§7.2）。色トークンは共通 */
-  if(onDark){ b.style.background="var("+m.v+")"; b.style.color="#fff"; }
+  if(onDark){
+    b.style.background="color-mix(in srgb, var("+m.v+") 18%, transparent)";
+    b.style.color="color-mix(in srgb, var("+m.v+") 72%, #fff)";
+    b.style.border="1px solid color-mix(in srgb, var("+m.v+") 45%, transparent)";
+  }
   else { b.style.background="var("+m.tint+")"; b.style.color="var("+m.ink+")"; }
   return b;
 }
@@ -1826,7 +1877,7 @@ function Sidebar(){
      ルート側（制作・管理）だけに出す。二重に光ると現在地が読めない */
   function navBtn(label, iconName, view, badge, plain){
     var b=h("button",{"aria-current":(!plain&&VIEW===view)?"page":null,onclick:goto(view)},
-      [ic(iconName,18), h("span",{text:label})]);
+      [ic(iconName,20), h("span",{text:label})]);
     if(badge!=null) b.appendChild(h("span",{class:"badge"+(badge?"":" dim"),text:String(badge)}));
     return b;
   }
@@ -1845,19 +1896,21 @@ function Sidebar(){
   }
 
   var foot=h("div",{class:"sidefoot"});
-  /* 案内カード。クライアント管理だけは社員限定である旨を出す（§3.2 と矛盾させない） */
-  foot.appendChild(h("div",{class:"sideinfo"},[
-    ic("info",16),
-    h("span",{text: VIEW==="client"
-      ? "この画面は社員のみ閲覧できます"
-      : "この画面は全メンバーが閲覧可能です"})]));
-  foot.appendChild(h("div",{class:"sidehr"}));
-  var fn=h("div",{class:"nav",style:"margin-top:8px"});
+  var fn=h("div",{class:"nav"});
   if(myRole()==="社員") fn.appendChild(h("button",{onclick:openGenerate},[ic("plus",18), h("span",{text:"翌月を生成"})]));
   fn.appendChild(h("button",{onclick:openBackup},[ic("save",18), h("span",{text:"退避（コピー用）"})]));
   fn.appendChild(h("button",{onclick:function(){ showToast("困ったときは なつみさん・友美さんへ。"); }},
     [ic("help",18), h("span",{text:"ヘルプ"})]));
   foot.appendChild(fn);
+  foot.appendChild(h("div",{class:"sidehr"}));
+  /* 案内カードは最下部（完成イメージ01）。クライアント管理だけは社員限定である旨を出す（§3.2） */
+  var si2=h("div",{class:"sideinfo"});
+  si2.style.marginTop="12px";
+  si2.appendChild(ic("info",16));
+  si2.appendChild(h("span",{text: VIEW==="client"
+      ? "この画面は社員のみ閲覧できます"
+      : "この画面は全メンバーが閲覧可能です"}));
+  foot.appendChild(si2);
   side.appendChild(foot);
   return side;
 }
@@ -1959,13 +2012,40 @@ function Header(){
   top.appendChild(sb);
   top.appendChild(h("div",{class:"spacer"}));
 
-  /* Top bar は完成イメージどおり4要素に絞る（§10.1）：
-     検索｜動画追加（gradient）｜Google Drive（白）｜ユーザーカード */
+  /* 補助機能（月ナビ・お知らせ）は行を増やさず Top bar の空き領域に置く。
+     完成イメージ01はヘッダー1行のみのため、独立の補助行は持たない */
+  var months=monthList(), mi=months.indexOf(MONTH);
+  var mn=h("div",{class:"mnav"});
+  mn.appendChild(h("button",{class:"iconbtn","aria-label":"前の月",disabled:mi<=0,
+    onclick:function(){ MONTH=months[mi-1]; SELECTED=null; SELECTEDC=null; render(); }},[ic("chevronLeft",16)]));
+  mn.appendChild(h("b",{text:MONTH.replace("-","年")+"月"}));
+  mn.appendChild(h("button",{class:"iconbtn","aria-label":"次の月",disabled:mi>=months.length-1,
+    onclick:function(){ MONTH=months[mi+1]; SELECTED=null; SELECTEDC=null; render(); }},[ic("chevronRight",16)]));
+  top.appendChild(mn);
+
+  var ns=notices(), bad=ns.filter(function(x){ return x.lv!=="ok"; }).length;
+  var rel=h("div",{class:"rel"});
+  rel.appendChild(h("button",{class:"chipbtn sm"+(bad?" warn":""),"aria-expanded":POP?"true":"false",
+    "aria-label":"お知らせ "+ns.length+"件",
+    onclick:function(e){ e.stopPropagation(); POP=!POP; render(); }},
+    [ic(bad?"alert":"info",15), h("span",{class:"n",text:String(ns.length)})]));
+  if(POP){
+    var np=noticePop(ns);
+    /* 最終更新と未同期は必ず並記する（片方だけだと「保存された」と誤読される） */
+    var stamp=h("div",{class:"stamp",style:"padding:4px 10px 8px;border-bottom:1px solid var(--border-soft)"});
+    stamp.appendChild(h("div",{text:"最終更新 "+(STATE.lastUpdated?fmtStamp(STATE.lastUpdated):"—")
+      +"　／　未同期 "+OPS.all().length+"件"}));
+    np.insertBefore(stamp, np.firstChild);
+    rel.appendChild(np);
+  }
+  top.appendChild(rel);
+
+  /* Top bar 右端は完成イメージどおり：動画追加（gradient）｜Google Drive（白）｜ユーザーカード */
   var tb=h("div",{class:"toolbar"});
-  if(writable()) tb.appendChild(h("button",{class:"cta",onclick:openAddVideo},
-    [ic("plus",16), h("span",{text:"動画追加"})]));
-  tb.appendChild(h("button",{class:"chipbtn",onclick:openDriveHub},
-    [driveMark(16), h("span",{text:"Google Drive"})]));
+  if(writable()) tb.appendChild(h("button",{class:"cta lg",onclick:openAddVideo},
+    [ic("plus",18), h("span",{text:"動画追加"})]));
+  tb.appendChild(h("button",{class:"chipbtn lg",onclick:openDriveHub},
+    [driveMark(22), h("span",{text:"Google Drive"})]));
   var av=h("div",{class:"avatar",text:(ME||"？").slice(0,1),"aria-hidden":"true"});
   av.style.background=tileBg(ME||"?");
   tb.appendChild(h("button",{class:"usercard","aria-label":"利用者を切り替える",onclick:openWho},[
@@ -1974,34 +2054,6 @@ function Header(){
     ic("chevronDown",14)]));
   top.appendChild(tb);
   box.appendChild(top);
-
-  /* 補助行：月ナビ・お知らせ・同期スタンプ（機能は残し、Top bar から降ろす） */
-  var ut=h("div",{class:"utilrow"});
-  var months=monthList(), mi=months.indexOf(MONTH);
-  var mn=h("div",{class:"mnav"});
-  mn.appendChild(h("button",{class:"iconbtn","aria-label":"前の月",disabled:mi<=0,
-    onclick:function(){ MONTH=months[mi-1]; SELECTED=null; SELECTEDC=null; render(); }},[ic("chevronLeft",16)]));
-  mn.appendChild(h("b",{text:MONTH.replace("-","年")+"月"}));
-  mn.appendChild(h("button",{class:"iconbtn","aria-label":"次の月",disabled:mi>=months.length-1,
-    onclick:function(){ MONTH=months[mi+1]; SELECTED=null; SELECTEDC=null; render(); }},[ic("chevronRight",16)]));
-  ut.appendChild(mn);
-
-  var ns=notices(), bad=ns.filter(function(x){ return x.lv!=="ok"; }).length;
-  var rel=h("div",{class:"rel"});
-  rel.appendChild(h("button",{class:"chipbtn sm"+(bad?" warn":""),"aria-expanded":POP?"true":"false",
-    "aria-label":"お知らせ "+ns.length+"件",
-    onclick:function(e){ e.stopPropagation(); POP=!POP; render(); }},
-    [ic(bad?"alert":"info",15), h("span",{text:"お知らせ"}), h("span",{class:"n",text:String(ns.length)})]));
-  if(POP) rel.appendChild(noticePop(ns));
-  ut.appendChild(rel);
-
-  ut.appendChild(h("div",{class:"spacer"}));
-  /* 最終更新と未同期は必ず並記する（片方だけだと「保存された」と誤読される） */
-  var stamp=h("div",{class:"stamp"});
-  stamp.appendChild(h("div",{text:"最終更新 "+(STATE.lastUpdated?fmtStamp(STATE.lastUpdated):"—")}));
-  stamp.appendChild(h("div",{text:"未同期 "+OPS.all().length+"件"}));
-  ut.appendChild(stamp);
-  box.appendChild(ut);
 
   return box;
 }
@@ -2013,7 +2065,7 @@ function kpiCard(cls, label, iconName, value, unit, subKids, progress){
   var c=h("div",{class:"kpi "+cls});
   /* 完成イメージ：白半透明の丸バッジに入ったアイコンをラベルの左に置く */
   c.appendChild(h("div",{class:"top"},[
-    h("span",{class:"kic"},[ic(iconName,16)]),
+    h("span",{class:"kic"},[ic(iconName,20)]),
     h("div",{class:"lab",text:label})]));
   c.appendChild(h("div",{class:"val"},[h("span",{class:"n",text:String(value)}), h("span",{class:"u",text:unit})]));
   var sub=h("div",{class:"sub"});
@@ -2045,7 +2097,7 @@ function kpiCardLight(tone, label, iconName, value, unit, subKids, progress){
 function kpiCardInline(cls, label, iconName, count, unit){
   var c=h("div",{class:"kpi "+cls});
   c.appendChild(h("div",{class:"top"},[
-    h("span",{class:"kic"},[ic(iconName,16)]),
+    h("span",{class:"kic"},[ic(iconName,20)]),
     h("div",{class:"lab",text:label}),
     h("b",{class:"iln num",text:count+unit})]));
   return c;
@@ -2108,7 +2160,7 @@ function homeKpis(){
   var expect=bd.length ? Math.round(target*done/bd.length) : 0;
   var deficit=Math.max(0, expect-posted);
 
-  var g=h("div",{class:"kpis"});
+  var g=h("div",{class:"kpis home5"});
 
   /* 最優先（critical）：件数はラベル行に inline（完成イメージ準拠）。クリックで動画一覧を遅延順に */
   var k1=kpiCardInline("g-critical","最優先","alertCircle", prio,"件");
@@ -2116,16 +2168,28 @@ function homeKpis(){
   bk.appendChild(h("div",{},[h("span",{text:"期限超過"}), h("b",{class:"num",text:late+"件"})]));
   bk.appendChild(h("div",{},[h("span",{text:"要修正"}), h("b",{class:"num",text:revise+"件"})]));
   k1.appendChild(bk);
-  k1.appendChild(h("div",{class:"kfoot"},[h("span",{text:"すべて見る"}), ic("chevronRight",14)]));
+  k1.appendChild(h("div",{class:"kfoot right"},[h("span",{text:"すべて見る"}), ic("chevronRight",14)]));
   k1.classList.add("click"); k1.setAttribute("role","button"); k1.setAttribute("tabindex","0");
   var goPrio=function(){ FILTER.sort="delay"; FILTER.status="open"; FILTER.editor="__all__"; VIEW="list"; render(); };
   k1.addEventListener("click", goPrio);
   k1.addEventListener("keydown", function(e){ if(e.key==="Enter") goPrio(); });
   g.appendChild(k1);
 
-  /* 投稿目標（blue）：クリックで動画一覧の進行トラックへ */
-  var k2=kpiCard("g-blue", MONTH.slice(5).replace(/^0/,"")+"月 投稿目標","calendar",
-    posted+" / "+target,"本", ["残り "+Math.max(0,target-posted)+"本"], pct(posted,target));
+  /* 投稿目標（blue）：クリックで動画一覧の進行トラックへ。
+     完成イメージ：大きい実績数字＋「/ 目標 本」、右端に「残り n本」、バー下に達成率 */
+  var k2=h("div",{class:"kpi g-blue"});
+  k2.appendChild(h("div",{class:"top"},[
+    h("div",{class:"lab",text:MONTH.slice(5).replace(/^0/,"")+"月 投稿目標"})]));
+  var v2=h("div",{class:"val"},[
+    h("span",{class:"n",text:String(posted)}),
+    h("span",{class:"u",text:"/ "+target+" 本"}),
+    h("span",{class:"u",style:"margin-left:auto",text:"残り "+Math.max(0,target-posted)+"本"})]);
+  k2.appendChild(v2);
+  var p2b=h("div",{class:"prog"}); var p2i=h("i");
+  p2i.style.width=Math.min(100,pct(posted,target))+"%"; p2b.appendChild(p2i);
+  k2.appendChild(p2b);
+  k2.appendChild(h("div",{class:"sub",style:"justify-content:flex-end;margin-top:4px"},
+    [txt(pct(posted,target)+"%")]));
   if(deficit>0){
     var pw=h("div",{class:"sub"},[ic("alert",14), txt("このペースでは"+deficit+"本不足")]);
     k2.appendChild(pw);
@@ -2171,7 +2235,12 @@ function homeStalled(){
   if(!items.length){
     bd.appendChild(h("p",{class:"sub",style:"margin:4px 0 10px",text:"停滞している動画はありません。"}));
   } else {
-    items.slice(0,5).forEach(function(it){
+    /* 完成イメージ01：列ヘッダー付き・3件（残りは「すべて見る」から） */
+    bd.appendChild(h("div",{class:"sthead","aria-hidden":"true"},[
+      h("span",{text:"クライアント / 動画タイトル"}),
+      h("span",{text:"現在ステータス"}),
+      h("span",{style:"text-align:right",text:"停滞期間"})]));
+    items.slice(0, mobile()?5:3).forEach(function(it){
       var r=it.r, c=contractById(r.contractId)||{display:r.client};
       bd.appendChild(h("button",{class:"strow",onclick:function(){ selectRow(r.id); }},[
         tile(r.contractId, shortName(c), 30, 22, 11),
@@ -2225,7 +2294,7 @@ function taskRow(r){
   var row=h("div",{class:"trow",role:"option",tabindex:"0","aria-selected":sel?"true":"false",
     onclick:function(){ selectRow(r.id); },
     onkeydown:function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); selectRow(r.id); } }});
-  row.appendChild(tile(r.contractId, shortName(c), 40, 40, 12));
+  row.appendChild(tile(r.contractId, shortName(c), 44, 44, 13));
 
   /* 完成イメージ：クライアント名が上・動画タイトルが下 */
   var mid=h("div",{class:"mid"});
@@ -2244,11 +2313,14 @@ function taskRow(r){
   var od=(r.planned<TODAY);
   var due=h("div",{class:"due"+(od?" od":"")});
   due.appendChild(h("b",{text:(r.planned===TODAY?"今日 ":"")+jpDate(r.planned)+"（"+WD[dow(r.planned)]+"）"}));
-  var p=prioOf(r);
-  var d2=h("span",{});
-  d2.appendChild(txt("投稿予定 "));
-  d2.appendChild(h("i",{class:"prio "+p, text:prioLabel(p), title:"優先度 "+prioLabel(p)}));
-  due.appendChild(d2);
+  /* 完成イメージ01のdesktop行は日付1行のみ。優先度ピルはモバイルカードにだけ残す */
+  if(mobile()){
+    var p=prioOf(r);
+    var d2=h("span",{});
+    d2.appendChild(txt("投稿予定 "));
+    d2.appendChild(h("i",{class:"prio "+p, text:prioLabel(p), title:"優先度 "+prioLabel(p)}));
+    due.appendChild(d2);
+  }
   row.appendChild(due);
 
   var ab=actionButtons(r), pend={}; OPS.all().forEach(function(o){ pend[o.target]=1; });
@@ -2266,7 +2338,7 @@ function taskRow(r){
 function MyTasksCard(){
   var card=h("div",{class:"dark"});
   card.appendChild(h("div",{class:"hd"},[
-    h("h3",{text:"My Tasks"}),
+    h("h3",{},[ic("list",20), txt(" My Tasks")]),
     hasView("list") ? h("button",{class:"linkbtn",onclick:function(){ VIEW="list"; render(); }},
       [h("span",{text:"タスク一覧へ"}), ic("arrowRight",14)]) : null]));
 
@@ -2296,9 +2368,13 @@ function MyTasksCard(){
     rows.forEach(function(r){ sc.appendChild(taskRow(r)); });
     card.appendChild(sc);
   }
-  card.appendChild(h("div",{class:"darkfoot"},[
-    h("span",{text:"表示 "+rows.length+"本　／　今月の未完了 "+myTasks("all").length+"本"}),
-    h("span",{text:writable()?"":"更新できません"})]));
+  /* 完成イメージ01のdesktopカードにフッター行は無い。
+     モバイルと閲覧専用時（更新不可の明示が必要）だけ残す */
+  if(mobile() || !writable()){
+    card.appendChild(h("div",{class:"darkfoot"},[
+      h("span",{text:"表示 "+rows.length+"本　／　今月の未完了 "+myTasks("all").length+"本"}),
+      h("span",{text:writable()?"":"更新できません"})]));
+  }
   return card;
 }
 
@@ -2396,12 +2472,10 @@ function DetailPanel(){
   }
   var c=contractById(r.contractId)||{display:r.client,steps:4,poster:"-"};
 
-  /* ヘッダー（§17.1：クライアントlogo＋クライアント名は中程度、タイトルを大きく） */
+  /* ヘッダー（完成イメージ01：アイコン64px → クライアント名 → 大きいタイトル の縦積み） */
   var s1=h("div",{class:"dsec"});
-  var idrow=h("div",{class:"didrow"});
-  idrow.appendChild(tile(r.contractId, shortName(c), 44, 44, 15));
-  idrow.appendChild(h("div",{class:"dcli",text:c.client+"　/　"+r.kind}));
-  s1.appendChild(idrow);
+  s1.appendChild(tile(r.contractId, shortName(c), 64, 64, 20));
+  s1.appendChild(h("div",{class:"dcli",style:"margin-top:10px",text:c.client+"　/　"+r.kind}));
   s1.appendChild(h("div",{class:"dttl",text:r.title||"（タイトル未定）"}));
 
   /* 情報（§17.2：担当／現在ステータス／期限） */
@@ -2437,12 +2511,14 @@ function DetailPanel(){
 
   /* 進行ステータス（§17.5）。主工程の横型ステッパー。要修正は分岐として注記 */
   var s15=h("div",{class:"dsec"});
-  var hs=h("div",{class:"hstep"});
+  var hs=h("div",{class:"hstep"+(r.status==="要修正"?" rev":"")});
   var curIdx=MAIN_STATUSES.indexOf(r.status==="要修正" ? "確認中" : r.status);
   MAIN_STATUSES.forEach(function(st,i){
     var seg=h("div",{class:"hseg"+(i<curIdx?" done":i===curIdx?" cur":"")});
     if(i===curIdx && r.status==="要修正") seg.classList.add("rev");
-    seg.appendChild(h("i"));
+    var dot=h("i");
+    if(i<curIdx) dot.appendChild(ic("check",12));   /* 完成イメージ：通過済みはチェック */
+    seg.appendChild(dot);
     seg.appendChild(h("span",{text:st}));
     hs.appendChild(seg);
   });
@@ -2455,14 +2531,15 @@ function DetailPanel(){
   /* Google Drive（§9.2：クライアント共通の2フォルダ） */
   var db=driveButtons(c.client||r.client);
   if(db){
-    var s2=h("div",{class:"dsec"});
+    /* 完成イメージ01：「Google Drive」ラベル＋ボタン2個を1行に並べる */
+    var s2=h("div",{class:"dsec ddrive"});
     s2.appendChild(h("div",{class:"dslabel",style:"margin-top:0",text:"Google Drive"}));
     s2.appendChild(db);
     d.appendChild(s2);
   }
 
   /* メモ（§17.2） */
-  var s3=h("div",{class:"dsec"});
+  var s3=h("div",{class:"dsec dmemo"});
   s3.appendChild(h("div",{class:"dslabel",style:"margin-top:0",text:"メモ"}));
   s3.appendChild(field(r,"","note","area","BGM・トーンの指定などを共有"));
   d.appendChild(s3);
@@ -4180,7 +4257,9 @@ function actionButtons(r){
   if(!acts.length) return null;
   var wrap=h("div",{class:"actbtns"});
   acts.forEach(function(a){
-    wrap.appendChild(h("button",{class:a==="要修正"?"outbtn":"cta",disabled:!writable(),text:a,
+    /* 完成イメージ01：承認だけteal。要修正は枠線ボタン */
+    wrap.appendChild(h("button",{class:a==="要修正"?"outbtn":a==="承認"?"cta ok":"cta",
+      disabled:!writable(),text:a,
       onclick:function(e){ e.stopPropagation(); doAction(r,a); }}));
   });
   return wrap;
@@ -4298,7 +4377,9 @@ function render(){
   var mob=mobile();
   /* 常設の右カラムはホームのみ。今日・動画一覧はドロワー（完成イメージ・§24） */
   var drawerMode = showDetail && VIEW!=="home";
-  var shell=h("div",{class:"shell"+(showDetail?"":" nodetail")
+  /* ホーム(desktop)の詳細はシェル第3カラムではなく下段2カラム内のカード（完成イメージ01） */
+  var homeInline = showDetail && VIEW==="home" && !mob;
+  var shell=h("div",{class:"shell"+((showDetail&&!homeInline)?"":" nodetail")
     +(drawerMode?" drawerdetail":"")+(mob?" mob":"")});
   shell.appendChild(Sidebar());
 
@@ -4321,9 +4402,17 @@ function render(){
       wrap.appendChild(homeKpis());
       wrap.appendChild(homeStalled());
     } else {
+      /* 完成イメージ01：KPI全幅 → 左（My Tasks＋停滞中）／右（動画詳細カード） */
       wrap.appendChild(homeKpis());
-      wrap.appendChild(MyTasksCard());
-      wrap.appendChild(homeStalled());
+      var hduo=h("div",{class:"homeduo"});
+      var hleft=h("div",{class:"homeleft"});
+      hleft.appendChild(MyTasksCard());
+      hleft.appendChild(homeStalled());
+      hduo.appendChild(hleft);
+      var hdp=DetailPanel();
+      hdp.classList.add("incard");
+      hduo.appendChild(hdp);
+      wrap.appendChild(hduo);
     }
   } else if(VIEW==="list"){
     wrap.appendChild(panelList());
@@ -4338,7 +4427,7 @@ function render(){
   }
   main.appendChild(wrap);
   shell.appendChild(main);
-  if(showDetail) shell.appendChild(DetailPanel());
+  if(showDetail && !homeInline) shell.appendChild(DetailPanel());
   root.appendChild(shell);
 
   if(POP || HKPOP){
