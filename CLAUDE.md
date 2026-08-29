@@ -1,6 +1,10 @@
 # SOCIAL BASE Development Instructions
 
-このリポジトリのUI/UXを変更する前に、必ず以下を参照してください。
+このリポジトリを変更する前に、必ず以下を参照してください。UI/UXの変更は「UI仕様書」を、システム（データ・権限・Workflow・外部連携）の変更は「システム設計書」を正とします。
+
+## システム設計書
+- `SOCIAL_BASE_SYSTEM_DESIGN.md` — システム設計の唯一の正典。データモデル、権限、Workflow、外部連携、移行手順。
+- `SOCIAL_BASE_SENIOR_REVIEW.md` / `SOCIAL_BASE_REVIEW_RESOLUTION.md` — 設計レビューと採否判断。有効な仕様は必ず正典へ反映されているため、仕様確認は正典だけを見ればよい。
 
 ## UI仕様書
 - `SOCIAL_BASE_UI_IMPLEMENTATION_SPEC.md`
