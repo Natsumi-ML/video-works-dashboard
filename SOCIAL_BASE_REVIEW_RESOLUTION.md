@@ -270,3 +270,61 @@ Transition の物理削除を明示的に許可しながら `workflow_run_transi
 | Q15 | 移行時にサンプルデータをどう扱うか。公開版が `seeded:true` のままなら、サンプルの進捗が本番の初期状態になる | R2-HIGH-2 |
 
 合計15項目（§28.1）。
+
+---
+
+## 9. 第3回レビューへの判断
+
+| | |
+|---|---|
+| 対象レビュー | `SOCIAL_BASE_SENIOR_REVIEW_3.md`（557行） |
+| 判定 | **B. 修正後に実装開始可能** |
+| 指摘件数 | BLOCKER **0** / HIGH 3 / MEDIUM 7 / LATER 1 |
+| 本書の判断 | ACCEPT 11 / PARTIAL 0 / REJECT 0 |
+
+第2回13件のうち、実物が無いものは1件も無かった。ただし**「主張は真だが目的を達していない」型の乖離が3件**あり、これが今回の HIGH につながった。文字化けは全項目検査で0件。
+
+### 9.1 HIGH
+
+| ID | 判断 | 内容と反映 |
+|---|---|---|
+| R3-HIGH-1 | **ACCEPT** | 実測で確認。現行は `generate()`（`:4992`）→ `assignEditors()`（`:4994`）→ `merge()`（`:5005`）の順で、`assignEditors()` は**生成案にだけ**作用する。v3 は merge を手順7、assignEditors を手順8 に置いており順序が逆だった。`assignEditors()` は `byClient[c].forEach(r => r.editor = best)`（`:1777`）で**無条件に上書き**するため、設計どおり実装すると進行中・`date_locked` の担当が毎月書き換わり、しかも無音。手順を入れ替え、理由と壊れ方を本文に明記した |
+| R3-HIGH-2 | **ACCEPT** | Q15 の推奨案「サンプルを削除してから抽出」が危険だった。`:2287` は `month !== monthOf(TODAY)` で**当月の全行を無条件削除**するため、サンプルに実データが混ざっていれば一緒に消える。さらに削除後は Parity が 0件対0件で無条件通過する。推奨を **「サンプルのまま移し、`settings.sample_months` に記録して新環境でも表示し続ける」** へ変更。§14.3 の「サンプル表示中→廃止」も「残す」へ修正し矛盾を解消。§24.2 Step 2-1 の実測項目を5点に具体化し、§24.6 に「0件なら Parity を通過としない」を追加 |
+| R3-HIGH-3 | **ACCEPT** | undo の「要修正 → 確認中」が前進の「修正完了」と `(from, to)` 完全一致で、`unique(template_id, from_state_id, to_state_id)` に違反していた。しかも設計書の否定根拠が別のペア（`確認中 → 要修正`）を引いており**論証が成立していなかった**。制約を `unique(template_id, from_state_id, to_state_id, kind)` に変更し、根拠を現行の `ACTION_TO` / `PREV_STATUS` で書き直した |
+
+### 9.2 MEDIUM
+
+| ID | 判断 | 反映 |
+|---|---|---|
+| R3-MEDIUM-1 | **ACCEPT** | §7.1 ER に `workflow_runs \|\|--\|\| tasks` の重複エッジが生まれていた（第2回が「削除」を求めた行を「置換」した結果）。重複を削除し、`workflow_transitions.kind` と `archived_at`、`workflow_states.archived_at` を ER にも反映。**同種の破損を機械検出するため、mermaid の関連エッジ重複チェックを `check_doc_integrity.sh` に追加した** |
+| R3-MEDIUM-2 | **ACCEPT** | v3 のスキーマ変更が他章へ波及していなかった。§5.2 の `ServiceContract` に `version` を追加、§22.1 に「契約内容の変更 → `service_contracts.version`」の行と **`version` のインクリメント主体**（その行を UPDATE する Command が Repository の UPDATE 文で＋1する。子テーブルのみの変更でも親を進める）を明記 |
+| R3-MEDIUM-3 | **ACCEPT** | §6.1 の UNIQUE 規約が同一節内で自己矛盾していた（「すべてのテーブル」と「`id` を持つもののみ」）。「`id` 列を持つ全テーブル」に統一し、`users` / `webhook_receipts` が対象外である理由も明記 |
+| R3-MEDIUM-4 | **ACCEPT** | 既定担当の役割が §10.3 と手順で矛盾。**`default_editor_member_id` は月次生成では使わない**（編集担当は毎月 `assignEditors()` が Capacity から決める。既定値は「動画追加」で1本ずつ作るときのみ）と明記し、v3 で加えた「現行に無いタイブレーク規則」を撤回した |
+| R3-MEDIUM-5 | **ACCEPT** | Core 純度チェックの語彙に `publish_date` 等が無く、**作った理由である違反を検出できていなかった**。語彙を拡充し、逆に `content_item` / `service_contract` は Core の説明文に意図的に登場するため対象外とした理由をスクリプトにコメントで残した。**実際に `publish_date` を Core の ER へ戻して FAIL することを確認済み**（検出力の実証） |
+| R3-MEDIUM-6 | **ACCEPT** | 第2回が求めたテストのうち未追加だったものを §25.1 / §25.2 / §25.4 / §25.7 に追加：generate の補正非対称性、assignEditors の実行順、`generation_input_hash`、`period_key` NULL の部分ユニーク、同一 `(from, to)` の forward/undo 共存、`is_terminal` からの undo、`seeded` の扱い、0件 Parity の停止 |
+| R3-MEDIUM-7 | **ACCEPT** | `contract_version_hash` が契約だけを対象にしており、**契約が同じままシフトだけ変えた再生成が冪等キーで無音で握り潰される**。`generation_input_hash` へ改名し、契約 + `business_calendar` + `working_schedules` の3つを含める形へ変更 |
+
+### 9.3 LATER
+
+| ID | 判断 | 反映 |
+|---|---|---|
+| R3-LATER-1 | **ACCEPT** | 参照の不揃い。`scopeRows()` の行番号を `:3066` → **`:3064`**（実測）に訂正。`settings.seeded_source` → `settings.sample_months` に統一 |
+
+### 9.4 REJECT
+
+なし。
+
+### 9.5 完了状況
+
+| 区分 | 件数 | ACCEPT | PARTIAL | REJECT | 未解消 |
+|---|---|---|---|---|---|
+| BLOCKER | 0 | — | — | — | **0** |
+| HIGH | 3 | 3 | 0 | 0 | **0** |
+| MEDIUM | 7 | 7 | 0 | 0 | 0 |
+| LATER | 1 | 1 | 0 | 0 | 0 |
+
+**unresolved BLOCKER = 0 / unresolved HIGH = 0。** v4 に対して第4回レビューを実施する。
+
+### 9.6 この3回で見えた傾向
+
+3回とも「Resolution が反映したと書いた内容が、目的を達していない」型の乖離が出ている（第2回は Core 純度チェックの不在、第3回はその語彙不足と `assignEditors()` の実行順）。**反映の主張は、実物の存在だけでなく「それで元の問題が起きなくなるか」まで確認する。** 第3回では Core 純度チェックの検出力を、実際に違反を入れて FAIL することで実証した。

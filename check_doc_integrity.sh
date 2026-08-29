@@ -53,6 +53,8 @@ mb=$(grep -c '^```mermaid' "$F")
 me=$(grep -A1 '^```mermaid' "$F" | grep -c '^erDiagram\|^flowchart\|^graph\|^sequenceDiagram')
 [ "$mb" -eq "$me" ] && ok "mermaid ブロック $mb 個すべてに図種の宣言がある" || bad "mermaid ブロック $mb 個中 $me 個しか宣言がない"
 p=$(awk '/^```mermaid/{m=1;next} /^```$/{m=0} m && /"[^"]*\|[^"]*"/' "$F" | wc -l)
+d=$(awk '/^```mermaid/{m=1;next} /^```$/{m=0} m && /^    [a-z_]+ \|\|--/ {print}' "$F" | sort | uniq -d)
+[ -z "$d" ] && ok "mermaid の関連エッジに重複なし" || { echo "$d" | sed 's/^/       DUP: /'; bad "mermaid に重複エッジ"; }
 [ "$p" -eq 0 ] && ok "mermaid の引用文字列にパイプなし" || bad "mermaid の引用文字列にパイプ $p 行（GitHubで描画が崩れる）"
 
 # 5. ファイル末尾が途中で切れていない
@@ -76,7 +78,9 @@ fi
 
 # 8. Core 純度（設計書のみ。SOCIAL BASE 固有語が Core の章に出ていないこと）
 if grep -q '^### 5.1 Core' "$F"; then
-  MODWORDS='client|video|instagram|drive|slack|publish_planned|shoot|client_meeting|planning_due|analysis_due|動画|クライアント'
+  # 注：`content_item` / `service_contract` は Core の説明文に「SOCIAL BASE では〜」として意図的に登場するため対象外。
+  # 禁じたいのは Core の列名・enum値・制約に固有語が入ること。
+  MODWORDS='client|video|instagram|tiktok|youtube|drive|slack|notion|publish_planned|publish_date|shoot|client_meeting|planning_due|analysis_due|material|poster|動画|クライアント'
   purity=0
   for r in '5.1 Core:5.2' '6.2 Core:6.3' '7.1 Core:7.2' '7.2 Core:7.3'; do
     s=${r%%:*}; e=${r##*:}

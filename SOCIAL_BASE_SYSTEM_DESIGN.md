@@ -4,12 +4,12 @@
 
 | | |
 |---|---|
-| 版 | **v3**（第2回 Senior Review 反映済み） |
+| 版 | **v4**（第3回 Senior Review 反映済み） |
 | 作成 | 2026-08-29 |
 | 対象 | `ml-editing-board.html`（SOCIAL BASE 編集進行ボード） |
 | 前提 | UIフェーズFIX済み（`f264170`） |
 | 関連 | `SOCIAL_BASE_UI_IMPLEMENTATION_SPEC.md` / `SOCIAL_BASE_TODAY_RESPONSIVE_SPEC.md` / `SOCIAL_BASE_CLIENT_MANAGEMENT_RESPONSIVE_SPEC.md` |
-| レビュー | `SOCIAL_BASE_SENIOR_REVIEW.md` / `SOCIAL_BASE_SENIOR_REVIEW_2.md` / `SOCIAL_BASE_REVIEW_RESOLUTION.md` |
+| レビュー | `SOCIAL_BASE_SENIOR_REVIEW.md` / `SOCIAL_BASE_SENIOR_REVIEW_2.md` / `SOCIAL_BASE_SENIOR_REVIEW_3.md` / `SOCIAL_BASE_REVIEW_RESOLUTION.md` |
 
 **優先順位** — UI に関する記述は既存 UI SPEC 3本が正典。本書はその裏側（データ・権限・処理）の正典。両者が矛盾した場合、UIの見た目と操作は UI SPEC を優先し、本書を直す。
 
@@ -452,7 +452,7 @@ Slack Adapter -> ShiftChangeRequest（Core: 未確定の変更要求）
 `id / workspace_id / name / display_name / status(active|paused|ended) / created_at`
 
 **ServiceContract** — 契約。**`SEED_CONTRACTS` の正式な移行先で、SOCIAL BASE の主要マスター。**
-`id / workspace_id / client_id / kind(動画|静止画) / monthly_count / step_count / lead_time_business_days / default_publisher_member_id / default_editor_member_id / workflow_template_id / starts_on / ends_on / status`
+`id / workspace_id / client_id / kind(動画|静止画) / monthly_count / step_count / lead_time_business_days / default_publisher_member_id / default_editor_member_id / workflow_template_id / starts_on / ends_on / status / version`
 
 現行の `steps`（4 または 2）は `step_count` に、そこから決まるリードタイム（7営業日 / 3営業日、`:1725`）は **`lead_time_business_days` として明示的に持つ**。コード内の三項演算子をデータにする。
 
@@ -560,7 +560,9 @@ PostgreSQL。すべてのテーブルは `workspace_id` を持ち、複合 UNIQU
 | `users` | Workspace をまたぐ人物。所属は `workspace_members` が表す |
 | `webhook_receipts` | 署名検証前の生受信記録。どの Workspace 宛かは検証後に確定するため、受信時点では決められない |
 
-そのうえで、**全テーブルに `unique(id, workspace_id)` を張り、すべての親子参照を複合外部キーにする**。UNIQUE の無い親は複合外部キーで参照できないため、これは「例」ではなく全テーブルに機械的に適用する規約である。
+そのうえで、**`id` 列を持つ全テーブルに `unique(id, workspace_id)` を張り、すべての親子参照を複合外部キーにする**。UNIQUE の無い親は複合外部キーで参照できないため、これは「例」ではなく機械的に適用する規約である。
+
+`users` と `webhook_receipts` は `workspace_id` を持たないためこの規約の対象外。`users` は `workspace_members` 経由で境界を得、`webhook_receipts` は `connection_id` の解決時点で境界が確定する（§6.3）。
 
 ```sql
 -- 規約：親に (id, workspace_id) の UNIQUE、子から複合外部キー
@@ -599,7 +601,7 @@ alter table member_roles
 | `member_roles` | `workspace_id, workspace_member_id, role_id` | `pk(workspace_member_id, role_id)`、`fk(role_id, workspace_id)`、`fk(workspace_member_id, workspace_id)` |
 | `workflow_templates` | `id, workspace_id, key, name, applies_to, is_default, archived_at` | `unique(workspace_id, key)` |
 | `workflow_states` | `id, workspace_id, template_id, key, name, semantic, sort_order, is_initial, is_terminal, archived_at` | `unique(template_id, key)`、`semantic in (todo,in_progress,review,ready,done,blocked)` |
-| `workflow_transitions` | `id, workspace_id, template_id, from_state_id, to_state_id, action_label, required_capability, kind, is_primary, sort_order, archived_at` | `unique(template_id, from_state_id, to_state_id)`。**物理削除しない**（履歴が参照する。§11.5 規則2）。`kind` は `forward` / `undo`（§11.3） |
+| `workflow_transitions` | `id, workspace_id, template_id, from_state_id, to_state_id, action_label, required_capability, kind, is_primary, sort_order, archived_at` | `unique(template_id, from_state_id, to_state_id, kind)`。**物理削除しない**（履歴が参照する。§11.5 規則2）。`kind` は `forward` / `undo`（§11.3） |
 | `workflow_runs` | `id, workspace_id, template_id, current_state_id, subject_type, subject_id, period_key, started_at, completed_at, version` | `unique(workspace_id, template_id, subject_type, subject_id, period_key) where period_key is not null` と `unique(workspace_id, template_id, subject_type, subject_id) where period_key is null` の**部分ユニーク2本**（PostgreSQL の UNIQUE は NULL を互いに異なる値と扱うため、1本だけでは `period_key` NULL の重複を防げない）、`index(workspace_id, subject_type, subject_id)`、`index(workspace_id, current_state_id)`。`period_key` は Core が書式を解釈しない不透明な文字列（月次なら `2026-09`、期間概念が無ければ NULL） |
 | `workflow_run_transitions` | `id, workspace_id, run_id, from_state_id, to_state_id, transition_id, actor_member_id, occurred_at, note` | `index(run_id, occurred_at)`、`fk(run_id, workspace_id)` |
 | `tasks` | `id, workspace_id, title, description, workflow_run_id, priority, start_at, due_at, completed_at, source_type, source_id, created_by, archived_at` | `index(workspace_id, due_at)`、`index(workspace_id, source_type, source_id)`。**現在の状態と Template は `workflow_runs` が唯一の正**。Task は `workflow_run_id` だけを持つ（§11.1）。**`version` を持たない**：工程は `workflow_runs.version`、内容・日付は `content_items.version` が守る（§22.1） |
@@ -755,7 +757,6 @@ erDiagram
     workflow_runs ||--o{ workflow_run_transitions : "履歴"
 
     workflow_runs ||--|| tasks : "進行を持つ"
-    workflow_runs ||--|| tasks : "進行"
     tasks ||--o{ task_assignments : "担当"
     workspace_members ||--o{ task_assignments : "担当"
 
@@ -812,6 +813,7 @@ erDiagram
         int sort_order
         bool is_initial
         bool is_terminal
+        timestamptz archived_at
     }
     workflow_transitions {
         uuid id PK
@@ -820,6 +822,8 @@ erDiagram
         uuid to_state_id FK
         text action_label
         text required_capability
+        text kind "forward or undo"
+        timestamptz archived_at
         bool is_primary
     }
     workflow_runs {
@@ -1435,7 +1439,11 @@ Task が増える将来像（1つの ContentItem に企画・撮影・編集・�
 | `publisher` | `SEED_CONTRACTS[].poster` | 投稿担当 |
 | `reviewer` | （なし） | 確認担当。v1 では未使用、Transition 権限の将来拡張用 |
 
-`ServiceContract.default_editor_member_id` / `default_publisher_member_id` は**既定値**。生成時に `task_assignments` へコピーされ、以後は Task 側が正。契約の既定を変えても既存 Task の担当は動かない（現行の `merge()` が進行中の行を動かさないのと同じ思想）。
+`ServiceContract.default_publisher_member_id` は投稿担当の**既定値**で、生成時に `task_assignments`（`publisher`）へコピーされる。
+
+**`default_editor_member_id` は月次生成では使わない。** 編集担当は `assignEditors()` がその月の Capacity から毎回決める（§12.4 手順7）。既定値が使われるのは「動画追加」で1本ずつ作る場合だけ。現行に無いタイブレーク規則を追加しない（`assignEditors()` の同点処理は現行どおり `names` の並び順に従う）。
+
+以上の既定値は生成時にコピーされ、以後は Task 側が正。契約の既定を変えても既存 Task の担当は動かない（現行の `merge()` が進行中の行を動かさないのと同じ思想）。
 
 ### 10.4 優先度は導出する
 
@@ -1456,10 +1464,10 @@ publish_date > 今日   -> 低
 | 箇所 | 関数 | 絞り込み条件 |
 |---|---|---|
 | `:2217` | `myTasks()` | `r.editor===ME || 契約の poster===ME` |
-| `:3066` | `scopeRows()`（「今日」画面） | 同上 |
+| `:3064` | `scopeRows()`（「今日」画面） | 同上 |
 | `:3335` | `filteredRows()`（動画一覧の「自分の担当」） | `r.editor===ME` のみ（poster を含まない） |
 
-`:3335` だけ条件が狭い。この差も含めて現行を再現する。Read Model では `MyTasksQuery`（`:2217`）・`TodayTasksQuery`（`:3066`）・`ContentListQuery`（`:3335`）の3つが対応する（§5.5）。
+`:3335` だけ条件が狭い。この差も含めて現行を再現する。Read Model では `MyTasksQuery`（`:2217`）・`TodayTasksQuery`（`:3064`）・`ContentListQuery`（`:3335`）の3つが対応する（§5.5）。
 
 移行後もこの規則を維持する。ただし**権限として表現しない**。
 
@@ -1552,7 +1560,9 @@ Transition（現行 `STATUS_ACTIONS` / `ACTION_TO` / `PREV_STATUS` の内容）
 | 投稿待ち | 確認中 | 承認を取り消す | |
 | 投稿済み | 投稿待ち | 投稿済みを取り消す | |
 
-`workflow_transitions` に `kind text`（`forward` / `undo`）を持たせ、UI は主アクションに `forward` だけを出す。`unique(template_id, from_state_id, to_state_id)` は方向が逆なので前進側と衝突しない（「確認中 -> 要修正」と「要修正 -> 確認中」は別の行）。
+`workflow_transitions` に `kind text`（`forward` / `undo`）を持たせ、UI は主アクションに `forward` だけを出す。
+
+**一意制約には `kind` を含める必要がある。** 「要修正 -> 確認中」は前進（「修正完了」）と undo（「要修正を取り消す」）の両方に存在し、`(from, to)` が完全に一致する（現行でも `ACTION_TO["修正完了"] = "確認中"` と `PREV_STATUS["要修正"] = "確認中"` の両方が成立する）。したがって制約は `unique(template_id, from_state_id, to_state_id, kind)` とする。
 
 **`is_terminal` の State からも undo は出る。** 「投稿済み -> 投稿待ち」があるため、`is_terminal` は「そこで前進が終わる」という意味であり「遷移が一切できない」ではない。§11.5 規則3の「滞在中の State は archive できない」判定に `is_terminal` を使わない。
 
@@ -1682,13 +1692,15 @@ var s = cs.filter(function(c){return c.kind==="静止画"})[0]; // :1709
 4. distribute() の位相は phaseOf(client_id) で決める
 5. 投稿担当に勤務予定が登録されている場合に限り、非稼働日から nearestWorking() で前後の空き営業日へ寄せる
 6. 契約の lead_time_business_days から internal_due を逆算（§12.3）
-7. merge: 未着手かつ未ロックの ContentItem だけ差し替える。
+7. assignEditors(): ここまでで作った「生成案」に対して編集担当を割り当てる。
+   editor Role 保持者の Capacity に比例させ、クライアント単位でまとめて同じ担当に寄せる
+8. merge: 生成案のうち「未着手かつ未ロックの ContentItem」だけを既存と差し替える。
    進行中・date_locked は動かさない。契約本数が減って削りきれない場合は overflow で返す
-8. `assignEditors()` で編集担当を割り当てる。`editor` Role 保持者の Capacity に比例させ、
-   クライアント単位でまとめて同じ担当に寄せる（1社を複数人で分けない）。
-   割当は ServiceContract の既定担当ではなく毎月の Capacity で決まるため、
-   既定担当（`default_editor_member_id`）は「Capacity が同点のときの優先」として使う
 ```
+
+**手順7は必ず merge の前に置く。** 現行も `generate()`（`:4992`）→ `assignEditors()`（`:4994`）→ `merge()`（`:5005`）の順で、**assignEditors は既存データではなく生成案にだけ作用する**。
+
+順序を逆にすると壊れる。`assignEditors()` は `byClient[c].forEach(function(r){ r.editor = best; })`（`:1777`）でクライアント配下の全行の担当を**無条件に上書き**する。merge 後に走らせると、merge が守ったはずの進行中・`date_locked` の案件まで担当が毎月書き換わる。手順8自身の「進行中・date_locked は動かさない」と §10.3 の「契約の既定を変えても既存 Task の担当は動かさない」の両方を破り、しかもエラーも通知も出ない。
 
 
 #### 投稿担当の補正は「勤務予定がある人」にだけかかる
@@ -1709,9 +1721,22 @@ var s = cs.filter(function(c){return c.kind==="静止画"})[0]; // :1709
 
 #### 冪等性
 
-同じ月に対して2回実行しても結果が同じになるよう、`idempotency_key = workspace_id + target_month + contract_version_hash` を使う（§22）。現行は連打すると `merge()` が2回走る。
+同じ月に対して2回実行しても結果が同じになるよう、`idempotency_key = workspace_id + target_month + generation_input_hash` を使う（§22）。現行は連打すると `merge()` が2回走る。
 
-**`contract_version_hash` の定義** — 生成対象の `ServiceContract` を `id` 順に並べ、各行の `(id, version)` を連結してハッシュした値。`service_contracts.version` は契約内容を変えるたびに上がる（§6.4）。これにより「同じ契約状態での再実行は1回に固定されるが、契約を直してからの再生成は別の操作として通る」という望ましい挙動になる。
+**`generation_input_hash` の定義（1）契約** — 生成対象の `ServiceContract` を `id` 順に並べ、各行の `(id, version)` を連結する。`service_contracts.version` は契約内容を変えるたびに上がる（§6.4）。これにより「同じ契約状態での再実行は1回に固定されるが、契約を直してからの再生成は別の操作として通る」という挙動になる。
+
+**（2）営業日と勤務予定も含める。** `generate()` の結果は契約に加えて **営業日（`business_calendar`）と投稿担当の勤務予定（`working_schedules`）** で変わる（手順1・手順5）。契約が同じままシフトだけ変わったときに再生成が冪等キーで弾かれると、**シフト変更が投稿予定に反映されないまま無音で握り潰される**。
+
+したがって鍵は次の3つを連結してハッシュする。
+
+```
+generation_input_hash =
+    hash( 対象契約の (id, version) 昇順連結
+        + 対象月の business_calendar の (date, kind) 昇順連結
+        + 対象月の working_schedules の (member_id, date, starts_at, ends_at) 昇順連結 )
+```
+
+`idempotency_key = workspace_id + target_month + generation_input_hash` とする。
 
 **生成対象の絞り込み** — 手順2は全契約ではなく、`status = active` かつ `starts_on <= 対象月末` かつ（`ends_on` が NULL または `ends_on >= 対象月初`）の契約に限る。現行は契約の開始・終了を持たないため全件が対象だが、Phase 5 以降は解約済みクライアントの分を生成しないことが必要になる。
 
@@ -1874,7 +1899,7 @@ Automation / Domain Event -> Notification（何を知らせるか）
 | メンテナンス中 | Workspace 設定 `settings.maintenance` |
 | 未同期 N件 | **廃止**。サーバー保存が成功してから画面に反映するため、未同期状態が発生しない |
 | データ取得日が古い | `Notification`（Automation Rule） |
-| サンプル表示中 | **廃止**（移行時に実データのみになる） |
+| サンプル表示中 | **残す**。`workspaces.settings.sample_months` に含まれる月を表示中の間だけ出す（§24.4）。サンプルを移行する場合に警告手段が無くなるのを防ぐ |
 | 過去月は読み取り専用 | UI 判定のまま |
 | 祝日テーブル期限 | `Notification`（§13.5） |
 
@@ -2448,6 +2473,9 @@ Read Model の1行は ContentItem と Task と WorkflowRun を結合したもの
 | 投稿予定日 / 締切の変更 | `content_items.version` |
 | 担当変更 | `content_items.version`（Assignment は行の追加削除で version を持たない） |
 | 日次メモ | `daily_notes.version` |
+| 契約内容の変更 | `service_contracts.version` |
+
+**`version` はその行を UPDATE する Command が必ず＋1する**（トリガーではなく Repository の UPDATE 文に含める）。子テーブルだけを書き換える操作（例：`task_assignments` の差し替え）も、親の `version` を進めて競合検出の対象にする。
 
 `tasks` は状態を持たない（§11.1）ため version を持たせない。Task の内容変更は ContentItem 側の編集として扱う。
 
@@ -2472,7 +2500,7 @@ Read Model の1行は ContentItem と Task と WorkflowRun を結合したもの
 
 適用先：工程の進行、動画追加、翌月生成、シフト変更申請、Recommendation の Accept。
 
-**翌月生成は特に重要。** 現行は連打すると `merge()` が2回走る。`idempotency_key = workspace_id + target_month + contract_version_hash` で1回に固定する。
+**翌月生成は特に重要。** 現行は連打すると `merge()` が2回走る。`idempotency_key = workspace_id + target_month + generation_input_hash` で1回に固定する（§12.4）。
 
 ### 22.4 Webhook の重複配送
 
@@ -2640,7 +2668,12 @@ Step 1  Build
         WorkflowTemplate / BusinessCalendar）を投入する。
 
 Step 2  Extract & Import
-        2-1 公開版 artifact から STATE を抽出し、件数・月・キーの有無を実測する
+        2-1 公開版 artifact から STATE を抽出し、次を実測する
+            ・rows の件数と対象月の分布
+            ・seeded の値（true なら対象月を settings.sample_months へ記録する。§24.4）
+            ・clients / notes キーの有無と件数
+            ・trans を持つ行の数と時系列の整合（展開はしないが実態を記録する）
+            ・全員の端末で未同期キューが 0 件であること（Step 5-1 の予行）
         2-2 実測値を Parity の期待値として確定させる
         2-3 変換して import する（24.3 のスナップショット同期）
 
@@ -2768,7 +2801,7 @@ import = legacy_id をキーとした upsert
 | `clients[].materialStatus` | WorkflowRun | `workflow_runs`（資料準備 Template） | D+B | 4状態の件数が一致。**`period_key` = 移行実施月の Run として作る** |
 | `clients[].updatedAt{}` | — | — | E | 上と同じ理由 |
 | `notes{}`（日付 -> テキスト） | — | `schedule_entries` ではなく専用の日次メモ | A+B | 件数と本文が一致。**移行先は Workspace 単位の `daily_notes`**（§24.5） |
-| `seeded` | Workspace 設定 | `workspaces.settings.seeded_source` | **A** | **移行時に必ず値を確定させる**。`true` のまま切り替えると、サンプルの進捗が本番の初期状態になる。Step 2-1 の実測で `seeded` の値と行数を確認し、(a) サンプルのまま移す / (b) artifact 側で「サンプルを削除」（`:2285`）を実行してから抽出する のどちらかをオーナーが選ぶ（§28 Q15）。移した場合は新環境にも「この月はサンプルです」の表示を残す |
+| `seeded` | Workspace 設定 | `workspaces.settings.sample_months` | **A** | **移行時に必ず値を確定させる。** `true` のまま切り替えると、サンプルの進捗が本番の初期状態になり、しかも新環境には警告手段が無い。Step 2-1 で `seeded` の値・行数・対象月を実測し、`true` なら **その月を `settings.sample_months` に記録して移行し、新環境でも「この月はサンプルです」と表示し続ける**（§14.3）。画面の「サンプルを削除」（`:2287`）は使わない — `month !== monthOf(TODAY)` で当月の**全行を無条件削除**するため、サンプルに実データが混ざっていれば一緒に消える。削除する場合は Parity が 0件対0件で無条件通過することにも注意（§24.6） |
 | `maintenance` | Workspace 設定 | `workspaces.settings.maintenance` | A | |
 | `lastUpdated` | — | — | E | `updated_at` が置き換える |
 | `version` | — | — | E | STATE スキーマ版。DB migration が置き換える |
@@ -2805,6 +2838,7 @@ Step 4（リハーサル）と Step 5-4（カットオーバー当日）の両�
 | 月別の件数 | 月ごとに一致 |
 | ステータス別の件数 | 6状態それぞれ一致 |
 | クライアント別の件数 | 10社それぞれ一致 |
+| **0件対0件の空打ちでないこと** | 抽出した `STATE.rows` が0件の場合、件数比較は無条件に通過する。**0件なら Parity を「通過」としない**。Step 2-1 の実測値と照らし、0件が想定どおりかを人が確認する |
 | 投稿済みの件数と `published_at` | 一致 |
 | 担当（editor）別の件数 | 一致 |
 | Drive URL が設定済みのクライアント数 | 一致（`clients` キー不在なら0件で一致） |
@@ -2874,6 +2908,9 @@ Domain Rules。外部依存なしで動く層。
 
 - 営業日・祝日計算（`isBiz` / `bizDays` / `subBiz` / `addBiz`）
 - 生成ロジック（`generate` / `distribute` / `interleave` / `phaseOf` / `nearestWorking` / **`assignEditors`**）。**1クライアントに同種2契約があるケースを必ず含める**（§12.4）
+- **`generate()` の投稿担当補正の非対称性** — 勤務予定を持たない担当（現行のなつみ相当）の契約には補正がかからず、持つ担当（りりか相当）の契約にはかかること。実データでは34本対16本（§12.4）
+- **`assignEditors()` は merge の前に生成案へ作用すること** — merge 後に走らせると進行中・`date_locked` の担当が書き換わる。「進行中の案件の担当が生成後も変わっていない」を明示的に検証する（§12.4 手順7）
+- **`generation_input_hash`** — 契約が同じままシフトだけ変えたら再生成が通ること（冪等キーで握り潰されない）。契約もシフトも同じなら2回目が1回分になること（§12.4）
 - リードタイム逆算と `schedule_squeezed` の判定
 - Capacity と負荷スコア
 - Workflow の遷移可否判定
@@ -2891,7 +2928,7 @@ Domain Rules。外部依存なしで動く層。
 - アプリ用ロール（非所有者）で他 Workspace の行が見えないこと。`force row level security` が効いていること
 - `version` 不一致の UPDATE が0行になること
 - `unique(queue, idempotency_key)` が重複を弾くこと
-- `unique(workspace_id, template_id, subject_type, subject_id, period_key)` が同月の Run 重複を弾くこと
+- `period_key` の部分ユニーク2本が、**`period_key` が NULL の場合も**同一対象の Run 重複を弾くこと（NULL を含む単一の UNIQUE では弾けないことを逆に確かめる回帰テストを含む）
 - 主要 Query（§5.5）の `EXPLAIN` が Seq Scan にならないこと
 
 ### 25.3 Permission Test（最重要）
@@ -2916,6 +2953,8 @@ Domain Rules。外部依存なしで動く層。
 - 使用中の State の archive が拒否されること
 - 履歴がある State の `semantic` / `is_initial` / `is_terminal` の変更が拒否されること（§11.5 規則4）
 - Transition の物理削除が拒否され、archive になること（規則2）
+- **同じ `(from, to)` を持つ forward と undo の2行が共存できること**（「要修正 -> 確認中」。`unique(..., kind)` の検証。§11.3）
+- **`is_terminal` の State からも undo が実行できること**（「投稿済み -> 投稿待ち」）
 - Template を切り替えても進行中の Task の参照が変わらないこと（規則7）
 
 ### 25.5 Idempotency / Webhook Replay
@@ -2946,6 +2985,8 @@ E2E は Playwright。ログイン、工程の進行、動画追加、翌月生�
 
 - §24.4 の Matrix の全行について、変換後の値が期待どおりか
 - import を2回流して結果が同じか（冪等性）
+- **`seeded` の扱い** — 抽出 STATE が `seeded:true` のとき、`settings.sample_months` に対象月が記録され、新環境で「サンプルです」の表示が出ること
+- **0件対0件で Parity を通さないこと** — 抽出 rows が0件のとき、件数比較が「通過」ではなく「要人手確認」で止まること
 - §24.6 の Parity チェックを自動化し、CI で回せるようにする
 
 > **■ オーナー向け説明**
@@ -3156,7 +3197,7 @@ Security review、Permission matrix test、rate limit、retry、dead-letter、ba
 | Q12 | **Phase の優先順位**。「新しいクライアントを画面から追加できる」（Phase 5）を早めるか | §27 | 順序どおり（土台なしに Phase 5 だけ前倒しはできない） | — |
 | Q13 | **移行時にスタッフの「動画追加」「担当変更」「投稿予定日の変更」を現行どおり全員可のままにするか** | §9.3 | 現行どおり全員可。移行で挙動を変えない | Phase 3 の Permission Test が書けない |
 | Q14 | **Google Drive / Calendar の接続に使うアカウント**。個人アカウントだと退職時に全社の連携が止まる | §15.1 | 共有の運用アカウント（または service account） | Phase 7 で接続主体が決まらない |
-| Q15 | **移行時にサンプルデータをどう扱うか**。公開版が `seeded:true` のままなら、サンプルの進捗が本番の初期状態になる | §24.4 | artifact 側で「サンプルを削除」を実行してから抽出し、実データのみで始める | Step 2-1 の抽出方法が決まらない |
+| Q15 | **移行時にサンプルデータをどう扱うか**。公開版が `seeded:true` のままなら、サンプルの進捗が本番の初期状態になる | §24.4 | **サンプルのまま移し、新環境でも「この月はサンプルです」と表示し続ける。** 画面の「サンプルを削除」は使わない（当月の全行を無条件削除するため、実データが混ざっていれば一緒に消える） | Step 2-1 の判断ができない |
 
 ### 28.2 技術リスク
 
@@ -3448,3 +3489,4 @@ Security review、Permission matrix test、rate limit、retry、dead-letter、ba
 | 2026-08-29 | v1 draft | 初版。Senior Engineer Review 前 |
 | 2026-08-29 | **v2** | 第1回 Senior Review（BLOCKER 3 / HIGH 13 / MEDIUM 10 / LATER 4）を反映。権限テーブルの Workspace 境界、RLS 運用規約、OIDC `sub` による同定、`STAFF_MAP` の移行先（`editor` Role）、`period_key`、`external_event_key`、業務日付のタイムゾーン、スナップショット同期。事実訂正：10社・動画10／静止画3 |
 | 2026-08-29 | **v3** | 第2回 Senior Review（BLOCKER 0 / HIGH 3 / MEDIUM 9 / LATER 1）を反映。`generate()` の投稿担当補正が34/50本に適用されない非対称性、`seeded` の扱い（Q15）、`contract_version_hash` の定義と `service_contracts.version`、`period_key` NULL の部分ユニーク2本、`id` を持たない結合テーブルの規約、`assignEditors()` の手順化、undo Transition の列挙と `kind` 列、絞り込み3箇所の明示、Job Runner のハートビート。v2 編集で残った章またぎの矛盾7箇所を解消 |
+| 2026-08-29 | **v4** | 第3回 Senior Review（BLOCKER 0 / HIGH 3 / MEDIUM 7 / LATER 1）を反映。`assignEditors()` を merge の前（手順7）へ修正、Q15 の推奨を「サンプルを削除」から「サンプルのまま移して表示を残す」へ変更、undo Transition の一意制約に `kind` を追加、`contract_version_hash` を `generation_input_hash` へ改名して営業日と勤務予定を含める、`default_editor_member_id` の役割を明確化、Step 2-1 の実測項目を具体化、0件対0件の Parity 空通過を禁止 |
