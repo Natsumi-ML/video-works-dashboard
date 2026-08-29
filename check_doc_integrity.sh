@@ -5,6 +5,7 @@
 set -u
 F="${1:-SOCIAL_BASE_SYSTEM_DESIGN.md}"
 WANT_CH="${2:-29}"
+XREF="${3:-xref}"   # noxref を渡すと相互参照チェックを省略（他文書を参照する文書用）
 FAIL=0
 ok()   { printf "  OK   %s\n" "$1"; }
 bad()  { printf "  FAIL %s\n" "$1"; FAIL=1; }
@@ -17,9 +18,10 @@ n=$(grep -c '^## [0-9]' "$F")
 [ "$n" -eq "$WANT_CH" ] && ok "章数 $n" || bad "章数 $n（期待 $WANT_CH）"
 
 # 2. 見出しの欠落・重複・順序崩れ
-grep -o '^## [0-9]\+' "$F" | sed 's/^## //' | awk -v w="$WANT_CH" '
-  { if ($1+0 != NR) { printf "  FAIL 章番号の順序崩れ: %s 番目に %s\n", NR, $1; e=1 } }
-  END { if (!e) printf "  OK   章番号 1..%s が順序どおり\n", w }'
+grep -o '^## [0-9]\+' "$F" | sed 's/^## //' | awk '
+  NR==1 { base=$1+0 }
+  { if ($1+0 != base+NR-1) { printf "  FAIL 章番号の順序崩れ: %s 番目に %s（期待 %s）\n", NR, $1, base+NR-1; e=1 } }
+  END { if (!e) printf "  OK   章番号 %s..%s が順序どおり\n", base, base+NR-1 }'
 grep -o '^## [0-9]\+' "$F" | sort | uniq -d | grep . && bad "章見出しが重複" || ok "章見出しの重複なし"
 d=$(grep '^### ' "$F" | sort | uniq -d)
 [ -z "$d" ] && ok "節見出しの重複なし（$(grep -c '^### ' "$F") 件）" || { echo "$d" | sed 's/^/       /'; bad "節見出しが重複"; }
@@ -42,6 +44,7 @@ d=$(awk '/^```/{f=!f; next} !f && length($0)>60 && $0 !~ /^\|---/ && $0 !~ /^> \
 grep -o '§[0-9]\+\(\.[0-9]\+\)\?' "$F" | sed 's/§//' | sort -u > /tmp/_dic_r
 { grep -o '^## [0-9]\+' "$F" | sed 's/^## //'; grep -o '^### [0-9]\+\.[0-9]\+' "$F" | sed 's/^### //'; } | sort -u > /tmp/_dic_h
 m=$(comm -23 /tmp/_dic_r /tmp/_dic_h); rm -f /tmp/_dic_r /tmp/_dic_h
+[ "$XREF" = "noxref" ] && m=""
 [ -z "$m" ] && ok "相互参照がすべて実在する節を指す" || { echo "$m" | sed 's/^/       DANGLING: §/'; bad "存在しない節への参照"; }
 
 # 4. code fence / Mermaid block の開閉

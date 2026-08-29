@@ -4,7 +4,7 @@
 
 | | |
 |---|---|
-| 版 | v1（draft） |
+| 版 | **v2**（第1回 Senior Review 反映済み） |
 | 作成 | 2026-08-29 |
 | 対象 | `ml-editing-board.html`（SOCIAL BASE 編集進行ボード） |
 | 前提 | UIフェーズFIX済み（`f264170`） |
@@ -89,7 +89,7 @@ Microservices・Event Sourcing・No-code Workflow Builder は作らない。Modu
 
 ### 1.3 Non-Goals（v1 でやらない）
 
-Microservices 化 / Kubernetes / Event Sourcing / AI による完全自動の担当変更・投稿日変更 / ML forecasting / 汎用 No-code Workflow Builder / UI 全面 Rewrite / 全外部サービス連携 / Redis 導入。
+Microservices 化 / Kubernetes / Event Sourcing / AI による完全自動の担当変更・投稿日変更 / ML forecasting / 汎用 No-code Workflow Builder / UI 全面 Rewrite / 全外部サービス連携 / Redis 導入 / **Automation の汎用条件式言語**（§13.3） / **Realtime（SSE / WebSocket）**（ADR-014）。
 
 そして明示的に：
 
@@ -139,7 +139,7 @@ Microservices 化 / Kubernetes / Event Sourcing / AI による完全自動の担
 
 | 定数 | 行 | 内容 |
 |---|---|---|
-| `SEED_CONTRACTS` | `:1846` | 11社13契約。`client / display / kind / count / steps / poster` |
+| `SEED_CONTRACTS` | `:1846` | 10社13契約。`client / display / kind / count / steps / poster` |
 | `STAFF_MAP` | `:1861` | 表示名 -> シフト表のローマ字名 |
 | `MEMBERS` | `:1864` | 6名。`name / role（社員・スタッフ）/ title` |
 | `SEED_SHIFTS` | `:1868` | 2026-08 のみ |
@@ -242,7 +242,7 @@ Microservices 化 / Kubernetes / Event Sourcing / AI による完全自動の担
 | 項目 | 決定 | 理由 |
 |---|---|---|
 | Source of Truth | **PostgreSQL** | 認証・監査・同時編集・外部連携のすべてが前提にする |
-| 実行形態 | **Modular Monolith** | 6人・11社の規模で Microservices は運用負荷だけ増える。Module境界を守れば後で切り出せる |
+| 実行形態 | **Modular Monolith** | 6人・10社の規模で Microservices は運用負荷だけ増える。Module境界を守れば後で切り出せる |
 | 稼働形態 | **Serverless API + Managed PostgreSQL + スケジュール起動の Job Runner** | 常時稼働サーバーを持たず運用負荷を最小化する |
 | 言語 | **TypeScript** | 現行 Layer A が JavaScript で、Domain ロジックを読み替えずに移植できる |
 | Schema/Migration | **SQL migration を正とする**。ORM は型付きクエリビルダとして使う | migration をライブラリ都合に握らせない |
@@ -262,6 +262,8 @@ Layer A を丸ごとサーバーへ移すのではなく、**壊れるとデー�
 
 **原則：同じ業務計算をサーバーとクライアントの両方に持たない。** Frontend が業務判断を再計算する構造にしない。優先度（`prioOf`）や負荷スコアのような「データから導出される業務値」は、サーバーが計算して Read Model に載せて返す。Frontend はラベルを付けるだけにする。
 
+**同格の規約：Domain から `new Date()` / `now()` を直接呼ばない。** 「今日」は必ず `businessToday(workspace)` を通す（§6.1 の業務日付）。Serverless と cron は UTC で動くため、これを守らないと日付が絡む全判定が1日ずれ得る。lint ルールで機械的に禁止する。
+
 ### 3.4 Layer C の扱い
 
 **「そのまま変更なし」ではなく「Visual / Interaction Contract を維持する」。**
@@ -276,7 +278,7 @@ Layer A を丸ごとサーバーへ移すのではなく、**壊れるとデー�
 >
 > **何を決めたか** — データを専用のデータベースに置き、画面はそのデータベースに問い合わせる形にします。プログラムは1つのまとまりとして作り、中を機能ごとにきれいに区切ります。
 >
-> **なぜそうするか** — 6人・11社の規模で、システムを何個にも分割すると管理の手間だけが増えます。1つにまとめつつ中身を整理しておけば、将来大きくなったときに必要な部分だけ切り出せます。
+> **なぜそうするか** — 6人・10社の規模で、システムを何個にも分割すると管理の手間だけが増えます。1つにまとめつつ中身を整理しておけば、将来大きくなったときに必要な部分だけ切り出せます。
 >
 > **何が良くなるか** — 常時動かしっぱなしのサーバーを持たずに済み、費用と管理の手間が小さくなります。画面の見た目と操作は今のままです。
 >
@@ -392,7 +394,7 @@ Slack Adapter -> ShiftChangeRequest（Core: 未確定の変更要求）
 `id / name / slug / type(team|personal) / timezone / settings(jsonb) / archived_at / created_at / updated_at`
 
 **User** — システム上の人物。Workspace をまたいで1つ。
-`id / email / display_name / avatar_url / status(active|suspended) / last_login_at`
+`id / identity_provider / external_subject / email / display_name / avatar_url / status(active|suspended) / last_login_at`
 
 **WorkspaceMember** — 特定 Workspace 内での参加状態。同じ人物が Workspace ごとに異なる Role を持てる。
 `id / workspace_id / user_id / display_name / status(active|invited|removed) / joined_at`
@@ -401,11 +403,13 @@ Slack Adapter -> ShiftChangeRequest（Core: 未確定の変更要求）
 `id / workspace_id / key / name / is_system / description`
 
 **Capability** — システム定義の固定リスト（§9.1）。
-**RoleCapability** — `role_id / capability_key / scope_type / scope_id`
-**MemberRole** — `workspace_member_id / role_id`（複数可）
+**RoleCapability** — `workspace_id / role_id / capability_key / scope_type / scope_id`
+**MemberRole** — `workspace_id / workspace_member_id / role_id`（複数可）
 
 **Task** — 「誰かが、ある目的のために、期限・状態・担当を持って行う作業単位」。
-`id / workspace_id / title / description / workflow_template_id / workflow_state_id / priority / start_at / due_at / completed_at / source_type / source_id / created_by / version / created_at / updated_at`
+`id / workspace_id / title / description / workflow_run_id / priority / start_at / due_at / completed_at / source_type / source_id / created_by / version / created_at / updated_at`
+
+現在の状態と適用中の Template は **`workflow_runs` が唯一の正**。Task は `workflow_run_id` だけを持ち、Template は `task -> run -> template` で解決する。状態を2箇所に持つと、一覧画面と詳細画面で同じ案件のステータスが違って見える。
 
 `source_type` / `source_id` は「この Task が何の作業か」への参照。SOCIAL BASE では `content_item`。Core は `source_type` の中身を解釈しない（文字列として持つだけ）。
 
@@ -414,8 +418,14 @@ Slack Adapter -> ShiftChangeRequest（Core: 未確定の変更要求）
 
 **WorkflowTemplate / WorkflowState / WorkflowTransition / WorkflowRun** — §11。
 
+`WorkflowRun` は `period_key` を持つ。Core は書式を解釈しない不透明な文字列で、月次なら `2026-09`、期間概念が無ければ NULL。`unique(workspace_id, template_id, subject_type, subject_id, period_key)` で「同じ対象・同じ期間の Run は1つ」を DB で保証する（§11.6）。
+
+
 **ScheduleEntry** — 日時を持つ予定。
 `id / workspace_id / kind / title / starts_at / ends_at / all_day / recurrence_rule_id / subject_type / subject_id / created_by`
+
+`kind` は Module が登録する不透明な文字列で、Core は具体値を知らない（値は §12.1）。
+
 
 **RecurrenceRule** — `id / workspace_id / rule(RFC5545 相当) / anchor / timezone / until`
 
@@ -529,50 +539,85 @@ PostgreSQL。すべてのテーブルは `workspace_id` を持ち、複合 UNIQU
 - 日付のみの列は `date`。時刻を伴うものは `timestamptz`（UTC保存、表示は Workspace の `timezone`）。
 - 更新競合を扱うテーブルは `version integer not null default 1`（§22）。
 - 論理削除は `archived_at timestamptz`。物理削除は原則しない。
-- `jsonb` を使うのは `settings` / `metadata` / `payload` / `conditions` / `actions` のみ。検索キーになる値は列にする。
-- **Workspace 境界の強制** — 子テーブルは `(id, workspace_id)` に UNIQUE を張り、親からは `(parent_id, workspace_id)` の複合外部キーで参照する。
+- `jsonb` を使うのは `settings` / `metadata` / `payload` / `params` / `actions` / `rule_snapshot` のみ。検索キーになる値は列にする。
+
+#### 業務日付（business date）の定義
+
+**日付のみの列（`date`）と、`date.reached` / 締切判定 / 営業日計算における「今日」は、すべて Workspace の `timezone` における暦日とする。UTC 暦日を業務日付として使わない。**
+
+現行実装は `TODAY = fromUTC(Date.now() + 9*3600*1000)`（`ml-editing-board.html:5180`）で明示的に JST の暦日を「今日」としており、`prioOf()` / `judge()` / `todayBuckets()` / `loadOf()` / `materialLate()` / `daysSince()` / `isPast()` / `generate()` の `genDate` がすべてこれを基準にしている。Serverless の実行環境と cron トリガーは通常 UTC で動くため、規約なしに移植すると全判定が1日ずれ得る。
+
+- Domain 層に `businessToday(workspace): LocalDate` を1本だけ用意する。
+- **Domain から `new Date()` / `now()` を直接呼ぶことを禁止する**（lint ルール化）。§3.3 の「同じ業務計算を両方に持たない」と同格の規約とする。
+- この種のずれは JST 00:00〜09:00 にしか症状が出ないため、固定時刻の Unit テストを必須にする（§25.1）。
+
+#### Workspace 境界の強制
+
+**すべてのテーブルは `workspace_id` を持つ。例外は次の2つだけで、それ以外に例外を作らない。**
+
+| テーブル | 例外の理由 |
+|---|---|
+| `users` | Workspace をまたぐ人物。所属は `workspace_members` が表す |
+| `webhook_receipts` | 署名検証前の生受信記録。どの Workspace 宛かは検証後に確定するため、受信時点では決められない |
+
+そのうえで、**全テーブルに `unique(id, workspace_id)` を張り、すべての親子参照を複合外部キーにする**。UNIQUE の無い親は複合外部キーで参照できないため、これは「例」ではなく全テーブルに機械的に適用する規約である。
 
 ```sql
--- 例：ContentItem が別 Workspace の Client を参照できないようにする
+-- 規約：親に (id, workspace_id) の UNIQUE、子から複合外部キー
 alter table clients
   add constraint clients_id_ws_uq unique (id, workspace_id);
 alter table content_items
   add constraint content_items_client_fk
   foreign key (client_id, workspace_id) references clients (id, workspace_id);
+
+-- 権限テーブルも同じ扱いにする（ここが抜けると権限昇格になる）
+alter table roles add constraint roles_id_ws_uq unique (id, workspace_id);
+alter table member_roles
+  add constraint member_roles_role_fk
+  foreign key (role_id, workspace_id) references roles (id, workspace_id);
+alter table member_roles
+  add constraint member_roles_member_fk
+  foreign key (workspace_member_id, workspace_id)
+  references workspace_members (id, workspace_id);
 ```
 
+これにより「Workspace A の Role を Workspace B の Member に付与する」行を DB が受理しなくなる。アプリ層の検証を1行落としても権限昇格にならない。
+
 ### 6.2 Core テーブル
+
+**全テーブルに `unique(id, workspace_id)` を張る（§6.1 の規約）。表では省略し、それ以外の制約・索引だけを書く。**
 
 | テーブル | 主な列 | 主な制約・索引 |
 |---|---|---|
 | `workspaces` | `id, name, slug, type, timezone, settings jsonb, archived_at` | `unique(slug)` |
-| `users` | `id, email, display_name, avatar_url, status, last_login_at` | `unique(lower(email))` |
-| `workspace_members` | `id, workspace_id, user_id, display_name, status, joined_at` | `unique(workspace_id, user_id)`、`unique(id, workspace_id)` |
+| `users` | `id, identity_provider, external_subject, email, display_name, avatar_url, status, last_login_at` | `unique(identity_provider, external_subject)`、`unique(lower(email))`。**同定は `external_subject`（OIDC `sub`）で行い、email は表示と招待照合のみ**（§8.2）。`workspace_id` を持たない例外テーブル |
+| `workspace_members` | `id, workspace_id, user_id, display_name, status, joined_at` | `unique(workspace_id, user_id)` |
 | `roles` | `id, workspace_id, key, name, is_system, description` | `unique(workspace_id, key)` |
-| `role_capabilities` | `role_id, capability_key, scope_type, scope_id` | `pk(role_id, capability_key, scope_type, scope_id)` |
-| `member_roles` | `workspace_member_id, role_id` | `pk(workspace_member_id, role_id)` |
+| `role_capabilities` | `workspace_id, role_id, capability_key, scope_type, scope_id` | `pk(role_id, capability_key, scope_type, scope_id)`、`fk(role_id, workspace_id)` |
+| `member_roles` | `workspace_id, workspace_member_id, role_id` | `pk(workspace_member_id, role_id)`、`fk(role_id, workspace_id)`、`fk(workspace_member_id, workspace_id)` |
 | `workflow_templates` | `id, workspace_id, key, name, applies_to, is_default, archived_at` | `unique(workspace_id, key)` |
-| `workflow_states` | `id, workspace_id, template_id, key, name, semantic, sort_order, is_initial, is_terminal` | `unique(template_id, key)`、`semantic in (todo,in_progress,review,ready,done,blocked)` |
-| `workflow_transitions` | `id, workspace_id, template_id, from_state_id, to_state_id, action_label, required_capability, is_primary, sort_order` | `unique(template_id, from_state_id, to_state_id)` |
-| `workflow_runs` | `id, workspace_id, template_id, current_state_id, subject_type, subject_id, started_at, completed_at, version` | `index(workspace_id, subject_type, subject_id)` |
-| `workflow_run_transitions` | `id, run_id, from_state_id, to_state_id, transition_id, actor_member_id, occurred_at, note` | `index(run_id, occurred_at)` |
-| `tasks` | `id, workspace_id, title, description, workflow_template_id, workflow_run_id, priority, start_at, due_at, completed_at, source_type, source_id, created_by, version, archived_at` | `index(workspace_id, due_at)`、`index(workspace_id, source_type, source_id)` |
-| `task_assignments` | `id, workspace_id, task_id, workspace_member_id, assignment_role, assigned_at, assigned_by` | `unique(task_id, workspace_member_id, assignment_role)` |
-| `schedule_entries` | `id, workspace_id, kind, title, starts_at, ends_at, all_day, recurrence_rule_id, subject_type, subject_id, created_by` | `index(workspace_id, starts_at)`、`index(workspace_id, subject_type, subject_id)` |
+| `workflow_states` | `id, workspace_id, template_id, key, name, semantic, sort_order, is_initial, is_terminal, archived_at` | `unique(template_id, key)`、`semantic in (todo,in_progress,review,ready,done,blocked)` |
+| `workflow_transitions` | `id, workspace_id, template_id, from_state_id, to_state_id, action_label, required_capability, is_primary, sort_order, archived_at` | `unique(template_id, from_state_id, to_state_id)`。**物理削除しない**（履歴が参照する。§11.5 規則2） |
+| `workflow_runs` | `id, workspace_id, template_id, current_state_id, subject_type, subject_id, period_key, started_at, completed_at, version` | `unique(workspace_id, template_id, subject_type, subject_id, period_key)`、`index(workspace_id, subject_type, subject_id)`、`index(workspace_id, current_state_id)`。`period_key` は Core が書式を解釈しない不透明な文字列（月次なら `2026-09`、期間概念が無ければ NULL） |
+| `workflow_run_transitions` | `id, workspace_id, run_id, from_state_id, to_state_id, transition_id, actor_member_id, occurred_at, note` | `index(run_id, occurred_at)`、`fk(run_id, workspace_id)` |
+| `tasks` | `id, workspace_id, title, description, workflow_run_id, priority, start_at, due_at, completed_at, source_type, source_id, created_by, version, archived_at` | `index(workspace_id, due_at)`、`index(workspace_id, source_type, source_id)`。**現在の状態と Template は `workflow_runs` が唯一の正**。Task は `workflow_run_id` だけを持つ（§11.1） |
+| `task_assignments` | `id, workspace_id, task_id, workspace_member_id, assignment_role, assigned_at, assigned_by` | `unique(task_id, workspace_member_id, assignment_role)`、`index(workspace_id, workspace_member_id, assignment_role)` |
+| `schedule_entries` | `id, workspace_id, kind, title, starts_at, ends_at, all_day, recurrence_rule_id, subject_type, subject_id, created_by` | `index(workspace_id, starts_at)`、`index(workspace_id, subject_type, subject_id)`。`kind` は Module が登録する不透明な文字列。**Core は具体値を知らない**（値は §12.1） |
 | `recurrence_rules` | `id, workspace_id, rule, anchor, timezone, until` | |
 | `working_schedules` | `id, workspace_id, workspace_member_id, date, starts_at, ends_at, source, source_connection_id, created_by` | `unique(workspace_member_id, date, starts_at)`、`index(workspace_id, date)` |
 | `time_offs` | `id, workspace_id, workspace_member_id, from_date, to_date, reason` | `index(workspace_id, from_date, to_date)` |
 | `business_calendar` | `id, workspace_id, date, kind, label, valid_source` | `unique(workspace_id, date)` |
 | `shift_change_requests` | `id, workspace_id, workspace_member_id, requested_changes jsonb, origin, origin_connection_id, origin_ref, status, reviewed_by, reviewed_at` | `index(workspace_id, status)` |
-| `automation_rules` | `id, workspace_id, name, trigger_type, conditions jsonb, actions jsonb, schema_version, enabled, created_by` | `index(workspace_id, trigger_type, enabled)` |
-| `automation_runs` | `id, workspace_id, rule_id, trigger_event_id, status, started_at, finished_at, error, idempotency_key` | `unique(rule_id, idempotency_key)` |
-| `notifications` | `id, workspace_id, recipient_member_id, kind, title, body, resource_type, resource_id, read_at, created_at` | `index(workspace_id, recipient_member_id, read_at)` |
-| `notification_deliveries` | `id, notification_id, channel, status, attempts, last_error, delivered_at` | |
-| `audit_logs` | `id, workspace_id, actor_type, actor_member_id, action, resource_type, resource_id, before jsonb, after jsonb, source, request_id, occurred_at` | `index(workspace_id, resource_type, resource_id, occurred_at)` |
+| `daily_notes` | `id, workspace_id, date, body, updated_by, version` | `unique(workspace_id, date)`。Workspace 共有の日次メモ（§24.5） |
+| `automation_rules` | `id, workspace_id, name, trigger_type, predicates jsonb, actions jsonb, schema_version, enabled, last_evaluated_on, created_by` | `index(workspace_id, trigger_type, enabled)`。`predicates` は**登録済み述語 + パラメータの配列**で AND 結合。式 DSL は作らない（§13.3） |
+| `automation_runs` | `id, workspace_id, rule_id, trigger_event_id, rule_snapshot jsonb, status, started_at, finished_at, error, idempotency_key` | `unique(rule_id, idempotency_key)`。`rule_snapshot` は実行時点の Rule 内容（§13.6） |
+| `notifications` | `id, workspace_id, recipient_member_id, kind, dedupe_key, title, body, resource_type, resource_id, read_at, created_at` | `index(workspace_id, recipient_member_id, read_at)`、`unique(workspace_id, dedupe_key) where read_at is null`（§14.4 の抑制） |
+| `notification_deliveries` | `id, workspace_id, notification_id, channel, status, attempts, last_error, delivered_at` | `fk(notification_id, workspace_id)` |
+| `audit_logs` | `id, workspace_id, actor_type, actor_member_id, action, resource_type, resource_id, before jsonb, after jsonb, source, request_id, occurred_at` | `index(workspace_id, resource_type, resource_id, occurred_at)`、`index(workspace_id, request_id)`（§19.5 の障害調査） |
 | `recommendations` | `id, workspace_id, kind, subject_type, subject_id, payload jsonb, score, reason, status, decided_by, decided_at, expires_at` | `index(workspace_id, kind, status)` |
 | `outbox_events` | `id, workspace_id, event_type, payload jsonb, occurred_at, processed_at, attempts` | `index(processed_at) where processed_at is null` |
 | `jobs` | `id, workspace_id, queue, payload jsonb, run_after, attempts, max_attempts, locked_until, locked_by, status, last_error, idempotency_key` | `unique(queue, idempotency_key)`、`index(status, run_after)` |
-| `idempotency_keys` | `key, workspace_id, endpoint, request_hash, response_status, response_body jsonb, created_at, expires_at` | `pk(key)` |
+| `idempotency_keys` | `workspace_id, key, endpoint, request_hash, response_status, response_body jsonb, created_at, expires_at` | `pk(workspace_id, key)` |
 
 ### 6.3 Integration テーブル
 
@@ -581,22 +626,37 @@ alter table content_items
 | `integration_connections` | `id, workspace_id, provider, account_label, external_account_id, scopes text[], access_token_enc, refresh_token_enc, token_expires_at, status, connected_by, revoked_at` |
 | `external_resource_links` | `id, workspace_id, connection_id, provider, external_kind, external_id, external_url, local_resource_type, local_resource_id, etag, last_synced_at` |
 | `webhook_subscriptions` | `id, workspace_id, connection_id, provider, channel_id, resource_id, verification_token_enc, expires_at, status` |
-| `webhook_receipts` | `id, provider, channel_id, message_number, received_at, signature_valid, payload jsonb, processed_at` |
+| `webhook_receipts` | `id, provider, connection_id, external_event_key, received_at, signature_valid, payload jsonb, processed_at` |
 | `sync_cursors` | `id, workspace_id, connection_id, resource_key, cursor_token, last_full_sync_at, last_delta_sync_at` |
 
 `external_resource_links` は `unique(provider, external_id, local_resource_type, local_resource_id)` を張り、**SOCIAL BASE 独自IDと Google ID を同一視しない**。
 
-`webhook_receipts` は `unique(provider, channel_id, message_number)` で再配送を弾く（§22.4）。
+`webhook_receipts` は `unique(provider, connection_id, external_event_key)` で再配送を弾く（§22.4）。
+
+**`external_event_key` は provider ごとに Adapter が決める。** Core も共通スキーマも provider 固有の識別子の形を知らない。
+
+| provider | `external_event_key` |
+|---|---|
+| Google Drive / Calendar | `channel_id + ":" + message_number`（`X-Goog-Channel-ID` と `X-Goog-Message-Number`） |
+| Slack Events API | `event_id`（`Ev0XXXXX`） |
+| Slack スラッシュコマンド / インタラクティブ | `trigger_id`（イベントごとに一意で、再送でも同一） |
+
+`X-Slack-Retry-Num` は**再送回数であってイベント識別子ではない**ため、重複排除キーに使わない（§17.4）。
+
+`connection_id` を UNIQUE に含めることで、Workspace 分離も同時に効く。`webhook_receipts` は署名検証前の生受信記録であり `workspace_id` を持たない（§6.1 の例外2）。検証と `connection_id` の解決が済んだ時点で Workspace が確定する。
 
 ### 6.4 SOCIAL BASE テーブル
 
 | テーブル | 主な列 | 制約 |
 |---|---|---|
-| `clients` | `id, workspace_id, name, display_name, status, legacy_key, archived_at` | `unique(workspace_id, name)`、`unique(id, workspace_id)` |
+| `clients` | `id, workspace_id, name, display_name, status, legacy_key, archived_at` | `unique(workspace_id, name)` |
 | `service_contracts` | `id, workspace_id, client_id, kind, monthly_count, step_count, lead_time_business_days, default_publisher_member_id, default_editor_member_id, workflow_template_id, starts_on, ends_on, status, legacy_id` | `unique(workspace_id, legacy_id)`、`check(monthly_count >= 0)`、`check(lead_time_business_days >= 0)` |
 | `social_accounts` | `id, workspace_id, client_id, platform, handle, external_account_id, status` | `unique(workspace_id, platform, handle)` |
-| `content_items` | `id, workspace_id, client_id, service_contract_id, social_account_id, kind, title, body, target_month, publish_date, published_at, published_url, notes, revision_note, date_locked, schedule_squeezed, version, legacy_id, archived_at` | `unique(workspace_id, legacy_id)`、`index(workspace_id, target_month)`、`index(workspace_id, publish_date)` |
+| `content_items` | `id, workspace_id, client_id, service_contract_id, social_account_id, kind, title, body, target_month, publish_date, published_at, published_url, notes, revision_note, date_locked, schedule_squeezed, version, legacy_id, archived_at` | `unique(workspace_id, legacy_id)`、`index(workspace_id, target_month)`、`index(workspace_id, publish_date)`、`index(workspace_id, client_id, target_month)`、`index(workspace_id, service_contract_id, target_month)` |
+| `content_item_tasks` | `workspace_id, content_item_id, task_id` | `pk(workspace_id, content_item_id, task_id)`、**`unique(task_id)`**、`fk(content_item_id, workspace_id)`、`fk(task_id, workspace_id)` |
 | `assets` | `id, workspace_id, owner_type, owner_id, role, external_link_id, mime_type, metadata jsonb` | `index(workspace_id, owner_type, owner_id)` |
+
+`content_item_tasks` は **Core を汚さずに ContentItem : Task の整合性を保証する**ための Module 側の結合テーブル。Core の `tasks.source_type` / `source_id` は外部キーを張れない多態参照なので、v1 の 1:1 は `unique(task_id)` でここに担保する。将来 1:N へ広げるときはこの UNIQUE を外すだけでよい。
 
 `legacy_id` / `legacy_key` は移行専用（§24）。Parity 確認が終わったら参照をやめるが、列は残す。
 
@@ -605,10 +665,40 @@ alter table content_items
 三重で守る。
 
 1. **アプリ層** — Repository は必ず `workspace_id` を引数に取る。取らないメソッドを作らない。
-2. **スキーマ層** — §6.1 の複合外部キーにより、別 Workspace の行を参照できない。
-3. **DB層（Defense in Depth）** — PostgreSQL Row Level Security を有効化し、セッション変数の `workspace_id` で絞る。アプリのバグで `where` が抜けても漏れない。
+2. **スキーマ層** — §6.1 の `unique(id, workspace_id)` と複合外部キーにより、別 Workspace の行を参照できない。**権限テーブル（`roles` / `member_roles` / `role_capabilities`）にも同じ防御を張る。** ここが抜けるとアプリ層の1行のバグが即座に権限昇格になる。
+3. **DB層（Defense in Depth）** — PostgreSQL Row Level Security。
 
-RLS は Phase 2 で入れる。後付けは既存クエリ全部の再検証が要るため、最初から入れる。
+RLS は Phase 2 で入れる。後付けは既存クエリ全部の再検証が要るため、最初から入れる（ADR-019）。
+
+#### RLS 運用規約
+
+**「RLS を有効化する」だけでは機能しない。** Serverless + Managed PostgreSQL（接続プーラ）構成では、次の4点を守らないと**無症状のまま無効化されるか、逆に Workspace をまたいで漏れる**。
+
+**(1) ロールを分ける。** テーブル所有者は RLS をバイパスする。migration を流すロール（所有者）とアプリが接続するロール（非所有者、`bypassrls` なし）を分ける。加えて全 RLS 対象テーブルに `force row level security` を付ける。
+
+```sql
+alter table content_items enable row level security;
+alter table content_items force  row level security;
+```
+
+これを怠ると、ポリシーを書いても一切適用されず、**テストでも本番でも「全行見える」のが正常に見えてしまう**。
+
+**(2) `SET` を使わない。`SET LOCAL` だけを使う。** transaction pooling では1つの物理接続が複数リクエストに使い回される。session レベルの `SET app.workspace_id` は次のリクエストへ持ち越され、**別ユーザーが前のリクエストの `workspace_id` を継承する**。これは Workspace 分離の完全な破綻であり、アプリ層は正しい値を渡しているためログにも異常が残らない。
+
+**(3) 読み取りを含む全 DB アクセスを明示トランザクションで包む。** `SET LOCAL` はトランザクション内でしか効かない。Query Service が autocommit でクエリを投げると GUC が未設定になる（§21.1）。
+
+**Repository の基底に「トランザクション開始 → `set local` → クエリ → commit」を1箇所だけ実装し、そこ以外から接続を取らせない。** これで (2)(3) が同時に解決する。`set`（LOCAL なし）の使用はコードレビューと lint で禁止する。
+
+**(4) 未設定時は0行にする。** `current_setting('app.workspace_id')` は未設定時に例外を投げる。ポリシーは次の形にして、fail closed かつ 500 にしない。
+
+```sql
+create policy ws_isolation on content_items
+  using (workspace_id = nullif(current_setting('app.workspace_id', true), '')::uuid);
+```
+
+**テスト** — §25.2 の RLS テストは「**本番と同じプーラ構成を通して**、リクエスト A の直後にリクエスト B を同一物理接続で実行し、B が A の workspace を継承しないこと」を必ず含める。直接接続でのテストは (2) を一切検出しない。
+
+採用するホスティングの接続プーリングモード（session / transaction）は §26.1 の決定事項とする。
 
 ### 6.6 Migration 方式
 
@@ -677,7 +767,9 @@ erDiagram
     }
     users {
         uuid id PK
-        citext email UK
+        text identity_provider
+        text external_subject UK
+        citext email
         text display_name
         text status
     }
@@ -696,6 +788,7 @@ erDiagram
         bool is_system
     }
     role_capabilities {
+        uuid workspace_id FK
         uuid role_id FK
         text capability_key
         text scope_type "workspace or a module-registered resource type"
@@ -733,6 +826,7 @@ erDiagram
         uuid current_state_id FK
         text subject_type
         uuid subject_id
+        text period_key
         int version
     }
     tasks {
@@ -780,7 +874,7 @@ erDiagram
 
     schedule_entries {
         uuid id PK
-        text kind "publish_planned or shoot or meeting or internal_due"
+        text kind "module-registered (see 12.1)"
         text title
         timestamptz starts_at
         timestamptz ends_at
@@ -903,6 +997,7 @@ erDiagram
     service_contracts ||--o{ content_items : "由来"
     social_accounts ||--o{ content_items : "投稿先"
     content_items ||--o{ assets : "素材"
+    content_items ||--o{ content_item_tasks : "1:1保証"
     content_items ||--|| tasks : "source_type=content_item"
     service_contracts }o--|| workflow_templates : "既定"
     service_contracts }o--o| workspace_members : "既定担当"
@@ -959,6 +1054,11 @@ erDiagram
         int version
         text legacy_id UK
     }
+    content_item_tasks {
+        uuid workspace_id FK
+        uuid content_item_id FK
+        uuid task_id UK
+    }
     assets {
         uuid id PK
         text owner_type "client or content_item"
@@ -999,8 +1099,8 @@ erDiagram
     webhook_receipts {
         uuid id PK
         text provider
-        text channel_id
-        text message_number
+        uuid connection_id FK
+        text external_event_key
         bool signature_valid
         timestamptz processed_at
     }
@@ -1045,6 +1145,7 @@ erDiagram
 | `role`（社員 / スタッフ） | `Role` + `MemberRole`（Capability 集合として再定義） |
 | `title`（社長） | `WorkspaceMember.display_name` の補助表示。**権限判定には一切使わない**（現行と同じ） |
 | `STAFF_MAP` のローマ字名 | 廃止。シフトは `workspace_member_id` で直接ひもづく |
+| **`STAFF_MAP` のキー集合** | **`editor` Role の保持者**。名前対応表ではなく「編集担当になれる人の一覧」として18箇所で使われているため、破棄せずこの意味を移す（§24.4 / HIGH-2） |
 
 ### 8.2 Identity
 
@@ -1053,12 +1154,34 @@ erDiagram
 理由は3つ。
 
 1. 全員が既に Google アカウントを持っている（Drive / Calendar を業務で使っている）。
-2. Drive / Calendar Integration の OAuth と同じ同意フローに乗せられ、認証基盤を二重に持たなくて済む。
-3. 退職時に Google アカウントを止めれば SOCIAL BASE も同時に閉じる。パスワード管理をこちらで持たない。
+2. 認証基盤を二重に持たなくて済む。
+3. 退職時に Google アカウントを止めれば SOCIAL BASE のログインも同時に閉じる。パスワード管理をこちらで持たない。
 
 セッションは HttpOnly / Secure / SameSite=Lax の Cookie。`User.email` のドメインで許可を絞る。
 
-**招待制** — 未登録のメールアドレスでログインできても、`WorkspaceMember` が存在しなければどの Workspace にも入れない（fail closed）。
+> **注意** — 「Google アカウントを止めれば全部閉じる」は**ログインについてのみ**成り立つ。その人が接続した Drive / Calendar の Integration トークンも同時に失効するため、接続主体は個人にしない（§15.1）。
+
+#### 同定は `sub` で行う。email は識別子に使わない
+
+`users` は `identity_provider` と `external_subject`（OIDC の `sub`）を持ち、`unique(identity_provider, external_subject)` で同定する。
+
+**email をプライマリな識別子にしない。** email は Google Workspace 側で再割り当て可能な可変の値である。具体的に次の経路で壊れる。
+
+1. 友美（`tomomi@example.co.jp`、Role = `internal`）が退職し、Google アカウントを停止する。
+2. 数か月後、情シスが同じアドレスを新入社員へ再発行する（役割アドレスなら日常的に起こる）。
+3. 新入社員が初回ログインする。email で `users` を引くと**友美の User にそのままログインする**。
+
+結果として新入社員は友美の `WorkspaceMember`・`MemberRole`・`task_assignments` をすべて引き継ぎ、Audit Log は「友美が操作した」と記録し続ける。**§19 の「誰がいつ何をどう変えたか」という要件そのものが偽になる。** 招待制はこの経路を防がない（`WorkspaceMember` は既に存在するため）。
+
+逆に姓名変更によるアドレス変更（`kato@` → `natsumi.kato@`）では、同一人物が別ユーザーとして重複作成され、担当と監査履歴が分断される。
+
+**規約**
+
+- ログイン時の検索キーは `(identity_provider, external_subject)`。
+- email は毎回のログインで `sub` を鍵に上書きする（アドレス変更に自動追随する）。
+- 招待は email で出し、**初回ログイン時に `sub` を束ねる（claim）**。以後は `sub` が正。まだ `sub` が束ねられていない招待レコードにだけ email 一致を許す。
+
+**招待制** — ログインできても `WorkspaceMember` が存在しなければどの Workspace にも入れない（fail closed）。
 
 ### 8.3 Permission は Capability で持つ
 
@@ -1154,6 +1277,7 @@ Scope        : workspace 全体、または client / contract 単位
 | `contract.manage` | 契約（月本数・工程数・担当）の変更 |
 | `content.read` | 制作物を見る |
 | `content.update` | タイトル・URL・メモ・修正指示を書く |
+| `content.review.internal` | 社員が対応する要確認項目（Drive未設定・タイトル未入力）を見る。**表示制御用で書き込み権限ではない** |
 | `content.generate` | 翌月分を生成する |
 | `asset.manage` | Drive フォルダ・ファイルの関連付け |
 | `analytics.read` | 分析結果を見る |
@@ -1171,13 +1295,13 @@ Scope        : workspace 全体、または client / contract 単位
 | `permission.manage` | ○ | — | — |
 | `task.read.own` | ○ | ○ | ○ |
 | `task.read.all` | ○ | ○ | ○ |
-| `task.create` | ○ | ○ | — |
+| `task.create` | ○ | ○ | ○ |
 | `task.update` | ○ | ○ | ○ |
-| `task.assign` | ○ | ○ | — |
+| `task.assign` | ○ | ○ | ○ |
 | `workflow.transition` | ○ | ○ | ○ |
 | `workflow.manage` | ○ | — | — |
 | `schedule.read` | ○ | ○ | ○ |
-| `schedule.manage` | ○ | ○ | — |
+| `schedule.manage` | ○ | ○ | ○ |
 | `availability.read` | ○ | ○ | ○ |
 | `availability.self.manage` | ○ | ○ | ○ |
 | `availability.manage` | ○ | ○ | — |
@@ -1195,24 +1319,56 @@ Scope        : workspace 全体、または client / contract 単位
 | `contract.manage` | ○ | — | — |
 | `content.read` | ○ | ○ | ○ |
 | `content.update` | ○ | ○ | ○ |
+| `content.review.internal` | ○ | ○ | — |
 | `content.generate` | ○ | ○ | — |
 | `asset.manage` | ○ | ○ | — |
 | `analytics.read` | ○ | ○ | — |
 
 ### 9.3 現行の判定との対応
 
-移行時に挙動が変わらないことを確認するための表。
+移行時に挙動が変わらないことを確認するための表。**現行の分岐は `myRole()==="社員"` の8箇所と `writable()` の2種類しかない**ので全列挙する。これが Permission Matrix Test（§25.3）の入力になる。
 
-| 現行のコード | 行 | 対応する Capability |
+#### `myRole()==="社員"` による分岐（8箇所すべて）
+
+| 行 | 現行の挙動 | 対応する Capability |
 |---|---|---|
-| `visibleViews()` の クライアント管理 | `:2176` | `client.read` |
-| サイドバー「管理」セクション | `:2353` | `client.read` |
-| 「翌月を生成」ボタン | `:2366` | `content.generate` |
-| 今日画面の要確認（Drive未設定・タイトル未入力） | `:3517` | `client.manage` / `content.update` |
-| 負荷調整の提案の実行 | `:4014` | `recommendation.decide` + `task.assign` |
-| Drive 設定の案内 | `:4820` | `asset.manage` |
-| クライアント画面への直接アクセス防止 | `:5081` | `client.read`（サーバー側で 404） |
-| `writable()` | `:2195` | 対象操作ごとの Capability（`task.update` / `workflow.transition` など） |
+| `:2176` | `visibleViews()` にクライアント管理を足す | `client.read` |
+| `:2353` | サイドバー「管理」セクションを出す | `client.read` |
+| `:2366` | 「翌月を生成」ボタンを出す | `content.generate` |
+| `:3517` | `todayReview()` が Drive未設定・タイトル未入力を数える | `content.review.internal` |
+| `:3564` | 「今日」画面 KPI の内訳行に同項目を出す | `content.review.internal` |
+| `:4014` | 負荷調整の提案を実行できる | `recommendation.decide` + `task.assign` |
+| `:4820` | Drive 未設定時に設定導線を出す | `asset.manage` |
+| `:5081` | クライアント画面への直接アクセスをホームへ戻す | `client.read`（サーバー側は 404） |
+
+**`:3517` と `:3564` は同じ項目の「件数」と「内訳」で、必ず同じ Capability にひもづける。** 片方だけ移すと数字と内訳が食い違う。
+
+またこの2箇所は**書き込み権限ではなく表示制御**である。`content.update` にひもづけると、`editor` も `content.update` を持つため**スタッフの「今日」画面に社員向けの督促が出てしまい**、UI 仕様（2026-08-28 指示：Drive未設定・タイトル未入力はスタッフには出さない）に反する。専用の `content.review.internal` を使う。
+
+#### `writable()` だけで守られている操作（＝現行は全員可）
+
+| 操作 | 行 | 対応する Capability |
+|---|---|---|
+| 工程を進める / 1段戻す | `:3639` `:3039` `:4937` | `workflow.transition` |
+| 動画追加 | `:4857`（ボタンは `:2328` / `:2490`） | `task.create` |
+| 担当編集者の変更 | `:3012` | `task.assign` |
+| 投稿予定日 / 締切の変更 | `:4667` ほかの日付入力 | `schedule.manage` |
+| タイトル・URL・メモ・修正指示 | `:4778` ほか | `content.update` |
+| クライアントの Drive URL・撮影日・企画ステータス・資料フロー | `:4659` `:4721` `:4745` | `client.manage` / `asset.manage`（画面自体が社員のみのため実質社員限定） |
+
+**§9.2 の既定 Role は、この表をそのまま再現するように組んである。** `editor` が `task.create` / `task.assign` / `schedule.manage` を持つのはそのため。移行時に絞りたい場合はオーナー判断（§28 Q13）であり、設計で黙って変えない。
+
+#### `writable()` 自体の条件
+
+`writable() = READY && identified() && CAN_WRITE && !maintenance && !isPast()`（`:2195`）
+
+| 条件 | 移行後 |
+|---|---|
+| `READY` | セッション取得完了。取得前は書き込み API を呼ばない |
+| `identified()` | 認証済みかつ `WorkspaceMember` が存在する |
+| `CAN_WRITE` | 対象操作の Capability を持つ |
+| `!maintenance` | `workspaces.settings.maintenance` |
+| `!isPast()` | 過去月は読み取り専用（UI 判定のまま維持） |
 
 ### 9.4 Transition 単位の権限
 
@@ -1226,7 +1382,7 @@ Scope        : workspace 全体、または client / contract 単位
 
 `role_capabilities.scope_type` は Capability キーと同じく**Module が登録する不透明な文字列**。Core は `workspace` だけを知り、それ以外の値の意味を解釈しない。SOCIAL BASE Module は `client` / `contract` を登録する。
 
-v1 では全 Role が `workspace` スコープで足りる。Scope 機構だけ先に入れておき、「このクライアントだけ触れる業務委託」のような要件が出たときに、テーブル変更なしで対応する。
+**v1 では列だけを先行させ、評価器は作らない。** 全 Role が `workspace` スコープで足りるため、`scope_type = 'workspace'` 以外を評価する必要がない。「このクライアントだけ触れる業務委託」のような要件が出た時点で評価器を足す。テーブル変更は不要（LATER-2）。
 
 > **■ オーナー向け説明**
 >
@@ -1294,16 +1450,25 @@ publish_date > 今日   -> 低
 
 ### 10.5 「自分のタスク」の絞り込み
 
-現行 `myTasks()`（`:2217`）は、`STAFF_MAP` にいる人（＝スタッフ）だけ「自分が editor か poster の行」に絞り、社員は全件見る。
+現行 `myTasks()`（`:2217`）は `if(STAFF_MAP[ME])` が真のとき、つまり**編集スタッフのときだけ**「自分が editor か poster の行」に絞る。社員は全件見る。
 
-移行後は Capability で表現する。
+移行後もこの規則を維持する。ただし**権限として表現しない**。
 
 ```
-task.read.all  を持つ  -> Workspace 内すべて
-持たない               -> 自分が assignee の Task のみ
+editor Role を持つ Member -> 自分が assignee の Task に絞る
+持たない Member           -> Workspace 内すべて
 ```
 
-§9.2 の既定 Role では `editor` にも `task.read.all` を与えているため、**現行と同じく全件が見える**。「自分のタスク」タブは絞り込みであって権限ではない。ここを混同しない。
+**これは絞り込みであって権限ではない。** §9.2 の既定 Role では `editor` にも `task.read.all` を与えているため、りりかが動画一覧で「全員」フィルタを選べば全件見える。絞り込みの既定値と、見てよいかどうかの権限を混同しない。
+
+読み取り権限そのものは別に定義する。
+
+```
+task.read.all を持つ  -> Workspace 内すべてを読んでよい
+持たない              -> 自分が assignee の Task だけ読んでよい
+```
+
+v1 では全 Role が `task.read.all` を持つため、権限による絞り込みは発生しない。将来「特定クライアントの分だけ見せる業務委託」を作るときに §9.5 の Scope と組み合わせて効かせる。
 
 > **■ オーナー向け説明**
 >
@@ -1378,14 +1543,19 @@ Transition（現行 `STATUS_ACTIONS` / `ACTION_TO` / `PREV_STATUS` の内容）
 
 ### 11.5 Workflow 変更時の既存データ互換
 
-**State を削除しない。** 使われなくなった State は `archived_at` を立てるだけにする。過去の `workflow_run_transitions` が参照し続けるため、物理削除すると履歴が壊れる。
+**State も Transition も削除しない。** 使われなくなったものは `archived_at` を立てるだけにする。過去の `workflow_run_transitions` が `from_state_id` / `to_state_id` / `transition_id` で参照し続けるため、物理削除すると履歴が壊れるか、外部キー違反で削除自体が失敗する。
 
-Template を編集すると、既存 Run に影響が出る可能性がある。次の規則で守る。
+Template の編集が既存 Run を壊さないよう、次の7規則で守る。**保存時に検証してエラーにする。**
 
-1. State の追加・表示名変更・並び替えは既存 Run に影響しない。
-2. Transition の追加・削除は、進行中の Run の現在地には影響しない。
-3. **現在どれかの Run が滞在している State は archive できない。** 保存時に検証してエラーにする。
-4. Template を大きく変えるときは新しい Template を作り、`ServiceContract.workflow_template_id` を切り替える。既存 Run は古い Template のまま完了させる。
+1. State の追加・**表示名変更**・並び替えは既存 Run に影響しない。
+2. **Transition も削除しない。`archived_at` を立てるだけにする。** 履歴が `transition_id` で参照しているため（State と同じ扱い）。
+3. **現在どれかの Run が滞在している State は archive できない。**
+4. **`semantic` / `is_initial` / `is_terminal` は、その State を参照する `workflow_run_transitions` が1件でもあれば変更できない。** 意味を変えたい場合は新しい State を作り、古い State を archive する。
+5. `workflow_transitions.required_capability` の変更は既存 Run に影響しないが、**Audit Log に必ず残す**（§20.2 の強い監査対象に Workflow Template 変更を含める）。
+6. Template を大きく変えるときは新しい Template を作り、`ServiceContract.workflow_template_id` を切り替える。既存 Run は古い Template のまま完了させる。
+7. 規則6を実行しても**既存 Task の参照は変更しない**。Task は `workflow_run_id` だけを持ち、Template は `task -> run -> template` で解決するため、切り替えの影響を受けない（§11.1）。
+
+規則4がなぜ要るか。`semantic` は表示名ではなく**集計とオートメーションの意味論そのもの**（§11.2）である。たとえば「投稿待ち」の `semantic` を `ready` から `done` へ変えると、その瞬間に過去12か月分の完了率が跳ね上がり、§13.5 の「締切超過」Rule が投稿待ちを対象外にし、「今日」画面の完了バケットに投稿待ちが流れ込む。取り消しても、その間に飛んだ通知と `AutomationRun` の記録は戻らない。
 
 ### 11.6 資料準備フローと月次分析
 
@@ -1401,6 +1571,8 @@ Template を編集すると、既存 Run に影響が出る可能性がある。
 | `completed` | 資料完成 | `done` |
 
 Client ごとに月次で `WorkflowRun` を生成する（`subject_type = client`）。現行 `STATE.clients[name].materialStatus` の1個の値が、月ごとの Run に置き換わる。**過去の月の状態が残るようになる**のが移行による改善点。
+
+**Run は `period_key` で月を持つ**（例：`2026-09`）。`unique(workspace_id, template_id, subject_type, subject_id, period_key)` により、同じクライアントの同じ月の Run が複数作られない。これが無いと「定例7日前」と「月次分析サイクル」の2つの Rule が別の日に同じ月の Run を作り、画面に出る状態が不定になる。遅延判定（現行 `materialLate()` `:4383`）も「その Run の `period_key` の12日」で行う。
 
 **企画ステータス**（現行 `PLAN_STATUSES`：未着手 / 進行中 / 確認待ち / 完了）も同じ形で Template 化する。
 
@@ -1435,6 +1607,8 @@ Task の期限とは別に `ScheduleEntry` を設ける。1つの制作物に複
 | `planning_due` | `clients[].planningDeadline` | 企画期限 |
 | `analysis_due` | （毎月12日・コード上は文言のみ） | 分析・ハイライトの期限 |
 
+この表の `kind` はすべて **SOCIAL BASE Module が登録する値**であり、Core の `schedule_entries.kind` は不透明な文字列として持つだけで意味を解釈しない（§4.2）。別部署は自分たちの `kind` を登録する。
+
 ### 12.2 営業日をデータにする
 
 現行の祝日は `EQUINOX` + 算出ロジック（`:1568-1598`）でコードに埋まっており、**2028年で切れる**。移行後は `business_calendar` テーブルに持つ。
@@ -1461,19 +1635,42 @@ if internal_due < floor:
 
 ### 12.4 月次生成
 
-現行 `generate()`（`:1697`）+ `merge()`（`:5019`）をサーバー側 Command として移植する。処理内容は変えない。
+現行 `generate()`（`:1697`）+ `merge()`（`:5019`）をサーバー側 Command として移植する。ただし**契約の扱いを1点変える**。
+
+#### ServiceContract 単位にする
+
+現行は Client でグループ化したあと、種別ごとに**先頭の契約1件しか見ない**。
+
+```js
+var v = cs.filter(function(c){return c.kind==="動画"})[0];   // :1708
+var s = cs.filter(function(c){return c.kind==="静止画"})[0]; // :1709
+```
+
+現在のデータでは1クライアントにつき種別ごと1契約なのでたまたま成立しているが、**Phase 5 で契約が画面から編集可能になった瞬間、2本目の契約が無音で消える**。「同じクライアントで別ブランドの動画契約をもう1本」は普通に起こる。
+
+移行後は `ServiceContract` を単位にする。
 
 ```
 1. business_calendar から対象月の営業日を得る
-2. Client ごとに 動画 n 本・静止画 m 本を interleave して並べる
-3. distribute() で営業日へ均等配置（Client ID から決まる位相 phaseOf で毎回同じ結果）
-4. 投稿担当の非稼働日に当たったら nearestWorking() で前後の空き営業日へ寄せる
-5. リードタイムから internal_due を逆算（12.3）
-6. merge: 未着手かつ未ロックの ContentItem だけ差し替える。
-   進行中・date_locked は動かさない。契約本数が減って削りきれない場合は overflow として返す
+2. ServiceContract ごとに monthly_count 本を用意する
+3. 同一 Client の全契約をまとめて interleave し、営業日へ均等配置する
+   （配置は Client 単位。1社の投稿が同じ日に固まらないようにするため）
+4. distribute() の位相は phaseOf(client_id) で決める
+5. 投稿担当の非稼働日に当たったら nearestWorking() で前後の空き営業日へ寄せる
+6. 契約の lead_time_business_days から internal_due を逆算（§12.3）
+7. merge: 未着手かつ未ロックの ContentItem だけ差し替える。
+   進行中・date_locked は動かさない。契約本数が減って削りきれない場合は overflow で返す
 ```
 
-**冪等性** — 同じ月に対して2回実行しても結果が同じになるよう、生成には `idempotency_key = workspace_id + target_month + contract_version_hash` を使う（§22）。現行は連打すると `merge()` が2回走る。
+#### 位相の鍵を不変にする
+
+現行 `phaseOf(client)`（`:1712`）はクライアント**名**を鍵にしている。名前を変えると配置が変わる。移行後は不変の `client_id` を鍵にする。
+
+ただし移行直後は現行と同じ配置を再現する必要があるため、`clients.legacy_key`（旧クライアント名）を鍵にする互換モードを用意し、Parity 確認（§24.6）ではこちらを使う。以後の生成は `client_id` 基準に切り替える。
+
+#### 冪等性
+
+同じ月に対して2回実行しても結果が同じになるよう、`idempotency_key = workspace_id + target_month + contract_version_hash` を使う（§22）。現行は連打すると `merge()` が2回走る。
 
 ### 12.5 Recurrence
 
@@ -1526,19 +1723,27 @@ Rule = { trigger_type, conditions, actions, schema_version, enabled }
 
 すべての Trigger は `outbox_events` を経由する（§23.1）。同期処理の中で Automation を実行しない。
 
-### 13.3 Conditions
+### 13.3 Conditions — 登録済み述語 + パラメータ
 
-AND / OR の入れ子を `jsonb` で持つ。参照できるのは Domain の公開フィールドのみ。
+**汎用の条件式 DSL は作らない。** 既知9ルール（§13.5）のために式評価器・パス解決・演算子テーブルとその検証を自作するのは P5（過剰設計をしない）に反する。§1.3 の Non-Goals に「Automation の汎用条件式言語」を追加する。
+
+`automation_rules.predicates` は**登録済み述語 + パラメータの配列**で、要素は AND で結合する。
 
 ```json
 {
-  "all": [
-    { "field": "content_item.publish_date", "op": "in_days", "value": 14 },
-    { "field": "workflow_run.semantic", "op": "not_in", "value": ["done"] },
-    { "field": "workflow_template.key", "op": "eq", "value": "planning" }
+  "predicates": [
+    { "key": "content.publish_date_within_days", "params": { "days": 14 } },
+    { "key": "workflow.run_not_in_semantic",     "params": { "template": "planning", "semantic": ["done"] } }
   ]
 }
 ```
+
+- 述語は関数として実装し、レジストリに登録する。1本あたり10行程度。
+- **日数・対象・しきい値はすべて `params`（＝データ）**。P4（設定をコードに埋めない）は満たす。
+- **OR が必要な場合は Rule を分ける。** 式のネストは作らない。ルール数が増えても Rule 一覧が読める形を保つ。
+- 述語のキーは Module が登録できる。Core は `content.*` の意味を知らない。
+
+v1 の述語は §13.5 の9ルールを賄う9個で足りる。増やすときは関数1本の追加で済み、既存 Rule に影響しない。
 
 ### 13.4 Actions
 
@@ -1573,9 +1778,10 @@ AND / OR の入れ子を `jsonb` で持つ。参照できるのは Domain の公
 
 - `AutomationRun` を必ず保存する（`rule_id / trigger_event_id / status / started_at / finished_at / error`）。
 - **冪等性** — `unique(rule_id, idempotency_key)`。`idempotency_key = rule_id + trigger_event_id`（`date.reached` は `rule_id + 日付 + 対象リソースID`）。同じイベントが再配送されても2回実行されない。
-- **Rule versioning** — `schema_version` を持ち、Run には**実行時点の Rule 内容のスナップショット**を保存する。あとから Rule を変えても、過去の Run が何をしたか追える。
+- **Rule versioning** — `schema_version` を持ち、Run には**実行時点の Rule 内容を `automation_runs.rule_snapshot jsonb` へ保存する**。あとから Rule を変えても、過去の Run が何をしたか追える。
 - **失敗時** — Job の retry（§23.3）に乗る。max_attempts 超過で dead-letter に落とし、社員へ通知する。**無音で消えない。**
 - **無効化** — `enabled = false` で即停止できる。暴走時の止め方を必ず用意する。
+- **catch-up** — `automation_rules.last_evaluated_on` を持ち、起動時に未評価の日を順に処理する。Job が落ちた日の Rule が永久に飛ばないようにする。上限7日で、それより古い分は通知して打ち切る（MEDIUM-6）。
 
 > **■ オーナー向け説明**
 >
@@ -1631,7 +1837,7 @@ Automation / Domain Event -> Notification（何を知らせるか）
 
 ### 14.4 通知の抑制
 
-同じ内容を毎日送らない。`Notification` に `dedupe_key`（`kind + resource_id + 対象日`）を持たせ、同一キーの未読が存在する間は再作成しない。
+同じ内容を毎日送らない。`Notification` に `dedupe_key`（`kind + resource_id + 対象日`）を持たせ、同一キーの未読が存在する間は再作成しない。制約で担保する：`notifications.dedupe_key` 列と `unique(workspace_id, dedupe_key) where read_at is null`（§6.2）。これが無いと §13.5 の9ルールは日次で回るため、毎日同じ通知が届き3日で誰も読まなくなる。
 
 > **■ オーナー向け説明**
 >
@@ -1662,19 +1868,38 @@ interface IntegrationProvider {
   refresh(connection): Promise<Connection>;
   revoke(connection): Promise<void>;
   verifyWebhook(request): WebhookVerification;   // 署名・トークン検証
+  dedupeKey(request): string;                    // 重複排除キー（provider 固有）
   sync(connection, cursor): Promise<SyncResult>; // 差分同期
 }
 ```
 
-共通テーブルは §6.3。共通ルールは5つ。
+共通テーブルは §6.3。共通ルールは7つ。
 
 1. **通知だけを信用しない。** webhook は「変わった」という合図としてだけ扱い、必ず API で対象を再取得して突き合わせる。
 2. **外部IDと内部IDを同一視しない。** 対応は `external_resource_links` にだけ持つ。
 3. **OAuth トークンは暗号化して保存する。** 平文で持たない（§20）。
 4. **Scope は最小限。** 必要になった時点で追加同意を取る。
-5. **すべての webhook は `webhook_receipts` に記録し、重複配送を弾く**（§22.4）。
+5. **すべての webhook は `webhook_receipts` に記録し、重複配送を弾く。** 重複排除キーは `dedupeKey()` が provider ごとに決める（§6.3）。共通スキーマは provider 固有の識別子の形を知らない。
+6. **接続主体は Workspace であり個人ではない**（下記）。
+7. **トークンのリフレッシュは直列化する**（下記）。
 
 外部API失敗は Integration の問題であって業務の問題ではない。**Drive が落ちても工程は進められる**ように、Integration Action は必ず非同期（Job）にする。
+
+#### 接続主体は Workspace
+
+§8.2 は「退職時に Google アカウントを止めれば SOCIAL BASE も閉じる」を利点として挙げているが、**これはログインについてのみ成り立つ**。接続主体を個人にすると、その人のアカウント停止で Drive / Calendar のトークンも失効し、**退職のたびに全社の外部連携が止まる**。
+
+- 接続に使うアカウントは**共有の運用アカウント**（または Google の service account + domain-wide delegation）とする。
+- `integration_connections.connected_by` は「誰が接続操作をしたか」の**監査用の記録**であり、トークンの帰属を表さない。
+- §26.5 に「接続アカウント自体の失効検知」を追加する。トークン期限とは別に、アカウント停止による失効を検知して通知する。
+
+どのアカウントを使うかは運用の判断のため §28 Q14 で確認する。
+
+#### リフレッシュの single-flight
+
+同じ接続に対して複数の Job が同時にトークンを更新すると、refresh token が二重使用されて失効する（Google は refresh token のローテーションを行う）。
+
+`integration_connections` の該当行を `select ... for update` でロックしてからリフレッシュし、**同時実行を直列化する**。ロック待ちの側は、待ち終わった時点で更新済みのトークンを読み直す。
 
 ### 15.2 何を Drive につなぐか
 
@@ -1826,11 +2051,24 @@ Slack Adapter
 
 **自分の勤務予定を自分で確定できるか**は運用判断。既定は「本人が申請し、`availability.manage` を持つ人が承認」とする。§28 で確認する。
 
-### 17.4 セキュリティ
+### 17.4 セキュリティと重複排除
 
 - リクエスト署名（`X-Slack-Signature`）と timestamp を必ず検証する。5分より古いリクエストは破棄。
 - Slack の `user_id` と `WorkspaceMember` の対応を `external_resource_links` に持つ。**未対応の Slack ユーザーからの操作は受け付けない**（fail closed）。
-- 再送（`X-Slack-Retry-Num`）は `webhook_receipts` で弾く。
+
+**再送の弾き方** — `webhook_receipts.external_event_key` を使う（§6.3）。
+
+| 種類 | `external_event_key` |
+|---|---|
+| Events API | `event_id`（`Ev0XXXXX`） |
+| スラッシュコマンド / インタラクティブ | `trigger_id` |
+
+**`X-Slack-Retry-Num` を重複排除キーに使わない。** これは同一イベントの再送回数（0, 1, 2, …）であってイベントの識別子ではなく、初回配送では 0 かヘッダ自体が無い。これをキーにすると、
+
+1. りりかが `/shift` を実行 → `(slack, conn, 0)` を INSERT、処理される。
+2. 30分後、ゆかりが `/shift` を実行 → `(slack, conn, 0)` が重複キー違反 → §22.4 の手順どおり 200 を返して**処理しない**。
+
+**ゆかりの申請は 200 OK が返り、Slack 上はエラーにならず、`ShiftChangeRequest` は作られず、どこにも記録されない。** 「無音で消えない」（§13.6 / §23.3）という原則が入口で破られる。`X-Slack-Retry-Num` は「これは再送である」というログ用の情報としてのみ使う。
 
 ### 17.5 通知の送信
 
@@ -1963,6 +2201,8 @@ v1 は Rule-based。`recommendations` に `score` / `reason` / 採否結果が�
 
 現行は `rows[].trans` に遷移時刻、`rows[].actor` に最後の操作者しか残らない。**誰が何回戻したかは追えない。** Audit Log で解決する。
 
+**移行前の遷移履歴は復元しない。** `trans{}` は「各状態に最後に入った時刻」であって履歴ではなく（`applyOp` が遷移のたびに上書きする、`:1831`）、実データには時系列として矛盾した行が実在する。これを展開すると**虚偽の監査履歴**を作る。Audit が対象とするのは移行時点以降とし、旧データは raw JSON を `audit_logs` 1件（`action = migration.import`）に保存して参照可能性だけ残す（§24.4）。
+
 ### 19.4 Observability
 
 | 項目 | 内容 |
@@ -1974,6 +2214,8 @@ v1 は Rule-based。`recommendations` に `score` / `reason` / 採否結果が�
 | Audit log | 上記 |
 
 **Integration の失敗は必ず人に見える形にする。** 外部連携が黙って止まっている状態を作らない。
+
+**dead-letter と同期停止の通知だけは Job を経由しない外形監視から出す。** Job Runner が止まったときに「止まった」という通知を Job で送ろうとしても届かない（MEDIUM-7）。
 
 ### 19.5 障害調査
 
@@ -2009,12 +2251,13 @@ v1 は Rule-based。`recommendations` に `score` / `reason` / 採否結果が�
 | CSRF | Cookie セッションのため、状態変更リクエストに CSRF トークンまたは SameSite + Origin 検証 |
 | 入力検証 | API 境界で Schema Validation。未知フィールドは拒否 |
 | Rate limiting | 認証前エンドポイントとwebhook受信に必須。認証後も Workspace 単位で上限 |
+| Identity binding | OIDC `sub`（`users.external_subject`）。**email を識別子として使わない**（§8.2） |
 | Audit | §19 |
 | バックアップ | §26 |
 
 ### 20.2 特に強い監査対象
 
-**Permission 変更と Integration 設定変更**は、通常の Audit に加えて次を行う。
+**Permission 変更・Integration 設定変更・Workflow Template 変更**は、通常の Audit に加えて次を行う。
 
 - 変更時に Workspace の `permission.manage` 保持者全員へ通知する。
 - `before` / `after` を必ず完全に残す。
@@ -2071,7 +2314,7 @@ Application Layer は2種類。
 | | 役割 |
 |---|---|
 | **Command Service** | 状態を変える。認可・検証・Domain 呼び出し・Outbox 書き込みを1トランザクションで行う |
-| **Query Service** | 読み取り専用。画面に合わせた Read Model を返す（§5.5） |
+| **Query Service** | 読み取り専用。画面に合わせた Read Model を返す（§5.5）。**読み取りも必ず明示トランザクションで包み、先頭で `set local app.workspace_id` を発行する**（§6.5）。autocommit で投げると RLS の GUC が未設定になり全画面が0件になる |
 
 ### 21.2 API の形
 
@@ -2145,7 +2388,7 @@ GET  /api/v1/workspaces/:ws/views/clients
 
 ### 22.1 楽観ロック
 
-`tasks` / `content_items` / `workflow_runs` に `version integer` を持つ。
+`content_items` / `workflow_runs` / `daily_notes` に `version integer` を持つ。
 
 ```
 UPDATE ... SET ..., version = version + 1
@@ -2153,7 +2396,17 @@ WHERE id = :id AND workspace_id = :ws AND version = :expectedVersion
 -- 0行なら 409 Conflict
 ```
 
-Frontend は Read Model で受け取った `version` をそのまま送り返す。
+Read Model の1行は ContentItem と Task と WorkflowRun を結合したものなので version が複数含まれる。**どれを送るかは操作ごとに1つに定める。**
+
+| 操作 | 送る version |
+|---|---|
+| 工程を進める / 1段戻す | `workflow_runs.version` |
+| タイトル・URL・メモ・修正指示の編集 | `content_items.version` |
+| 投稿予定日 / 締切の変更 | `content_items.version` |
+| 担当変更 | `content_items.version`（Assignment は行の追加削除で version を持たない） |
+| 日次メモ | `daily_notes.version` |
+
+`tasks` は状態を持たない（§11.1）ため version を持たせない。Task の内容変更は ContentItem 側の編集として扱う。
 
 **現行の `ADVANCING`（`:3583`）は UX として残すが、安全性の根拠にしない**（P3）。UI 側の二度押し防止だけを根拠にしない。
 
@@ -2180,10 +2433,10 @@ Frontend は Read Model で受け取った `version` をそのまま送り返す
 
 ### 22.4 Webhook の重複配送
 
-`webhook_receipts` に `unique(provider, channel_id, message_number)`。Google も Slack も再配送するため、**受信の冪等性は必須**。
+`webhook_receipts` に `unique(provider, connection_id, external_event_key)`。キーの作り方は Adapter の `dedupeKey()` が決める（§6.3 / §15.1）。Google も Slack も再配送するため、**受信の冪等性は必須**。
 
 ```
-受信 -> 署名検証 -> receipts へ INSERT
+受信 -> 署名検証 -> dedupeKey() -> receipts へ INSERT
                     重複キー違反なら 200 を返して終了（処理しない）
                  -> Job 投入
 ```
@@ -2192,7 +2445,9 @@ Frontend は Read Model で受け取った `version` をそのまま送り返す
 
 `jobs.idempotency_key` に `unique(queue, idempotency_key)`。at-least-once 配送のため、**同じ Job が2回走っても結果が1回分になる**ように Action 側でも冪等にする。
 
-例：`create_calendar_event` は `external_resource_links` を先に引き、既に対応付けがあれば作成しない。
+例1：`create_calendar_event` は `external_resource_links` を先に引き、既に対応付けがあれば作成しない。
+
+例2：Workflow Run を作る Action（資料準備 / 企画 / 月次分析）は、`(workspace_id, template_id, subject_type, subject_id, period_key)` をキーとした upsert にする（§11.6）。別の日に走った別の Rule が同じ月の Run を重複作成するのをこれで防ぐ。Job 単位の `idempotency_key` だけでは防げない。
 
 ### 22.6 トランザクション境界
 
@@ -2252,6 +2507,10 @@ COMMIT
 1時間ごと: webhook チャンネルの期限更新、トークン更新
 日次     : date.reached の Automation、Recurrence 展開、dead-letter の確認
 ```
+
+起動時刻は **Workspace の `timezone` 基準**で指定し、実装時に対応する UTC 時刻へ変換する（§6.1 の業務日付）。日次 Job は Workspace tz の 00:05 に相当する時刻で起動する。
+
+UTC で組んだまま業務日付を UTC 暦日で判定すると、**毎月12日の分析期限アラートが JST の13日朝に発火する**。この種のずれは JST 00:00〜09:00 にしか症状が出ないため、日中のテストでは再現しない（§25.1 に固定時刻テストを置く）。
 
 ### 23.3 Queue に求める保証
 
@@ -2325,6 +2584,8 @@ ml-editing-board.html      --コピー-->   ml-editing-board.html
 
 ### 24.2 移行の順序
 
+**Step 2 の最初の作業は、運用中の公開版 artifact から `STATE` を抽出して実測することである。** 本書は移行の数量前提を持たない。ローカル（GitHub 版）の `<script id="state">` は `seeded:true` のサンプルデータ（50行・2026-08のみ・`clients` / `notes` キー不在）だが、**公開版には利用者の実データが入っている可能性があり、両者は state 行だけが異なる**。設計に推定値を書かず、実測で確定させる。
+
 ```
 Step 0  Freeze
         現行 artifact はそのまま運用を続ける。設計・実装フェーズ中は一切触らない。
@@ -2335,20 +2596,26 @@ Step 1  Build
         マスターデータ（Client / ServiceContract / Member / WorkingSchedule /
         WorkflowTemplate / BusinessCalendar）を投入する。
 
-Step 2  Import
-        artifact から STATE JSON を1回抽出し、変換して import する（24.4）。
+Step 2  Extract & Import
+        2-1 公開版 artifact から STATE を抽出し、件数・月・キーの有無を実測する
+        2-2 実測値を Parity の期待値として確定させる
+        2-3 変換して import する（24.3 のスナップショット同期）
 
 Step 3  Read 移行（並行稼働）
         新環境を読み取り専用で公開し、artifact と同じ数字が出ることを確認する。
         artifact は引き続き本番。書き込みは artifact 側のみ。
 
-Step 4  Parity 確認
+Step 4  Parity リハーサル
         24.6 のチェックを全項目通す。差分が出たら Step 2 からやり直す。
+        Parity は §25.7 で自動化されているスクリプトで実行する。
 
-Step 5  Write 移行（カットオーバー）
-        artifact を maintenance にして書き込みを止める。
-        最終の STATE を再抽出して差分 import する。
-        新環境を書き込み可にして、スタッフへ新URLを周知する。
+Step 5  カットオーバー
+        5-1 全員の画面で未同期バナー（`:2255`）が出ていないことを確認する
+        5-2 artifact を maintenance にして書き込みを止める
+        5-3 最終 STATE を再抽出し、スナップショット同期を流す
+        5-4 【必須】Parity を再実行する。
+            1件でも差分があれば artifact の maintenance を解除して撤退する
+        5-5 新環境を書き込み可にして、スタッフへ新URLを周知する
 
 Step 6  参照系として残す
         artifact は読み取り専用のまま一定期間（推奨2週間）残す。
@@ -2360,16 +2627,33 @@ Step 7  Legacy 撤去
 
 **いきなり全機能を切り替えない。** Read が一致してから Write を移す。
 
-### 24.3 STATE の抽出方法
+**Parity は Step 4 と 5-4 の両方で走らせる。** Step 4 で検証するのは Step 2 のスナップショットであり、実際に本番になるのは 5-3 の再抽出データである。5-4 が無いと**本番になるデータが一度も検証されないまま切り替わる**。Parity が自動化されていれば 5-4 は数分で終わる。
 
-検証済みの経路が2つある。
+### 24.3 STATE の抽出と同期
+
+検証済みの抽出経路が2つある。
 
 1. **Claude Code の `Artifact action:"read"`** で公開版 HTML 全文を取得し、`<script id="state" type="application/json">` の1行を取り出す。現在の公開版更新手順と同じ経路。
 2. **`openBackup()`（`:4968`）** — STATE を textarea に出す。現在どこからも呼ばれていないが、サイドバーにボタンを1つ戻せば使える。
 
 Step 2 と Step 5 で使う。抽出した JSON は移行専用リポジトリに保存し、import スクリプトの入力にする。
 
-**import は冪等にする。** `legacy_id` で UPSERT し、何度流しても同じ結果になるようにする。
+#### UPSERT ではなくスナップショット同期にする
+
+**`legacy_id` の UPSERT だけでは削除が反映されない。** artifact 側では行が消える経路が実在する。
+
+- `merge()`（`:5019`）— 翌月生成で「未着手かつ未ロックの行」を置き換えるため、旧行が消えて別 `id` の新行が生まれる
+- 「サンプルを削除」（`:2285`）— 当月の全行を削除する
+
+Step 3〜4 の期間中は artifact が本番なので、これらは普通に起こる。UPSERT だけを流すと**消えた行が新環境に残り続ける**（ゴースト）。ゴーストには Task と Run がぶら下がるため、「今日」画面に存在しない案件が期限超過として出続け、**UI に削除手段が無い**（現行にも無い）。
+
+```
+import = legacy_id をキーとした upsert
+       + 抽出した rows の legacy_id 集合に含まれない content_items を archived_at でマーク
+       + それにぶら下がる tasks も同時に archive
+```
+
+物理削除はしない（§6.1）。**import は冪等**で、何度流しても同じ結果になる。
 
 ### 24.4 Migration Matrix
 
@@ -2385,17 +2669,17 @@ Step 2 と Step 5 で使う。抽出した JSON は移行専用リポジトリ�
 
 | Current | 行 | Target Domain | Target Table | Method | 検証 |
 |---|---|---|---|---|---|
-| `SEED_CONTRACTS[].client` | `:1846` | Client | `clients` | C | 11社が登録され `name` が一致 |
+| `SEED_CONTRACTS[].client` | `:1846` | Client | `clients` | C | 10社が登録され `name` が一致 |
 | `SEED_CONTRACTS[].display` | `:1846` | Client | `clients.display_name` | C | 一覧の略称表示が現行と一致 |
 | `SEED_CONTRACTS[]`（1件＝1契約） | `:1846` | ServiceContract | `service_contracts` | C | 13契約。`legacy_id` = 旧 `id` |
-| `SEED_CONTRACTS[].kind` | `:1846` | ServiceContract | `.kind` | C | 動画9 / 静止画4 |
+| `SEED_CONTRACTS[].kind` | `:1846` | ServiceContract | `.kind` | C | 動画10 / 静止画3 |
 | `SEED_CONTRACTS[].count` | `:1846` | ServiceContract | `.monthly_count` | C | 合計が現行の必要本数と一致 |
 | `SEED_CONTRACTS[].steps` | `:1846` | ServiceContract | `.step_count` + `.lead_time_business_days` | C | steps=4 -> 7営業日 / steps=2 -> 3営業日 |
 | `SEED_CONTRACTS[].poster` | `:1846` | ServiceContract | `.default_publisher_member_id` | C | なつみ9件 / りりか4件 |
 | `MEMBERS[].name` | `:1864` | WorkspaceMember | `workspace_members.display_name` | C | 6名 |
 | `MEMBERS[].role` | `:1864` | Role / MemberRole | `roles` + `member_roles` | C | 社員3名 -> `internal`、スタッフ3名 -> `editor`（§9.2） |
 | `MEMBERS[].title`（社長） | `:1864` | WorkspaceMember | 表示補助 | C | **権限判定に使わない**ことを確認 |
-| `STAFF_MAP` | `:1861` | — | — | E | 名前→ローマ字の対応表。移行後は `workspace_member_id` で直接ひもづくため不要 |
+| `STAFF_MAP` | `:1861` | Role / MemberRole | `roles` + `member_roles` | **C** | **キー集合の移行先は `editor` Role の保持者。** ローマ字値だけを破棄する。`Object.keys()` は18箇所で「編集担当になれる人」の定義として使われており、担当セレクトの選択肢・チーム負荷の対象・`myTasks()` の絞り込み・カレンダーの営業日軸・`generate()` の caps がすべてこれで決まる。`editor` Role 保持者がちょうど3名（りりか / ゆかり / つかさ）になる構成にすれば挙動が一致する |
 | `SEED_SHIFTS`（2026-08） | `:1868` | WorkingSchedule | `working_schedules` | A | 月の合計勤務時間が `capacityOf()` と一致 |
 | `SHIFT_UNMATCHED`（7名） | `:1873` | — | — | E | 編集スタッフ以外の除外リスト。移行後は `workspace_members` に存在しないだけで足りる。**ただし移行時に「この7名を本当に登録しないでよいか」を人が確認する** |
 | `SNAP.contracts` / `.shifts` | `:1874` | — | — | E | Notion からの取得日。マスターが DB に載るため鮮度警告そのものが不要になる |
@@ -2424,7 +2708,7 @@ Step 2 と Step 5 で使う。抽出した JSON は移行専用リポジトリ�
 | `rows[].planned` | ScheduleEntry / ContentItem | `schedule_entries(kind=publish_planned)` + `.publish_date` | A | 日別件数が一致 |
 | `rows[].due` | Task | `tasks.due_at` | A | 全件一致 |
 | `rows[].postedAt` | ContentItem | `.published_at` | A | 投稿済みの件数と日付が一致 |
-| `rows[].trans{}` | WorkflowRun | `workflow_run_transitions` | D | 遷移時刻を履歴行に展開。**actor は不明として `null`**（現行に情報がない） |
+| `rows[].trans{}` | — | — | **E** | **展開しない。** 「各状態に最後に入った時刻」であって履歴ではない（`applyOp:1831` が遷移のたびに上書きする）。実測では投稿済み38件に対し投稿待ちの記録は6件しかなく、両方を持つ3行のうち2行で「投稿済み < 投稿待ち」と時系列が逆転している。展開すると虚偽の監査履歴になる。raw JSON を `audit_logs` 1件（`action = migration.import`）へ保存し、参照可能性だけ残す |
 | `rows[].actor` | AuditLog | `audit_logs`（移行イベント1件） | A | 最後の操作者として記録 |
 | `rows[].dateLocked` | ContentItem | `.date_locked` | A | true の件数が一致 |
 | `rows[].squeezed` | ContentItem | `.schedule_squeezed` | A | true の件数が一致 |
@@ -2432,18 +2716,22 @@ Step 2 と Step 5 で使う。抽出した JSON は移行専用リポジトリ�
 | `rows[].note` | ContentItem | `.notes` | A | 全件一致 |
 | `rows[].revisionNote` | ContentItem | `.revision_note` | A | 全件一致 |
 | `rows[].updatedAt{}` | — | — | E | フィールド別 last-write-wins のタイムスタンプ。`version` + `audit_logs` に置換されるため不要 |
-| `clients[].material` | Asset / ExternalResourceLink | `assets(role=material)` + `external_resource_links` | A | URL が一致。folder_id は初回同期で埋める |
-| `clients[].review` | Asset / ExternalResourceLink | `assets(role=review)` | A | 同上 |
-| `clients[].nextShootDate` | ScheduleEntry | `schedule_entries(kind=shoot)` | A | 設定済みの件数が一致 |
-| `clients[].planningDeadline` | ScheduleEntry | `schedule_entries(kind=planning_due)` | A | 同上 |
-| `clients[].planningStatus` | WorkflowRun | `workflow_runs`（企画 Template） | D | 4状態の件数が一致 |
-| `clients[].nextRegularMeeting` | ScheduleEntry | `schedule_entries(kind=client_meeting)` | A | 同上 |
-| `clients[].materialStatus` | WorkflowRun | `workflow_runs`（資料準備 Template） | D | 4状態の件数が一致。**当月の Run として作る** |
+| `clients[].material` | Asset / ExternalResourceLink | `assets(role=material)` + `external_resource_links` | A+B | URL が一致。folder_id は初回同期で埋める |
+| `clients[].review` | Asset / ExternalResourceLink | `assets(role=review)` | A+B | 同上 |
+| `clients[].nextShootDate` | ScheduleEntry | `schedule_entries(kind=shoot)` | A+B | 設定済みの件数が一致 |
+| `clients[].planningDeadline` | ScheduleEntry | `schedule_entries(kind=planning_due)` | A+B | 同上 |
+| `clients[].planningStatus` | WorkflowRun | `workflow_runs`（企画 Template） | D+B | 4状態の件数が一致 |
+| `clients[].nextRegularMeeting` | ScheduleEntry | `schedule_entries(kind=client_meeting)` | A+B | 同上 |
+| `clients[].materialStatus` | WorkflowRun | `workflow_runs`（資料準備 Template） | D+B | 4状態の件数が一致。**`period_key` = 移行実施月の Run として作る** |
 | `clients[].updatedAt{}` | — | — | E | 上と同じ理由 |
-| `notes{}`（日付 -> テキスト） | — | `schedule_entries` ではなく専用の日次メモ | A | 件数と本文が一致。**移行先は Workspace 単位の `daily_notes`**（§24.5） |
+| `notes{}`（日付 -> テキスト） | — | `schedule_entries` ではなく専用の日次メモ | A+B | 件数と本文が一致。**移行先は Workspace 単位の `daily_notes`**（§24.5） |
 | `seeded` | — | — | E | サンプルデータのフラグ。移行時は実データのみ |
 | `maintenance` | Workspace 設定 | `workspaces.settings.maintenance` | A | |
 | `lastUpdated` | — | — | E | `updated_at` が置き換える |
+
+**`clients` / `notes` はキーごと存在しないことがある。** `migrateState()`（`:1933-1935`）は両キーを空オブジェクトとして作るため、不在は異常ではなく正常な初期状態である。ローカル（GitHub 版）の state では実際に両キーとも存在しない。したがって Method A（JSON抽出→変換import）の各行は **「キー不在なら0件移行として正常終了」** とし、エラーにしない。
+
+Drive URL・撮影日・企画ステータス・資料準備状況・定例MTG・日次メモは、公開版に実データが無ければ **Method B（手入力で初期投入）が主経路**になる。A は「あれば取り込む」補助として扱う。どちらになるかは Step 2-1 の実測で決まる。
 | `version` | — | — | E | STATE スキーマ版。DB migration が置き換える |
 
 #### `localStorage`
@@ -2451,18 +2739,20 @@ Step 2 と Step 5 で使う。抽出した JSON は移行専用リポジトリ�
 | Current | Method | 理由 |
 |---|---|---|
 | `mlboard.me` | E | 自己申告の本人。実認証（§8.2）に置き換わる |
-| `mlboard.ops.v1` | E | 未同期キュー。**カットオーバー前に必ず0件にする**（残っていたら artifact 側で再送してから移行） |
+| `mlboard.ops.v1` | E | 未同期キュー。**カットオーバー前に必ず0件にする**。端末ローカルなのでサーバーからは確認できない。全員に自分の画面を開いてもらい、「未同期 N件」バナー（`blockers()` `:2255`）が出ていないことを確認する（Step 5-1） |
 | `mlboard.draft.*` | E | 入力途中の下書き。端末ローカルのまま新環境でも継続して使う（新規に作られる） |
 
 ### 24.5 未定義だった移行先
 
 現行 `STATE.notes`（今日のメモ、`:1934`）に対応する Domain が Core にない。日付単位の自由記述で、Task にも Schedule にも属さない。
 
-**`daily_notes` テーブルを Core に追加する。** `id / workspace_id / date / body / updated_by / version`。Workspace 単位で1日1件。個人メモではなく共有メモである点を現行仕様（§19）から引き継ぐ。
+**`daily_notes` テーブルを Core に追加する。** `id / workspace_id / date / body / updated_by / version`。Workspace 単位で1日1件なので **`unique(workspace_id, date)`** を張る（無いと同じ日のメモが複数行でき、現行の共有メモの挙動が壊れる）。個人メモではなく共有メモである点を現行仕様（§19）から引き継ぐ。
 
 ### 24.6 Parity 確認
 
-Step 4 で全項目を通す。**1件でも差分があれば Write 移行に進まない。**
+Step 4（リハーサル）と Step 5-4（カットオーバー当日）の両方で全項目を通す。**1件でも差分があれば先へ進まない。**
+
+**期待値は Step 2-1 の実測で確定させる。** 以下は「何を比べるか」であって、数量そのものは本書に書かない。
 
 #### 件数の一致
 
@@ -2471,10 +2761,11 @@ Step 4 で全項目を通す。**1件でも差分があれば Write 移行に進
 | `content_items` の件数 | `STATE.rows` と一致 |
 | 月別の件数 | 月ごとに一致 |
 | ステータス別の件数 | 6状態それぞれ一致 |
-| クライアント別の件数 | 11社それぞれ一致 |
+| クライアント別の件数 | 10社それぞれ一致 |
 | 投稿済みの件数と `published_at` | 一致 |
 | 担当（editor）別の件数 | 一致 |
-| Drive URL が設定済みのクライアント数 | 一致 |
+| Drive URL が設定済みのクライアント数 | 一致（`clients` キー不在なら0件で一致） |
+| archive された `content_items` | 抽出した `rows` に含まれない行だけが archive されている（§24.3） |
 
 #### 計算結果の一致
 
@@ -2484,17 +2775,19 @@ Step 4 で全項目を通す。**1件でも差分があれば Write 移行に進
 |---|---|
 | `summary()` の各値 | ホーム画面のKPIを数値比較 |
 | `judge()` の level | クライアント別に ok / warn / late が一致 |
-| `loadOf()` の score / band | メンバー6名すべて一致 |
-| `capacityOf()` の cap | メンバー6名すべて一致 |
+| `loadOf()` の score / band | **`editor` Role 保持者3名（りりか / ゆかり / つかさ）で一致**。現行 `:4156` は `Object.keys(STAFF_MAP)` の3名しか計算していないため、6名分の期待値は存在しない |
+| `capacityOf()` の cap | 同じ3名で一致 |
 | `bizDays()` | 2026-08 から2027-12まで月ごとに営業日数が一致 |
-| `generate()` | 同じ入力で同じ配置になる（`phaseOf` の決定性を確認） |
+| `generate()` | 同じ入力で同じ配置になる。位相の鍵は互換モード（`clients.legacy_key`）を使う（§12.4） |
 | `todayBuckets()` | over / now / nodate / done の件数が一致 |
 
 #### 画面の一致
 
-Visual Regression（§25.6）。**Desktop 1448 / Tablet 834 / Mobile 375 で、現行 artifact と新環境のスクリーンショットを比較する。**
+**artifact と新環境でスクリーンショットの画素差0 は要求しない。** オリジンもフォント解決も異なるため原理的に達成できない。ここで比べるのは上の数値 Parity と、DOM 実測（要素数・テキスト・主要ボックスの寸法）である。
 
-同一データ・同一日付で撮る必要があるため、新環境の「今日」をテスト用に固定できるようにしておく（`TODAY` の注入。現行 `:5180` の `fromUTC(Date.now() + 9h)` を設定可能にする）。
+画素差0 を要求するのは **新環境の変更前後**（§25.6 の Visual Regression）。基準を混同しない。
+
+同一データ・同一日付で比較するため、新環境の「今日」をテスト用に固定できるようにしておく（`TODAY` の注入。現行 `:5180` の `fromUTC(Date.now() + 9h)` を設定可能にする）。**注入するのは Workspace timezone における暦日**（§6.1）。ここが揃わないと現行と新環境で「今日」が1日ずれる。
 
 ### 24.7 Rollback
 
@@ -2536,10 +2829,11 @@ Visual Regression（§25.6）。**Desktop 1448 / Tablet 834 / Mobile 375 で、�
 Domain Rules。外部依存なしで動く層。
 
 - 営業日・祝日計算（`isBiz` / `bizDays` / `subBiz` / `addBiz`）
-- 生成ロジック（`generate` / `distribute` / `interleave` / `phaseOf` / `nearestWorking`）
+- 生成ロジック（`generate` / `distribute` / `interleave` / `phaseOf` / `nearestWorking`）。**1クライアントに同種2契約があるケースを必ず含める**（§12.4）
 - リードタイム逆算と `schedule_squeezed` の判定
 - Capacity と負荷スコア
 - Workflow の遷移可否判定
+- **`businessToday()`** — JST 00:00〜09:00 に相当する UTC 時刻での固定時刻テスト。この時間帯にしか症状が出ないため必須（§6.1 / HIGH-13）
 
 **現行 JS の出力を期待値として使う。** 移行前に現行実装で入出力のペアを吐き出し、それを固定テストにする。これで「移行して挙動が変わった」を検出できる。
 
@@ -2548,21 +2842,27 @@ Domain Rules。外部依存なしで動く層。
 実 PostgreSQL で検証する。SQLite やモックで代替しない。
 
 - 複合外部キーが Workspace をまたぐ参照を拒否すること
-- RLS が有効な接続で他 Workspace の行が見えないこと
+- **別 Workspace の Role を Member に付与する INSERT が拒否されること**（BLOCKER-1）
+- **RLS を、本番と同じプーラ構成を通して検証すること。** リクエスト A の直後にリクエスト B を同一物理接続で実行し、B が A の `workspace_id` を継承しないこと。**直接接続でのテストはこの不具合を一切検出しない**（BLOCKER-2）
+- アプリ用ロール（非所有者）で他 Workspace の行が見えないこと。`force row level security` が効いていること
 - `version` 不一致の UPDATE が0行になること
 - `unique(queue, idempotency_key)` が重複を弾くこと
+- `unique(workspace_id, template_id, subject_type, subject_id, period_key)` が同月の Run 重複を弾くこと
+- 主要 Query（§5.5）の `EXPLAIN` が Seq Scan にならないこと
 
 ### 25.3 Permission Test（最重要）
 
 **Role × Capability × Resource の Matrix Test。**
 
-§9.2 の表を機械可読な形で持ち、全組み合わせについて「許可されるべき操作が通る」「許可されないべき操作が 403 になる」を検証する。表を変えたらテストも自動で変わる形にする。
+§9.2 の表を機械可読な形で持ち、全組み合わせについて「許可されるべき操作が通る」「許可されないべき操作が 403 になる」を検証する。表を変えたらテストも自動で変わる形にする。**入力は §9.3 の分岐全列挙表**。
 
 加えて：
 
 - Workspace 外のリソースへのアクセスが 404 になること（403 ではない。存在を漏らさない）
 - 権限昇格（自分の Role 変更、持っていない Capability の付与）が拒否されること
 - 最後の `permission.manage` 保持者の降格が拒否されること
+- **同じ email・異なる `sub` でのログインが既存 User に入れないこと**（BLOCKER-3）
+- `content.review.internal` を持たない Member の「今日」画面に、Drive未設定・タイトル未入力が出ないこと
 
 ### 25.4 Workflow Test
 
@@ -2570,12 +2870,16 @@ Domain Rules。外部依存なしで動く層。
 - 許可されない Transition が拒否されること（未着手 -> 投稿済み など）
 - `from_state` 不一致が 409 になること
 - 使用中の State の archive が拒否されること
+- 履歴がある State の `semantic` / `is_initial` / `is_terminal` の変更が拒否されること（§11.5 規則4）
+- Transition の物理削除が拒否され、archive になること（規則2）
+- Template を切り替えても進行中の Task の参照が変わらないこと（規則7）
 
 ### 25.5 Idempotency / Webhook Replay
 
 - 同じ `Idempotency-Key` で2回送って、結果が1回分であること
 - 翌月生成を2回実行して、行が二重にならないこと
 - Google / Slack の webhook を同じ内容で2回送って、1回しか処理されないこと
+- **異なる2つの Slack イベントが同じチャンネルから来ても両方処理されること**（HIGH-9。「同じ内容で2回」のテストだけではこの不具合を検出できない）
 - Job を強制的に2回実行して、外部リソースが二重作成されないこと
 
 ### 25.6 E2E / Visual Regression
@@ -2587,7 +2891,7 @@ Domain Rules。外部依存なしで動く層。
 | 対象画面 | 現行6画面 + 追加される管理画面 |
 | viewport | Desktop 1448 / Tablet 834 / Mobile 375 |
 | 手法 | 実寸スクリーンショット + DOM 実測 |
-| 判定 | **変更前後を同一幅で撮って画素差0** |
+| 判定 | **新環境の変更前後を同一幅で撮って画素差0**。artifact との比較には適用しない（§24.6） |
 | 制約 | headless は幅500px未満不可。375px 検証は iframe 経由 |
 
 **Backend 化を理由に現在の UI を変えない。** 意図しない差分は Regression として扱う。
@@ -2627,6 +2931,8 @@ E2E は Playwright。ログイン、工程の進行、動画追加、翌月生�
 | Static | `ml-editing-board.html` を API と同一オリジンから配信 |
 | Jobs | スケジュール起動（cron トリガー）で `jobs` をドレイン |
 | Secrets | ホスティング環境の Secret Manager |
+| 接続プーリング | **採用するモード（session / transaction）を決定事項として明記する**。transaction pooling を使う場合は §6.5 の RLS 運用規約（`set local` のみ、全アクセスを明示トランザクション化）が必須になる |
+| DB ロール | migration 用（所有者）とアプリ用（非所有者・`bypassrls` なし）を分ける（§6.5） |
 
 **特定クラウドへの依存は Integration Adapter 層に閉じる。** Domain とApplication Layer はホスティング先を知らない。
 
@@ -2662,6 +2968,7 @@ DB migration は expand / contract（§6.6）。`production` への migration �
 | Job の dead-letter 件数 | **1件でも発生したら通知** |
 | Integration の最終同期時刻 | 24時間以上更新がなければ通知 |
 | OAuth トークンの期限 | 期限7日前に通知 |
+| **接続アカウント自体の失効** | トークン期限とは別に、アカウント停止による失効を検知して通知する（§15.1） |
 | webhook チャンネルの期限 | 期限前に自動更新。失敗したら通知 |
 | `business_calendar` の残日数 | 90日を切ったら通知（§13.5） |
 
@@ -2802,6 +3109,8 @@ Security review、Permission matrix test、rate limit、retry、dead-letter、ba
 | Q10 | **シフト表にいた「編集スタッフ以外の7名」**（`SHIFT_UNMATCHED`）を登録するか | §24.4 | 登録しない（現行と同じ扱い）。必要なら後から追加 | 移行時にデータが欠ける可能性 |
 | Q11 | **月額のかかるサービス構成**と概算費用 | §26.1 | 構成候補と金額を Phase 2 着手前に提示する | 予算の合意が取れない |
 | Q12 | **Phase の優先順位**。「新しいクライアントを画面から追加できる」（Phase 5）を早めるか | §27 | 順序どおり（土台なしに Phase 5 だけ前倒しはできない） | — |
+| Q13 | **移行時にスタッフの「動画追加」「担当変更」「投稿予定日の変更」を現行どおり全員可のままにするか** | §9.3 | 現行どおり全員可。移行で挙動を変えない | Phase 3 の Permission Test が書けない |
+| Q14 | **Google Drive / Calendar の接続に使うアカウント**。個人アカウントだと退職時に全社の連携が止まる | §15.1 | 共有の運用アカウント（または service account） | Phase 7 で接続主体が決まらない |
 
 ### 28.2 技術リスク
 
@@ -2809,7 +3118,7 @@ Security review、Permission matrix test、rate limit、retry、dead-letter、ba
 |---|---|---|---|
 | R1 | **CSP によるホスティング移行**。UI ごと新オリジンへ移す必要があり、運用URLが変わる | 全スタッフのブックマーク変更が必要 | §24.2 の段階移行。旧URLを2週間残す |
 | R2 | **移行時のデータ欠落** | 過去の進捗が失われる | §24.4 の Matrix を1行ずつ検証。§24.6 の Parity で件数・計算結果・画面を全一致させてから切り替え |
-| R3 | **`trans` の操作者が復元できない** | 移行前の「誰が承認したか」は追えない | 現行データに情報がないため復元不能。移行時点以降のみ Audit で追える。**これは受け入れる** |
+| R3 | **`trans` の遷移履歴が復元できない** | 移行前の「誰が承認したか」は追えない | `trans{}` は各状態の最終時刻であり履歴ではなく、実データに時系列の逆転が実在する。展開すれば虚偽の監査履歴になるため展開しない（§24.4）。raw JSON だけ `audit_logs` に残す。**これは受け入れる** |
 | R4 | **祝日・営業日データの保守** | 登録が止まると営業日判定が土日のみに劣化する | `business_calendar` の残日数を監視し90日前に通知（§13.5）。担当を運用で決める |
 | R5 | **Serverless + cron の Job 遅延** | 通知が最大1分程度遅れる | 即時性が要る処理を Job に載せない（§23.5）。遅延の上限を明示 |
 | R6 | **Google API のレート制限・quota** | 同期が止まる | retry + backoff。24時間同期がなければ通知（§26.5） |
@@ -2859,7 +3168,7 @@ Security review、Permission matrix test、rate limit、retry、dead-letter、ba
 ### ADR-002 Modular Monolith から始める
 
 - **決定** — 1つのアプリケーション内部を Domain Module に分離する。Microservices にしない。
-- **理由** — 6人・11社の規模で分割は運用負荷だけ増える。Module 境界を守れば後で切り出せる。
+- **理由** — 6人・10社の規模で分割は運用負荷だけ増える。Module 境界を守れば後で切り出せる。
 - **結果** — 境界を守る規律が必要（§4.2 の禁止事項）。
 - **変更容易度** — 多少大変。
 - **参照** — §3, §4
@@ -2878,9 +3187,9 @@ Security review、Permission matrix test、rate limit、retry、dead-letter、ba
 
 ### ADR-004 Google アカウントによる認証
 
-- **決定** — Google Workspace の OIDC ログイン。招待制（`WorkspaceMember` がなければ入れない）。
+- **決定** — Google Workspace の OIDC ログイン。招待制（`WorkspaceMember` がなければ入れない）。**同定は OIDC の `sub`（`users.external_subject`）で行い、email を識別子に使わない。**
 - **理由** — 全員が既に持っている。Drive / Calendar の OAuth と同じ同意フローに乗る。退職時に一元的に閉じられる。
-- **結果** — Google アカウントを持たない人は招待できない。
+- **結果** — Google アカウントを持たない人は招待できない。「退職時にアカウントを止めれば全部閉じる」はログインにだけ成り立ち、Integration の接続主体は個人にしない（§15.1）。
 - **変更容易度** — 多少大変。
 - **参照** — §8.2
 
@@ -3026,7 +3335,7 @@ Security review、Permission matrix test、rate limit、retry、dead-letter、ba
 
 - **決定** — Phase 2 で RLS を有効化する。後付けにしない。
 - **理由** — 後から入れると既存クエリ全部の再検証が要る。Workspace 分離はアプリのバグでも破られてはいけない。
-- **結果** — 開発時にセッション変数の設定が必要になる。
+- **結果** — 有効化だけでは機能しない。所有者ロールとアプリロールの分離、`force row level security`、`set local` のみの使用、読み取りを含む全アクセスの明示トランザクション化が必須（§6.5 RLS 運用規約）。テストは本番と同じプーラ構成を通す。
 - **変更容易度** — 非常に大変（後付けの場合）。
 - **参照** — §6.5
 
@@ -3042,6 +3351,46 @@ Security review、Permission matrix test、rate limit、retry、dead-letter、ba
 
 > **■ オーナー向け** 今のシステムを止めずに移します。数字が全部一致することを確認してから切り替えるので、データが失われる心配がありません。**判断が必要：切り替え日時（Q8）。**
 
+
+### ADR-021 権限テーブルにも Workspace 境界のスキーマ防御を張る
+
+- **文脈** — §6.1 は複合外部キーを規約として宣言していたが、実際に `unique(id, workspace_id)` を持つのは2テーブルだけで、`member_roles` / `role_capabilities` には `workspace_id` 列すら無かった。
+- **決定** — 全テーブルに `unique(id, workspace_id)` を張り、権限テーブルを含むすべての親子参照を複合外部キーにする。例外は `users` と `webhook_receipts` の2つだけ。
+- **理由** — 権限テーブルが一重防御だと、アプリ層の1行のバグが即座に権限昇格になる。
+- **変更容易度** — 非常に大変（後付けは全外部キーの張り直し）。
+- **参照** — §6.1 / §6.5
+
+> **■ オーナー向け** 「別の部署の管理者権限を、うっかり別の人に付けてしまう」ことをデータベース側でも防ぎます。プログラムにミスがあっても起きません。判断不要。
+
+### ADR-022 業務日付は Workspace のタイムゾーンの暦日とする
+
+- **決定** — 日付列と「今日」の判定はすべて Workspace `timezone` の暦日。Domain から `new Date()` を直接呼ばず `businessToday()` を通す。
+- **理由** — 現行は JST 固定（`:5180`）だが、Serverless と cron は UTC で動く。規約が無いと毎月12日の期限アラートが13日に飛び、締切が1営業日ずれる。
+- **結果** — JST 00:00〜09:00 の固定時刻テストが必須。
+- **変更容易度** — 多少大変（後から直すと日付が絡む全テストの期待値を見直す）。
+- **参照** — §6.1 / §23.2 / §25.1
+
+> **■ オーナー向け** 「今日」が何日を指すかを日本時間で統一します。これを決めておかないと、毎月12日の期限のお知らせが13日に届くといったズレが起きます。判断不要。
+
+### ADR-023 Automation の条件は登録済み述語 + パラメータにする
+
+- **決定** — 汎用の条件式 DSL を作らない。`predicates` は登録済み述語とパラメータの配列で AND 結合。OR が要る場合は Rule を分ける。
+- **理由** — 既知9ルールのために式評価器・パス解決・演算子テーブルを自作するのは過剰（P5）。日数がデータであれば P4 は満たせる。
+- **結果** — 述語の追加は関数1本。式のネストはできない。
+- **変更容易度** — 簡単。
+- **参照** — §13.3
+
+> **■ オーナー向け** 「14日前に通知」の日数は画面から変えられますが、複雑な条件式を組み立てる機能までは作りません。実際に必要な9個の通知に対して作りすぎになるためです。判断不要。
+
+### ADR-024 移行は UPSERT ではなくスナップショット同期にする
+
+- **決定** — `legacy_id` の upsert に加え、抽出データに含まれない行を archive する。Parity をカットオーバー当日（Step 5-4）にも再実行し、差分があれば撤退する。
+- **理由** — artifact 側には行が消える経路（`merge()` / サンプル削除）があり、UPSERT だけではゴーストが残る。ゴーストは「今日」画面に期限超過として出続け、UI に削除手段が無い。
+- **変更容易度** — 簡単（import スクリプトに数行）。
+- **参照** — §24.2 / §24.3
+
+> **■ オーナー向け** 移行のときに「もう消したはずの案件」が新しい方に残らないようにします。切り替え当日にもう一度データの一致を確認し、合わなければ切り替えを中止して元に戻します。**判断が必要：切り替え日時（Q8）。**
+
 ---
 
 ## 変更履歴
@@ -3049,3 +3398,4 @@ Security review、Permission matrix test、rate limit、retry、dead-letter、ba
 | 日付 | 版 | 内容 |
 |---|---|---|
 | 2026-08-29 | v1 draft | 初版。Senior Engineer Review 前 |
+| 2026-08-29 | **v2** | 第1回 Senior Review（BLOCKER 3 / HIGH 13 / MEDIUM 10 / LATER 4）を反映。権限テーブルの Workspace 境界、RLS 運用規約、OIDC `sub` による同定、`STAFF_MAP` の移行先（`editor` Role）、`period_key`、`external_event_key`、業務日付のタイムゾーン、スナップショット同期。事実訂正：10社・動画10／静止画3 |
