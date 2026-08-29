@@ -1271,6 +1271,8 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
     color:var(--text-muted);font-size:10.5px;font-weight:600;border-radius:10px;min-width:0}
   .bottomnav button span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .bottomnav button[aria-current="page"]{color:var(--brand-blue)}
+  /* 5枠外の画面ではハンバーガーが現在地。ボトムナビの選択中と同じ配色を使う（§MUST3） */
+  .mhead .iconbtn.mh[aria-current="page"]{color:var(--brand-blue);background:var(--surface-blue-soft)}
   /* モーダルはほぼ全幅 */
   .modal{max-width:calc(100vw - 28px)}
   .mstep .ms{font-size:9.5px}
@@ -1857,8 +1859,10 @@ var SEED_CONTRACTS = [
  {id:"nano-v",  client:"なの花交通バス",         display:"なの花",   kind:"動画",  count:4, steps:2, poster:"りりか"}
 ];
 var STAFF_MAP = {"りりか":"Ririka","ゆかり":"Yukari","つかさ":"Tukasa"};
+/* title は表示名だけの肩書き。権限判定は role のみを見る（myRole）ので、
+   肩書きを足しても見える画面は変わらない */
 var MEMBERS = [
- {name:"なつみ", role:"社員"},{name:"友美", role:"社員"},{name:"翔平", role:"社員"},
+ {name:"なつみ", role:"社員"},{name:"友美", role:"社員"},{name:"翔平", role:"社員", title:"社長"},
  {name:"りりか", role:"スタッフ"},{name:"ゆかり", role:"スタッフ"},{name:"つかさ", role:"スタッフ"}
 ];
 var SEED_SHIFTS = {"2026-08":{
@@ -1872,7 +1876,9 @@ var SNAP = {contracts:"2026-08-26", shifts:"2026-08-26"};
 /* =====================================================================
    Layer B — アダプタ（保存・外部取得）。フェーズ3ではここだけ差し替える
    ===================================================================== */
-var STATE = null, ME = null, ARTIFACT = null, CAN_WRITE = true;
+/* READY：boot の初期化が終わったか。claude.use("artifact") の解決を待たずに書くと
+   persist() が "nocap" を返して保存されないまま未同期キューに残るため、確定するまで書かせない */
+var STATE = null, ME = null, ARTIFACT = null, CAN_WRITE = true, READY = false;
 var PENDING = {conflict:0, expired:0, stale:0};
 var LAST_TOAST = null;
 
@@ -2155,7 +2161,13 @@ function shortName(c){ return (c.display||c.client||"？").slice(0,2); }
 /* ---------------------------------------------------------------
    セレクタ
    --------------------------------------------------------------- */
-function myRole(){ var m=MEMBERS.filter(function(x){return x.name===ME})[0]; return m?m.role:"社員"; }
+function memberOf(name){ return MEMBERS.filter(function(x){return x.name===name})[0] || null; }
+/* 本人が確定していない間は権限を与えない（fail closed）。
+   既知メンバー以外は role なし＝社員限定UIにも書き込みにも入れない */
+function myRole(){ var m=memberOf(ME); return m ? m.role : null; }
+function identified(){ return myRole()!==null; }
+/* 画面に出す肩書き。権限は role で判定するため、ここは表示専用 */
+function roleLabel(name){ var m=memberOf(name); return m ? (m.title||m.role) : "未確認"; }
 /* ナビ（§3）。共通5画面＋社員のみクライアント管理。
    進行トラックは動画一覧へ統合済み・投稿待ちはホームのKPIと動画一覧の絞り込みで代替（§0.9） */
 function visibleViews(){
@@ -2165,6 +2177,11 @@ function visibleViews(){
   return vs;
 }
 function hasView(k){ return visibleViews().some(function(v){ return v[0]===k; }); }
+/* ナビは「主要5枠＋その他」。ここに載らない画面（クライアント管理、今後の
+   Workspace / Workflow / Permission 等）はドロワー側に入り、
+   ハンバーガーが現在地になる。画面を足すときはこの表だけ見ればよい（§MUST3） */
+var BOTTOM_NAV_VIEWS = {home:1, today:1, list:1, load:1, calendar:1};
+function inBottomNav(v){ return !!BOTTOM_NAV_VIEWS[v]; }
 function contractsOf(){ return SEED_CONTRACTS; }
 function contractById(id){ return SEED_CONTRACTS.filter(function(c){return c.id===id})[0]; }
 function rowsOfMonth(){ return STATE.rows.filter(function(r){ return r.month===MONTH; }); }
@@ -2174,7 +2191,8 @@ function monthList(){
   return Object.keys(s).sort();
 }
 function isPast(){ return MONTH < monthOf(TODAY); }
-function writable(){ return CAN_WRITE && !STATE.maintenance && !isPast(); }
+/* 書き込み可否。初期化が終わり、本人が確定していることを前提にする（§MUST2・§MUST4） */
+function writable(){ return READY && identified() && CAN_WRITE && !STATE.maintenance && !isPast(); }
 function daysSince(d){ return Math.floor((toUTC(TODAY)-toUTC(d))/86400000); }
 function narrow(){ try{ return window.matchMedia("(max-width:1279px)").matches; }catch(e){ return false; } }
 /* モバイル（§35.1：0–767px）。PCの縮小ではなく専用レイアウトに切り替える */
@@ -2367,7 +2385,12 @@ function Sidebar(){
 function MobileHeader(){
   var box=h("div");
   var top=h("div",{class:"mhead"});
-  top.appendChild(h("button",{class:"iconbtn mh","aria-label":"メニューを開く",
+  /* ボトムナビ5枠の外にいるときは、ハンバーガーが現在地を示す（§MUST3）。
+     どの画面にいるかは読み上げにも出したいので aria-label にも入れる */
+  var offNav = !inBottomNav(VIEW);
+  var curName = (visibleViews().filter(function(v){ return v[0]===VIEW; })[0]||[])[1];
+  top.appendChild(h("button",{class:"iconbtn mh","aria-current":offNav?"page":null,
+    "aria-label":offNav&&curName ? "メニューを開く（現在のページ："+curName+"）" : "メニューを開く",
     onclick:function(){ MNAV=true; render(); }},[ic("menu",22)]));
   /* ワードマーク画像は白抜きで白地に置けないため、ここだけテキストで組む（指示書 §4.1・§5.1） */
   top.appendChild(h("div",{class:"mlogo"},[sbMark(28), h("span",{class:"mword",text:"SOCIAL BASE"})]));
@@ -2427,7 +2450,7 @@ function BottomNav(){
   var bn=h("nav",{class:"bottomnav","aria-label":"主要ページ"});
   /* 指示書 §9：ホーム／今日／動画一覧／チーム負荷／カレンダー */
   var SHORT={"投稿カレンダー":"カレンダー"};
-  visibleViews().filter(function(v){ return v[0]!=="client"; }).forEach(function(v){
+  visibleViews().filter(function(v){ return inBottomNav(v[0]); }).forEach(function(v){
     bn.appendChild(h("button",{"aria-current":VIEW===v[0]?"page":null,
       onclick:function(){ if(VIEW!==v[0]) SELECTED=null; VIEW=v[0]; POP=false; DRAWER=false; MNAV=false; render(); }},
       [ic(v[2],20), h("span",{text:SHORT[v[1]]||v[1]})]));
@@ -2471,7 +2494,7 @@ function Header(){
   av.style.background=tileBg(ME||"?");
   tb.appendChild(h("button",{class:"usercard","aria-label":"利用者を切り替える",onclick:openWho},[
     av,
-    h("div",{class:"un"},[h("b",{text:ME||"未選択"}), h("span",{text:myRole()})]),
+    h("div",{class:"un"},[h("b",{text:ME||"未選択"}), h("span",{text:roleLabel(ME)})]),
     ic("chevronDown",14)]));
   top.appendChild(tb);
   box.appendChild(top);
@@ -3552,14 +3575,24 @@ function todayKpiStrip(b, rv){
 /* CTAを押した行に一手間だけ動きを付けてから工程を進める（§10.6）。
    render() が DOM を作り直すので、アニメが終わってから advance する。
    動きを止めている環境（prefers-reduced-motion）では待たずに進める */
+/* 完了アニメーション中は行のボタンが生きたままなので、連打すると
+   工程が二段・三段と進んでしまう（承認を飛ばして投稿済みになる）。
+   行ID単位で実行中を持ち、アニメーションが終わるまで再実行を拒否する（§MUST1）。
+   1操作＝1工程になるので、doAction が出す「元に戻す」も1段ぶんで意味が合う。
+   ここは今日画面の進行だけ。他画面は commit→render で押した要素ごと消えるため窓が無い */
+var ADVANCING = {};
 function todayAdvance(r, rowEl){
   if(!writable()) return;
+  if(ADVANCING[r.id]) return;
   var last=(nextStatus(r.status)==="投稿済み");
   var reduce=false;
   try{ reduce=window.matchMedia("(prefers-reduced-motion:reduce)").matches; }catch(e){}
+  /* アニメーションを挟まない経路は同期的に進むので窓が無い＝ガード不要 */
   if(reduce || !rowEl){ if(last) TODAY_DONE_OPEN=true; advance(r); return; }
+  ADVANCING[r.id]=1;
   rowEl.classList.add(last?"finish":"step");
   setTimeout(function(){
+    delete ADVANCING[r.id];
     if(last) TODAY_DONE_OPEN=true;   /* どこへ移ったのか見えるように開く */
     advance(r);
   }, last?300:340);
@@ -4728,11 +4761,16 @@ function clientDetail(name){
 /* =====================================================================
    モーダル / トースト
    ===================================================================== */
+/* data-blocking が付いたモーダルは背景クリック・Escape・closeModals では閉じない。
+   閉じてよくなった時点で属性を外してから closeModals() を呼ぶ（openWho 参照） */
 function modal(node){
-  var bg=h("div",{class:"modalbg",onclick:function(e){ if(e.target===bg) bg.remove(); }});
+  var bg=h("div",{class:"modalbg",onclick:function(e){
+    if(e.target===bg && !bg.hasAttribute("data-blocking")) bg.remove(); }});
   bg.appendChild(node); document.body.appendChild(bg); return bg;
 }
-function closeModals(){ document.querySelectorAll(".modalbg").forEach(function(x){ x.remove(); }); }
+function closeModals(){
+  document.querySelectorAll(".modalbg:not([data-blocking])").forEach(function(x){ x.remove(); });
+}
 /* 行の詳細は全ビュー共通の右パネル（DetailPanel）に統一した。
    かつての行モーダル openRow は §6.1 に従って廃止（§MUST NOT：モーダルを多用しない）。*/
 
@@ -4902,6 +4940,7 @@ function actionButtons(r){
   return wrap;
 }
 function openWho(){
+  var bg=null;   /* 下で modal() の戻り値を入れる。選択ハンドラから参照する */
   var m=h("div",{class:"modal"});
   m.appendChild(h("h3",{text:"あなたは誰ですか？"}));
   m.appendChild(h("p",{class:"sub",text:"全員が共用アカウントを使っているため、システム側からは誰が見ているか分かりません。ここでの選択はこの端末にだけ保存され、操作の記録に添えられます。"}));
@@ -4913,11 +4952,16 @@ function openWho(){
     p.appendChild(h("button",{onclick:function(){
       ME=x.name; LS.set("mlboard.me",ME);
       var vs=visibleViews(); if(!vs.some(function(v){return v[0]===VIEW})) VIEW=vs[0][0];
+      /* 本人が決まったので閉じてよい。ここで初めてブロックを解除する */
+      if(bg) bg.removeAttribute("data-blocking");
       SELECTED=null; closeModals(); render();
-    }},[av, h("span",{text:x.name+"（"+x.role+"）"})]));
+    }},[av, h("span",{text:x.name+"（"+roleLabel(x.name)+"）"})]));
   });
   m.appendChild(p);
-  modal(m);
+  bg=modal(m);
+  /* 本人未確定のうちは Escape でも背景クリックでも閉じさせない（§MUST4：fail closed）。
+     閉じられると ME=null のまま操作できてしまうため */
+  if(!identified()) bg.setAttribute("data-blocking","1");
 }
 /* 退避（コピー用）。2026-08-29 にサイドバーから項目を外したため、現在どこからも呼ばれていない。
    戻す場合は sideBar() の foot に onclick:openBackup のボタンを足すだけでよい */
@@ -5145,7 +5189,9 @@ function boot(){
   }
   var vs=visibleViews(); if(!vs.some(function(v){return v[0]===VIEW})) VIEW=vs[0][0];
   render();
-  if(!ME) openWho();
+  /* 未設定に加えて、保存名がメンバー表に無い場合も「未確定」として聞き直す。
+     このとき writable() は false なので、選ぶまで書き込みは起きない（§MUST4） */
+  if(!identified()) openWho();
 
   window.addEventListener("beforeunload", function(e){
     if(OPS.all().length){ e.preventDefault(); e.returnValue=""; }
@@ -5158,15 +5204,22 @@ function boot(){
     if(POP || HKPOP || DRAWER){ POP=false; HKPOP=null; DRAWER=false; render(); }
   });
 
+  /* 初期化の終了条件は3つ。どの経路でも必ず READY=true にしてから描き直す（§MUST2）
+       a) artifact が使える  → 書き込み可・未確定分を再送
+       b) artifact が無い    → 閲覧のみ（capability 未付与）
+       c) claude API が無い  → 閲覧のみ（ローカルプレビュー等）
+     READY より前は writable() が false なので、この間の操作でopsが積まれることはない。
+     ＝初期化前のクリックが未同期／競合として誤表示されない */
   if(window.claude && claude.use){
     claude.use("artifact").then(function(api){
       ARTIFACT = api;
-      if(!api){ CAN_WRITE=false; render(); return; }
+      if(!api){ CAN_WRITE=false; READY=true; render(); return; }   /* b */
+      READY = true;                                                 /* a */
       replayPending();
       render();
-    }).catch(function(){ CAN_WRITE=false; render(); });
+    }).catch(function(){ CAN_WRITE=false; READY=true; render(); }); /* b */
   } else {
-    CAN_WRITE = false; render();
+    CAN_WRITE = false; READY = true; render();                      /* c */
   }
 }
 boot();
