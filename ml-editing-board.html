@@ -1221,6 +1221,12 @@ tr.rowfocus:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
   .dark .drivebtn:hover{background:rgba(255,255,255,.16)}
   .actbtns{width:100%}
   .cta,.outbtn,.trow2 .cta,.trow2 .outbtn{height:44px;font-size:13px}
+  /* Tablet/Mobile のタップ領域 44px（2026-08-29）。見た目は変えずに高さだけ確保する */
+  /* ホーム My Tasks：絞り込みタブと「タスク一覧へ」 */
+  .tabs button{min-height:44px;display:flex;align-items:center;padding:0 0 4px}
+  .linkbtn{min-height:44px}
+  /* 投稿カレンダー：対象月・クライアント・担当者・ステータス・リセット */
+  .calfb .calsel,.calfb .ghostbtn{min-height:44px}
   .actbtns .cta,.actbtns .outbtn{flex:1;min-width:0}
   /* 動画詳細 → ボトムシート（§38）。ドロワーCSSより詳細度を上げて上書きする */
   .shell.mob .detail{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;max-width:none;max-height:90vh;
