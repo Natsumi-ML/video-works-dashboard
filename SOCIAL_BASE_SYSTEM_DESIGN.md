@@ -4,12 +4,12 @@
 
 | | |
 |---|---|
-| 版 | **v4**（第3回 Senior Review 反映済み） |
+| 版 | **v5**（第4回 Senior Review 反映済み・判定 A） |
 | 作成 | 2026-08-29 |
 | 対象 | `ml-editing-board.html`（SOCIAL BASE 編集進行ボード） |
 | 前提 | UIフェーズFIX済み（`f264170`） |
 | 関連 | `SOCIAL_BASE_UI_IMPLEMENTATION_SPEC.md` / `SOCIAL_BASE_TODAY_RESPONSIVE_SPEC.md` / `SOCIAL_BASE_CLIENT_MANAGEMENT_RESPONSIVE_SPEC.md` |
-| レビュー | `SOCIAL_BASE_SENIOR_REVIEW.md` / `SOCIAL_BASE_SENIOR_REVIEW_2.md` / `SOCIAL_BASE_SENIOR_REVIEW_3.md` / `SOCIAL_BASE_REVIEW_RESOLUTION.md` |
+| レビュー | `SOCIAL_BASE_SENIOR_REVIEW.md` / `SOCIAL_BASE_SENIOR_REVIEW_2.md` / `SOCIAL_BASE_SENIOR_REVIEW_3.md` / `SOCIAL_BASE_SENIOR_REVIEW_4.md` / `SOCIAL_BASE_REVIEW_RESOLUTION.md` |
 
 **優先順位** — UI に関する記述は既存 UI SPEC 3本が正典。本書はその裏側（データ・権限・処理）の正典。両者が矛盾した場合、UIの見た目と操作は UI SPEC を優先し、本書を直す。
 
@@ -407,7 +407,7 @@ Slack Adapter -> ShiftChangeRequest（Core: 未確定の変更要求）
 **MemberRole** — `workspace_id / workspace_member_id / role_id`（複数可）
 
 **Task** — 「誰かが、ある目的のために、期限・状態・担当を持って行う作業単位」。
-`id / workspace_id / title / description / workflow_run_id / priority / start_at / due_at / completed_at / source_type / source_id / created_by / version / created_at / updated_at`
+`id / workspace_id / title / description / workflow_run_id / priority / start_at / due_at / completed_at / source_type / source_id / created_by / created_at / updated_at`
 
 現在の状態と適用中の Template は **`workflow_runs` が唯一の正**。Task は `workflow_run_id` だけを持ち、Template は `task -> run -> template` で解決する。状態を2箇所に持つと、一覧画面と詳細画面で同じ案件のステータスが違って見える。
 
@@ -1032,6 +1032,7 @@ erDiagram
         uuid workflow_template_id FK
         date starts_on
         date ends_on
+        int version
         text legacy_id UK
     }
     social_accounts {
@@ -1441,7 +1442,7 @@ Task が増える将来像（1つの ContentItem に企画・撮影・編集・�
 
 `ServiceContract.default_publisher_member_id` は投稿担当の**既定値**で、生成時に `task_assignments`（`publisher`）へコピーされる。
 
-**`default_editor_member_id` は月次生成では使わない。** 編集担当は `assignEditors()` がその月の Capacity から毎回決める（§12.4 手順7）。既定値が使われるのは「動画追加」で1本ずつ作る場合だけ。現行に無いタイブレーク規則を追加しない（`assignEditors()` の同点処理は現行どおり `names` の並び順に従う）。
+**`default_editor_member_id` は月次生成では使わない。** 編集担当は `assignEditors()` がその月の Capacity から毎回決める（§12.4 手順7）。「動画追加」で1本ずつ作る場合も既定値は使わない：現行 `:4875` の選択肢は先頭が空文字で、**既定は「未割当」**である。移行後もこれを維持し、`default_editor_member_id` は**契約上の参考情報としてだけ持つ**（画面からの初期値にも使わない）。現行に無いタイブレーク規則を追加しない（`assignEditors()` の同点処理は現行どおり `names` の並び順に従う）。
 
 以上の既定値は生成時にコピーされ、以後は Task 側が正。契約の既定を変えても既存 Task の担当は動かない（現行の `merge()` が進行中の行を動かさないのと同じ思想）。
 
@@ -1732,8 +1733,10 @@ var s = cs.filter(function(c){return c.kind==="静止画"})[0]; // :1709
 ```
 generation_input_hash =
     hash( 対象契約の (id, version) 昇順連結
-        + 対象月の business_calendar の (date, kind) 昇順連結
+        + 対象月と前月の business_calendar の (date, kind) 昇順連結
         + 対象月の working_schedules の (member_id, date, starts_at, ends_at) 昇順連結 )
+
+前月を含めるのは、リードタイム逆算（§12.3）が最大7営業日さかのぼるためで、現行も `bizRange(monthMinus(ym,1), 3)`（`:1701`）で前後3か月を見ている。前月の祝日を後から登録した場合、内部締切が変わるのに再生成が冪等キーで弾かれる。
 ```
 
 `idempotency_key = workspace_id + target_month + generation_input_hash` とする。
@@ -2688,6 +2691,7 @@ Step 4  Parity リハーサル
 Step 5  カットオーバー
         5-1 全員の画面で未同期バナー（`:2255`）が出ていないことを確認する
         5-2 artifact を maintenance にして書き込みを止める
+            ※「サンプルを削除」（`:2287`）は押さない。当月の全行を無条件削除する
         5-3 最終 STATE を再抽出し、スナップショット同期を流す
         5-4 【必須】Parity を再実行する。
             1件でも差分があれば artifact の maintenance を解除して撤退する
@@ -2752,6 +2756,8 @@ import = legacy_id をキーとした upsert
 | `SEED_CONTRACTS[].count` | `:1846` | ServiceContract | `.monthly_count` | C | 合計が現行の必要本数と一致 |
 | `SEED_CONTRACTS[].steps` | `:1846` | ServiceContract | `.step_count` + `.lead_time_business_days` | C | steps=4 -> 7営業日 / steps=2 -> 3営業日 |
 | `SEED_CONTRACTS[].poster` | `:1846` | ServiceContract | `.default_publisher_member_id` | C | なつみ9件 / りりか4件 |
+| （現行に該当なし） | — | ServiceContract | `.default_editor_member_id` | **B** | 現行の `SEED_CONTRACTS` に編集担当の既定は無い（編集担当は毎月 `assignEditors()` が決める）。**移行時は NULL のまま**とし、必要になったら画面から入れる。参考情報としてのみ持つ（§10.3） |
+| （現行に該当なし） | — | ServiceContract | `.starts_on` / `.ends_on` / `.version` | **B** | 現行の契約に開始・終了・版は無い。`starts_on` は移行実施月の初日、`ends_on` は NULL、`version` は 1 で初期化する |
 | `MEMBERS[].name` | `:1864` | WorkspaceMember | `workspace_members.display_name` | C | 6名 |
 | `MEMBERS[].role` | `:1864` | Role / MemberRole | `roles` + `member_roles` | C | 社員3名 -> `internal`、スタッフ3名 -> `editor`（§9.2） |
 | `MEMBERS[].title`（社長） | `:1864` | WorkspaceMember | 表示補助 | C | **権限判定に使わない**ことを確認 |
@@ -3490,3 +3496,4 @@ Security review、Permission matrix test、rate limit、retry、dead-letter、ba
 | 2026-08-29 | **v2** | 第1回 Senior Review（BLOCKER 3 / HIGH 13 / MEDIUM 10 / LATER 4）を反映。権限テーブルの Workspace 境界、RLS 運用規約、OIDC `sub` による同定、`STAFF_MAP` の移行先（`editor` Role）、`period_key`、`external_event_key`、業務日付のタイムゾーン、スナップショット同期。事実訂正：10社・動画10／静止画3 |
 | 2026-08-29 | **v3** | 第2回 Senior Review（BLOCKER 0 / HIGH 3 / MEDIUM 9 / LATER 1）を反映。`generate()` の投稿担当補正が34/50本に適用されない非対称性、`seeded` の扱い（Q15）、`contract_version_hash` の定義と `service_contracts.version`、`period_key` NULL の部分ユニーク2本、`id` を持たない結合テーブルの規約、`assignEditors()` の手順化、undo Transition の列挙と `kind` 列、絞り込み3箇所の明示、Job Runner のハートビート。v2 編集で残った章またぎの矛盾7箇所を解消 |
 | 2026-08-29 | **v4** | 第3回 Senior Review（BLOCKER 0 / HIGH 3 / MEDIUM 7 / LATER 1）を反映。`assignEditors()` を merge の前（手順7）へ修正、Q15 の推奨を「サンプルを削除」から「サンプルのまま移して表示を残す」へ変更、undo Transition の一意制約に `kind` を追加、`contract_version_hash` を `generation_input_hash` へ改名して営業日と勤務予定を含める、`default_editor_member_id` の役割を明確化、Step 2-1 の実測項目を具体化、0件対0件の Parity 空通過を禁止 |
+| 2026-08-29 | **v5** | 第4回 Senior Review（**判定 A・BLOCKER 0 / HIGH 0** / MEDIUM 5 / LATER 1）を反映。§5.1 と §7.3 ER のスキーマ波及漏れ、`generation_input_hash` に前月の営業日を追加、`default_editor_member_id` は画面の初期値にも使わない（現行の既定は「未割当」）、契約の `starts_on` / `ends_on` / `version` の移行方法、Step 5-2 に「サンプルを削除を押さない」を追記。整合性チェックの mermaid 重複検出をラベル違いにも対応（検出力を実証） |

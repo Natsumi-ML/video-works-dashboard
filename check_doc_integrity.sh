@@ -53,13 +53,13 @@ mb=$(grep -c '^```mermaid' "$F")
 me=$(grep -A1 '^```mermaid' "$F" | grep -c '^erDiagram\|^flowchart\|^graph\|^sequenceDiagram')
 [ "$mb" -eq "$me" ] && ok "mermaid ブロック $mb 個すべてに図種の宣言がある" || bad "mermaid ブロック $mb 個中 $me 個しか宣言がない"
 p=$(awk '/^```mermaid/{m=1;next} /^```$/{m=0} m && /"[^"]*\|[^"]*"/' "$F" | wc -l)
-d=$(awk '/^```mermaid/{m=1;next} /^```$/{m=0} m && /^    [a-z_]+ \|\|--/ {print}' "$F" | sort | uniq -d)
-[ -z "$d" ] && ok "mermaid の関連エッジに重複なし" || { echo "$d" | sed 's/^/       DUP: /'; bad "mermaid に重複エッジ"; }
+d=$(awk '/^```mermaid/{m=1;next} /^```$/{m=0} m && /^    [a-z_]+ [|}o][|o{-]*-[-|o{}]* [a-z_]+/ { sub(/ *:.*$/,""); print }' "$F" | sort | uniq -d)
+[ -z "$d" ] && ok "mermaid の関連エッジに重複なし" || { echo "$d" | sed 's/^/       DUP: /'; bad "mermaid に重複エッジ（ラベル違いも含む）"; }
 [ "$p" -eq 0 ] && ok "mermaid の引用文字列にパイプなし" || bad "mermaid の引用文字列にパイプ $p 行（GitHubで描画が崩れる）"
 
 # 5. ファイル末尾が途中で切れていない
 [ "$(tail -c 1 "$F" | od -An -c | tr -d ' ')" = "\n" ] && ok "改行で終端" || bad "末尾が改行で終わっていない"
-tail -1 "$F" | grep -qE '(。|\.|\||\)|）)$|^(#|-|\||[0-9])' && ok "最終行が文の途中ではない" || bad "最終行が途中で切れている疑い: $(tail -1 "$F" | cut -c1-40)"
+tail -1 "$F" | grep -qE '(。|\.|\||\)|）|\*|`|」)$|^(#|-|\||[0-9])' && ok "最終行が文の途中ではない" || bad "最終行が途中で切れている疑い: $(tail -1 "$F" | cut -c1-40)"
 
 # 6. git diff --check
 if git rev-parse --git-dir >/dev/null 2>&1; then
