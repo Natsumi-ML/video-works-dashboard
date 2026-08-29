@@ -206,3 +206,67 @@ Transition の物理削除を明示的に許可しながら `workflow_run_transi
 | 日付 | 内容 |
 |---|---|
 | 2026-08-29 | 初版。第1回レビュー（BLOCKER 3 / HIGH 13 / MEDIUM 10 / LATER 4）に対する判断 |
+
+---
+
+## 8. 第2回レビューへの判断
+
+| | |
+|---|---|
+| 対象レビュー | `SOCIAL_BASE_SENIOR_REVIEW_2.md`（674行） |
+| 判定 | **B. 修正後に実装開始可能** |
+| 指摘件数 | BLOCKER **0** / HIGH 3 / MEDIUM 9 / LATER 1 |
+| 本書の判断 | ACCEPT 13 / PARTIAL 0 / REJECT 0 |
+
+**第1回の BLOCKER 3件はすべて解消と確認された。** HIGH 13件のうち7件が解消、6件が部分的。残った分と新規指摘を v3 で反映した。
+
+### 8.1 HIGH
+
+| ID | 判断 | 内容と反映 |
+|---|---|---|
+| R2-HIGH-1 | **ACCEPT** | 実測で確認。`generate()` `:1714` の `cfg.staff[poster] ? ... : null` により、poster がなつみ（社員・`STAFF_MAP` 外）の9契約 **34/50本には投稿担当の非稼働日補正がかかっていない**。§12.4 手順5 を無条件に書いていたため Parity が確実に落ちる。手順5を「勤務予定が登録されている場合に限り」に修正し、非対称性の説明と「移行時は社員の `working_schedules` を投入しない」を追記 |
+| R2-HIGH-2 | **ACCEPT** | `seeded:true` のまま切り替えると、サンプルの進捗が本番の初期状態になる。§14.3 で「サンプル表示中」バナーを廃止しているため新環境に警告手段がなく、Parity も0件対0件で通過する。§24.4 の `seeded` を Method E → **A** に変更し、Step 2-1 の実測項目に加え、**§28 に Q15（サンプルデータの扱い）を追加**してオーナー判断に上げた |
+| R2-HIGH-3 | **ACCEPT** | `contract_version_hash` を2箇所で使いながら未定義だった。§12.4 に定義（対象契約の `(id, version)` を連結してハッシュ）を追記し、`service_contracts` に `version` 列を追加。契約の有効期間フィルタ（`status = active` かつ `starts_on` / `ends_on` の範囲）も手順に追加 |
+
+### 8.2 MEDIUM
+
+| ID | 判断 | 反映 |
+|---|---|---|
+| R2-MEDIUM-1 | **ACCEPT** | 分割追記の副作用で章をまたぐ矛盾が7箇所と文書破損2箇所。§5.4 の `status` / `trans{}` 行、§7.1 ER の `tasks.version` と `workflow_templates -> tasks`、§7.2 ER と §13.1 の `conditions`、§28.2 R8 の「4規則」、§28.1 の「12個」、§24.4 で表外へ脱落した `version` 行をすべて修正。**この種の意味的な矛盾は既存の整合性チェックでは検出できないため、Core 純度チェックをスクリプトへ追加した**（下記 R2-MEDIUM-9） |
+| R2-MEDIUM-2 | **ACCEPT** | `tasks.version` を §6.2 からも削除し、「工程は `workflow_runs.version`、内容・日付は `content_items.version` が守る」と明記 |
+| R2-MEDIUM-3 | **ACCEPT** | PostgreSQL の UNIQUE は NULL を互いに異なる値として扱うため、`period_key` が NULL の Run の重複を防げない。**部分ユニーク2本**（`where period_key is not null` と `where period_key is null`）に変更 |
+| R2-MEDIUM-4 | **ACCEPT** | 「全テーブルに `unique(id, workspace_id)`」は `id` 列を持たない結合テーブル4本（`role_capabilities` / `member_roles` / `content_item_tasks` / `idempotency_keys`）には適用できない。規約を「`id` 列を持つ全テーブル」に精密化し、結合テーブルは主キーに `workspace_id` を含めるか複合外部キーで担保すると明記 |
+| R2-MEDIUM-5 | **ACCEPT** | 月次生成の手順から `assignEditors()` が欠落していた。手順8として追加し、§25.1 のテスト対象と §24.6 の Parity 項目にも加えた |
+| R2-MEDIUM-6 | **ACCEPT** | 「1段戻す」の逆向き Transition を5件すべて表で列挙。`workflow_transitions.kind`（`forward` / `undo`）を追加。`is_terminal` は「前進が終わる」意味であり undo は出ることを明記し、§11.5 規則3の判定に `is_terminal` を使わないとした |
+| R2-MEDIUM-7 | **ACCEPT** | 外形監視のハートビートを §19.4 の1文だけでなく §26.5 の監視表と §26.6 の障害時UXにも反映 |
+| R2-MEDIUM-8 | **ACCEPT** | 絞り込みの適用箇所が `myTasks()` だけでなく `scopeRows()`（`:3066`）と `filteredRows()`（`:3335`）にもある。3箇所を表で列挙し、`:3335` だけ poster を含まない差も明記して Read Model と対応付けた |
+| R2-MEDIUM-9 | **ACCEPT** | **Resolution が「スクリプトへ Core 純度チェックを追加した」と書いていたが実在しなかった**（手動 grep しかしていなかった）。`check_doc_integrity.sh` に実際のチェックとして実装し、`recommendations.kind` の ER 記述も Module 登録の不透明な文字列に修正 |
+
+### 8.3 LATER
+
+| ID | 判断 | 反映 |
+|---|---|---|
+| R2-LATER-1 | **ACCEPT** | 第1回の LATER-1 / 3 / 4 を「反映済み」としながら設計書に無かった。§28.3 の未決事項に3件とも追記 |
+
+### 8.4 REJECT
+
+なし。
+
+### 8.5 完了状況
+
+| 区分 | 件数 | ACCEPT | PARTIAL | REJECT | 未解消 |
+|---|---|---|---|---|---|
+| BLOCKER | 0 | — | — | — | **0** |
+| HIGH | 3 | 3 | 0 | 0 | **0** |
+| MEDIUM | 9 | 9 | 0 | 0 | 0 |
+| LATER | 1 | 1 | 0 | 0 | 0 |
+
+**unresolved BLOCKER = 0 / unresolved HIGH = 0。** v3 に対して第3回レビューを実施し、そこで BLOCKER / HIGH が0件であれば Phase 1 完了とする。
+
+### 8.6 オーナー確認事項の追加
+
+| # | 論点 | 出所 |
+|---|---|---|
+| Q15 | 移行時にサンプルデータをどう扱うか。公開版が `seeded:true` のままなら、サンプルの進捗が本番の初期状態になる | R2-HIGH-2 |
+
+合計15項目（§28.1）。

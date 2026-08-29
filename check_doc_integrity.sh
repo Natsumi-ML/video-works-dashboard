@@ -26,7 +26,7 @@ grep -o '^## [0-9]\+' "$F" | sort | uniq -d | grep . && bad "章見出しが重�
 d=$(grep '^### ' "$F" | sort | uniq -d)
 [ -z "$d" ] && ok "節見出しの重複なし（$(grep -c '^### ' "$F") 件）" || { echo "$d" | sed 's/^/       /'; bad "節見出しが重複"; }
 grep -o '^### [0-9]\+\.[0-9]\+' "$F" | sed 's/### //' | awk -F. '
-  { if ($1 != ch) { ch=$1; want=1 }
+  { if (NR==1 || $1+0 != ch+0) { ch=$1+0; want=1 }
     if ($2+0 != want) { printf "  FAIL 節番号の飛び: %s.%s（期待 %s.%s）\n", $1, $2, ch, want; e=1 }
     want = $2+1 }
   END { if (!e) printf "  OK   節番号に飛びなし（%s 件）\n", NR }'
@@ -39,7 +39,7 @@ if sed -n '/^## 目次/,/^---$/p' "$F" | grep -q '^[0-9]\+\. \['; then
 fi
 
 # 3. 分割追記による重複・欠落
-d=$(awk '/^```/{f=!f; next} !f && length($0)>60 && $0 !~ /^\|---/ && $0 !~ /^> \*\*/ && $0 !~ /^- \*\*/' "$F" | sort | uniq -d)
+d=$(awk 'NR==FNR{ if ($0 ~ /^\|---/) hdr[FNR-1]=1; next } /^```/{f=!f; next} !f && !hdr[FNR] && length($0)>60 && $0 !~ /^\|---/ && $0 !~ /^> \*\*/ && $0 !~ /^- \*\*/' "$F" "$F" | sort | uniq -d)
 [ -z "$d" ] && ok "60字超の本文行に重複なし" || { echo "$d" | head -5 | sed 's/^/       DUP: /'; bad "本文行が重複（二重貼りの疑い）"; }
 grep -o '§[0-9]\+\(\.[0-9]\+\)\?' "$F" | sed 's/§//' | sort -u > /tmp/_dic_r
 { grep -o '^## [0-9]\+' "$F" | sed 's/^## //'; grep -o '^### [0-9]\+\.[0-9]\+' "$F" | sed 's/^### //'; } | sort -u > /tmp/_dic_h
@@ -57,7 +57,7 @@ p=$(awk '/^```mermaid/{m=1;next} /^```$/{m=0} m && /"[^"]*\|[^"]*"/' "$F" | wc -
 
 # 5. ファイル末尾が途中で切れていない
 [ "$(tail -c 1 "$F" | od -An -c | tr -d ' ')" = "\n" ] && ok "改行で終端" || bad "末尾が改行で終わっていない"
-tail -1 "$F" | grep -qE '^(\||#|-|[0-9])' && ok "最終行が文の途中ではない" || bad "最終行が途中で切れている疑い: $(tail -1 "$F" | cut -c1-40)"
+tail -1 "$F" | grep -qE '(。|\.|\||\)|）)$|^(#|-|\||[0-9])' && ok "最終行が文の途中ではない" || bad "最終行が途中で切れている疑い: $(tail -1 "$F" | cut -c1-40)"
 
 # 6. git diff --check
 if git rev-parse --git-dir >/dev/null 2>&1; then
@@ -73,6 +73,18 @@ if git rev-parse --git-dir >/dev/null 2>&1; then
   fi
 fi
 
+
+# 8. Core 純度（設計書のみ。SOCIAL BASE 固有語が Core の章に出ていないこと）
+if grep -q '^### 5.1 Core' "$F"; then
+  MODWORDS='client|video|instagram|drive|slack|publish_planned|shoot|client_meeting|planning_due|analysis_due|動画|クライアント'
+  purity=0
+  for r in '5.1 Core:5.2' '6.2 Core:6.3' '7.1 Core:7.2' '7.2 Core:7.3'; do
+    s=${r%%:*}; e=${r##*:}
+    hit=$(awk "/^### $s/,/^### $e/" "$F" | grep -inE "$MODWORDS" | head -3)
+    if [ -n "$hit" ]; then echo "$hit" | sed "s/^/       §$s: /"; purity=1; fi
+  done
+  [ "$purity" -eq 0 ] && ok "Core の章に Module 固有語なし" || bad "Core の章に Module 固有語が混入（P1 / §4.2 違反）"
+fi
 echo
 [ "$FAIL" -eq 0 ] && echo "== PASS ==" || echo "== FAIL =="
 exit "$FAIL"
