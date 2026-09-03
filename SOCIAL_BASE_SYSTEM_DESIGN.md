@@ -33,7 +33,7 @@
 12. [Schedule / Recurrence](#12-schedule--recurrence)
 13. [Automation](#13-automation)
 14. [Notification](#14-notification)
-15. [Google Drive Integration](#15-google-drive-integration)
+15. [External Data Integration（Google Drive / Notion）](#15-external-data-integrationgoogle-drive--notion)
 16. [Google Calendar Integration](#16-google-calendar-integration)
 17. [Slack Integration](#17-slack-integration)
 18. [Recommendation / Capacity](#18-recommendation--capacity)
@@ -68,13 +68,26 @@ UI の非表示は利便性のためであり、安全性の根拠にしない�
 ステータス、権限、アラート日数、負荷しきい値は運用中に変わる。変わるものはデータに置く。
 
 **P5. 過剰設計をしない。**
-Microservices・Event Sourcing・No-code Workflow Builder は作らない。Modular Monolith から始め、必要になった Module だけ切り出せる形にする。
+Microservices・Event Sourcing・No-code Workflow Builder は作らない。Modular Monolith から始め、必要になった Module だけ切り出せる形にする。 **優先順位（P0）に反する複雑さは、将来の汎用性を理由にしても入れない。**
 
 **P6. AI と自動計算は提案まで。**
 投稿日の最適化も担当変更も Recommendation を出すだけ。人が Accept して初めて確定データになる。
 
 **P7. 段階移行。**
 現行 artifact を止めずに移す。Read → Write → Parity確認 → Legacy撤去。二重実装はしない。
+
+**P0. 優先順位（2026-09-03 追加・オーナー確定）。**
+判断に迷ったときはこの順序で決める。**上位のために下位を犠牲にすることは許すが、逆はしない。**
+
+1. **SNS運用チームで本当に便利に使えること**
+2. **今の手入力・管理工数を減らすこと**
+3. **進捗漏れ・遅れを防止すること**
+4. **保守・運用が簡単であること**
+5. そのうえで他用途へ流用しやすいこと
+
+**5 は最優先ではない。** P1（汎用 Core + 固有 Module）は Core を汚さないための構造上の制約であり、**将来の汎用化のために v1 の機能や運用を複雑にする根拠にはしない。**
+
+**判定に使える基準** — ある機能について「人が新しく入力する場所が増えるか」を問う。増えるなら 2 に反しており、設計が間違っている。
 
 ### 1.2 Goals（v1 の到達点）
 
@@ -93,7 +106,7 @@ Microservices 化 / Kubernetes / Event Sourcing / AI による完全自動の担
 
 そして明示的に：
 
-**artifact 上へ新しい Workspace / Permission / Workflow 基盤を先行実装してから PostgreSQL で作り直す、という二重実装をしない。** 新しい Domain 機能は PostgreSQL 実装にのみ載せる。
+**artifact 上へ新しい Workspace / Permission / Workflow 基盤を先行実装してから新環境で作り直す、という二重実装をしない。** 新しい Domain 機能は新環境（Worker + D1）にのみ載せる。
 
 ---
 
@@ -179,7 +192,7 @@ Microservices 化 / Kubernetes / Event Sourcing / AI による完全自動の担
 1. **新規クライアント1社の追加に5,226行のHTML編集が要る。** 契約本数の変更も同じ。
 2. **翌月のシフトを入れる経路がない。** `SEED_SHIFTS` は2026-08のみで、`generate()` は将来月で稼働日情報を失う。
 3. **本人が自己申告。** `ME` は `localStorage` にあるだけで、誰でも社員を選べる（`:4942`）。
-4. **外部サービスと繋がらない。** artifact の CSP が外部ホストへの fetch / XHR / WebSocket を遮断する。設定で外せる制約ではない。
+4. **外部サービスと自力では繋がらない。** artifact のページから外部ホストへの fetch / XHR / WebSocket は遮断される（設定で外せる制約ではない）。**［2026-09-03 訂正］** 閲覧者本人の Claude コネクタを借りる経路（`mcp` 能力）は存在するため「一切繋がらない」は不正確である。ただし**閲覧者本人を識別する能力が使えず、定期実行の仕組みも無い**ため、本番の基盤にはできない（§24.1）。
 5. **毎回350KBの全文再公開。** 同時操作が増えるほど競合が出る。
 6. **監査記録がない。** `trans` に遷移時刻は残るが、誰がいつ何を変えたかは追えない。
 
@@ -215,8 +228,15 @@ Microservices 化 / Kubernetes / Event Sourcing / AI による完全自動の担
                         |  HTTPS / same-origin
                         v
   +--------------------------------------------------+
-  |  Application Layer（Serverless HTTP API）         |
+  |  Cloudflare Access（認証のみ。エッジで評価）       |
+  |    未認証はここで止まりコードに到達しない          |
+  +--------------------------------------------------+
+                        |  ctx.access
+                        v
+  +--------------------------------------------------+
+  |  Application Layer（Worker / Serverless HTTP）    |
   |    Command Service  /  Query Service              |
+  |    認可は必ずここで判定（fail closed）             |
   +--------------------------------------------------+
                         |
                         v
@@ -228,28 +248,43 @@ Microservices 化 / Kubernetes / Event Sourcing / AI による完全自動の担
         +---------------+---------------+
         v                               v
   +-----------+                   +--------------+
-  | Postgres  |  Outbox -> Queue  |  Job Runner  |
-  |  (SoT)    |                   | (scheduled)  |
+  |    D1     |  Outbox -> Queue  |  Job Runner  |
+  | (業務SoT) |                   | (cron 起動)   |
   +-----------+                   +--------------+
                                          |
                                          v
                               Integration Adapters
-                          （Drive / Calendar / Slack）
+                （Notion 読取 / Drive / Slack / Calendar）
+                                         |
+                    +--------------------+--------------------+
+                    v                                         v
+        +------------------------+                +------------------------+
+        | Notion（マスタ SoT）    |                | Google Drive           |
+        | 顧客 / 案件 / 社員Task  |                | （ファイル本体の SoT）  |
+        | / ネタストック          |                |                        |
+        +------------------------+                +------------------------+
 ```
+
+**Source of Truth は1つではない。** 業務のトランザクションデータは D1、人が保守するマスタは Notion、ファイル本体は Google Drive が正典である。**どのデータがどこの正典かは §5.6 の表を唯一の正とする。**
 
 ### 3.2 決定事項
 
 | 項目 | 決定 | 理由 |
 |---|---|---|
-| Source of Truth | **PostgreSQL** | 認証・監査・同時編集・外部連携のすべてが前提にする |
-| 実行形態 | **Modular Monolith** | 6人・10社の規模で Microservices は運用負荷だけ増える。Module境界を守れば後で切り出せる |
-| 稼働形態 | **Serverless API + Managed PostgreSQL + スケジュール起動の Job Runner** | 常時稼働サーバーを持たず運用負荷を最小化する |
+| Source of Truth | **役割で分ける。** 業務トランザクション（進捗・工程・担当・業務予定・権限・Audit）＝ **D1** / 人が保守するマスタ（顧客・案件・運用ルール・一般社員Task・ネタストック）＝ **Notion** / ファイル本体 ＝ **Google Drive**（§5.6） | 同時更新・監査・冪等性を要するデータだけが専用の置き場を必要とする。人が保守するマスタは、人が既に使っている場所を正典にしたほうが二重入力が生まれない |
+| 業務データベース | **Cloudflare D1（SQLite）** | トランザクション・版番号による競合検出・一意制約・SQL migration・時点復元（30日）を満たす。RLS は使わない（ADR-019 改訂） |
+| 認証 | **Cloudflare Access を Worker に適用し、`ctx.access` / `ctx.access.getIdentity()` を使う** | Access JWT の検証を自前実装しない。認証はエッジで完了する（§8.2） |
+| 認可 | **Worker 側で D1 の Membership / Capability を判定する。Access は認証のみ** | Access は「社内の誰か」しか保証しない。何をしてよいかは SOCIAL BASE の責任（§8.4） |
+| 実行形態 | **Modular Monolith（Worker 1つ）** | 6人・10社の規模で Microservices は運用負荷だけ増える。加えて **Access のコンテキストは Service Binding / RPC を越えて伝播しない**ため、Worker を分けると本人情報が失われる |
+| 稼働形態 | **Worker（リクエスト起動）＋ D1 ＋ cron トリガーの Job Runner** | 常時稼働サーバーを持たず運用負荷を最小化する |
 | 言語 | **TypeScript** | 現行 Layer A が JavaScript で、Domain ロジックを読み替えずに移植できる |
 | Schema/Migration | **SQL migration を正とする**。ORM は型付きクエリビルダとして使う | migration をライブラリ都合に握らせない |
-| Validation | **Schema Validation（Zod 相当）を API 境界に必須** | 外部入力（UI・webhook）を型で止める |
+| Validation | **Schema Validation（Zod 相当）を API 境界に必須** | 外部入力（UI・webhook・Notion 応答）を型で止める |
 | 非同期 | **Domain Event -> Outbox -> Job Runner** | UI の応答時間に外部APIを巻き込まない |
+| Notion 連携 | **片方向（Notion -> SOCIAL BASE）の読み取りのみ** | 双方向にすると正典が二重になる（§5.6 / §15.6） |
 | Event Sourcing | **不採用** | 通常のRDB + Audit Log + Domain Event で足りる |
 | Realtime | **v1 は不採用。ポーリングで足りる** | §24 参照。必要になったら SSE |
+| 特定クラウドへの依存 | **SQL とドメイン層を分離し、SQLite 固有の書き方を避ける** | 将来 PostgreSQL へ移す余地を残す。移す動機は「Workspace が増える」「データ量が数GBを超える」のいずれかが起きたとき |
 
 ### 3.3 Layer A の分割
 
@@ -391,7 +426,7 @@ Slack Adapter -> ShiftChangeRequest（Core: 未確定の変更要求）
 ### 5.1 Core
 
 **Workspace** — すべてのデータの境界。個人 Workspace も Workspace として表現する。
-`id / name / slug / type(team|personal) / timezone / settings(jsonb) / archived_at / created_at / updated_at`
+`id / name / slug / type(team|personal) / timezone / settings(json) / archived_at / created_at / updated_at`
 
 **User** — システム上の人物。Workspace をまたいで1つ。
 `id / identity_provider / external_subject / email / display_name / avatar_url / status(active|suspended) / last_login_at`
@@ -438,7 +473,7 @@ Slack Adapter -> ShiftChangeRequest（Core: 未確定の変更要求）
 `id / workspace_id / date / kind(holiday|company_closed|business_day) / label / valid_source`
 
 **ShiftChangeRequest** — 未確定の勤務変更要求。
-`id / workspace_id / workspace_member_id / requested_changes(jsonb) / origin(ui|integration) / origin_connection_id / origin_ref / status(pending|approved|rejected) / reviewed_by / reviewed_at`
+`id / workspace_id / workspace_member_id / requested_changes(json) / origin(ui|integration) / origin_connection_id / origin_ref / status(pending|approved|rejected) / reviewed_by / reviewed_at`
 
 **AutomationRule / AutomationRun** — §13。
 **Notification / NotificationDelivery** — §14。
@@ -448,11 +483,15 @@ Slack Adapter -> ShiftChangeRequest（Core: 未確定の変更要求）
 
 ### 5.2 SOCIAL BASE Module
 
-**Client** — 運用クライアント。現行 `STATE.clients` と `SEED_CONTRACTS.client` の移行先。
-`id / workspace_id / name / display_name / status(active|paused|ended) / created_at`
+**Client** — 運用クライアント。**Source of Truth は Notion `DB_顧客マスター`（§5.6）。D1 側は読み取り専用の写しであり、画面から編集させない。**
+`id / workspace_id / notion_page_id UK / name / display_name / status(active|paused|ended) / synced_at / created_at`
 
-**ServiceContract** — 契約。**`SEED_CONTRACTS` の正式な移行先で、SOCIAL BASE の主要マスター。**
-`id / workspace_id / client_id / kind(動画|静止画) / monthly_count / step_count / lead_time_business_days / default_publisher_member_id / default_editor_member_id / workflow_template_id / starts_on / ends_on / status / version`
+現行 `STATE.clients` と `SEED_CONTRACTS.client` の移行先だが、移行後の更新経路は Notion だけになる。
+
+**ServiceContract** — 契約。**Source of Truth は Notion `DB_案件`（§5.6）。D1 側は読み取り専用の写し。**
+`id / workspace_id / notion_page_id UK / client_id / kind(動画|静止画) / monthly_count / step_count / lead_time_business_days / default_publisher_member_id / default_editor_member_id / workflow_template_id / starts_on / ends_on / status / synced_at / version`
+
+`monthly_count` は Notion の `動画投稿本数` / `静止画投稿本数` から取り込む。**`契約金額` と `先方担当者` は取得対象に入れない**（§15.6）。`SEED_CONTRACTS` はここへ移行するが、移行後の更新経路は Notion だけになる。
 
 現行の `steps`（4 または 2）は `step_count` に、そこから決まるリードタイム（7営業日 / 3営業日、`:1725`）は **`lead_time_business_days` として明示的に持つ**。コード内の三項演算子をデータにする。
 
@@ -462,7 +501,7 @@ Slack Adapter -> ShiftChangeRequest（Core: 未確定の変更要求）
 `id / workspace_id / client_id / service_contract_id / social_account_id / kind / title / body / target_month / publish_date / published_at / published_url / notes / revision_note / date_locked / schedule_squeezed / version / created_at / updated_at`
 
 **Asset** — Drive 上のファイル・フォルダへの参照。本体は複製しない。
-`id / workspace_id / owner_type / owner_id / role(material|review|deliverable) / external_link_id / mime_type / metadata(jsonb)`
+`id / workspace_id / owner_type / owner_id / role(material|review|deliverable) / external_link_id / mime_type / metadata(json)`
 
 ### 5.3 ContentItem と Task を分ける理由
 
@@ -510,7 +549,7 @@ Write Model は正規化する。Read Model は画面が使いやすい形にす
 | `ClientOverviewQuery` | クライアント管理 | `clientAgg()` `clientAlerts()` | クライアント別の進捗・遅延・アラート |
 | `ClientDetailQuery` | クライアント管理（詳細） | `clientDetail()` の参照分 | Drive リンク、次回撮影日、企画・資料の Workflow Run、担当編集者 |
 
-**重要** — 負荷スコア（`loadOf()` の `score` / `band`）、優先度（`prioOf()`）、遅延判定（`judge()`）は **サーバーが計算して Read Model に載せる**。Frontend では再計算しない（§3.3）。
+**重要** — 負荷スコア（`loadOf()` の `score` / `band`）、優先度（`prioOf()`）、遅延判定（`judge()`）、**および緊急度（§8.6 の導出値）** は **サーバーが計算して Read Model に載せる**。Frontend では再計算しない（§3.3）。**緊急度は列として保存しない**（ADR-029）。
 
 > **■ オーナー向け説明**
 >
@@ -528,18 +567,77 @@ Write Model は正規化する。Read Model は画面が使いやすい形にす
 
 ---
 
+### 5.6 Source of Truth（正典）
+
+**この表を Source of Truth の唯一の正とする。** 他の章の記述がこの表と矛盾する場合、この表を優先する。
+
+原則は2つ。**人が保守するものは、人が既に使っている場所を正典にする。機械が保守するものだけを D1 に持つ。**
+
+| データ | Source of Truth | 人が更新する場所 | D1 での扱い |
+|---|---|---|---|
+| Client（顧客） | **Notion `DB_顧客マスター`** | Notion のみ | 読み取り専用の写し。画面から編集させない |
+| ServiceContract / 運用ルール（月本数・種類・事業ライン） | **Notion `DB_案件`** | Notion のみ | 読み取り専用の写し。翌月生成と本数管理の入力になる |
+| 企画の素（USP・ターゲット・訴求・不安） | **Notion `DB_顧客マスター` の本文** | Notion のみ | 保存しない。必要時に読む |
+| 一般社員 Task（企画・台本・指示出し） | **Notion `DB_タスク`** | Notion のみ | **原則 Read Only。SOCIAL BASE から書かない**（§21.5） |
+| ネタストック | **Notion** | Notion のみ | v1 では参照しない。UI に画面を追加しない |
+| Asset 本体（素材・完成物のファイル） | **Google Drive** | Drive のみ | ファイルを複製しない。`external_link_id` だけを持つ（機械が書く） |
+| ContentItem（動画・投稿1本） | **D1** | SOCIAL BASE のみ | 正典 |
+| 制作進捗（WorkflowRun の現在地） | **D1** | SOCIAL BASE のみ | 正典 |
+| Task（制作工程上の Task） | **D1** | SOCIAL BASE のみ | 正典。ContentItem と 1:1（§5.3） |
+| TaskAssignment（編集担当） | **D1** | SOCIAL BASE のみ | 正典 |
+| 業務 Schedule（投稿予定日・編集完了希望日・締切） | **D1** | SOCIAL BASE のみ | 正典 |
+| Google Calendar | **正典にしない** | Calendar（人の予定として） | **v1 では連携しない**（§16）。将来連携する場合も D1 を正典とし、Calendar は書き出し先として扱う |
+| Membership（誰がいるか） | **Cloudflare Access の認証情報**（＋D1 の表示名・Role） | Google Workspace / Access | `users.id` / `workspace_members.id` を不変の内部IDとして持つ。**email を主キーにしない**（§8.2） |
+| Permission / Capability | **D1** | SOCIAL BASE | 正典。**判定はサーバー側**（§8.4） |
+| WorkingSchedule（勤務予定・シフト） | **D1** | SOCIAL BASE（本人申請＋承認） | 正典。Slack から受ける（§17） |
+| Workflow（State / Transition の定義） | **D1（v1 は固定値）** | 更新しない | 正典。画面から編集できるようにしない（§11.5） |
+| AutomationRule（自動処理設定） | **D1** | SOCIAL BASE | 正典 |
+| AuditLog | **D1** | 更新しない（機械が追記） | 正典。あとから書き換えない（§19） |
+| idempotency_keys / jobs / 同期状態 | **D1** | 人は触らない | 正典。システム内部データ |
+| business_calendar（営業日・祝日） | **D1** | SOCIAL BASE（年1回） | 正典 |
+| 緊急度 | **持たない（導出値）** | **入力欄を作らない** | 締切・現在工程・遅延状態から算出する（§5.5 / §18） |
+| 依頼者 | **D1（自動記録）** | **入力欄を作らない** | 作成者・操作ユーザーから自動記録（§8.6 / §19） |
+
+#### 二重更新の禁止
+
+**同じ情報を Notion と D1 の両方で人間が更新する構造を作らない。** 次の3つは名前が似ているだけで別の対象であり、混同すると二重更新になる。
+
+| 紛らわしい対 | 区別 |
+|---|---|
+| Notion `DB_案件.担当` と D1 `task_assignments` | 前者は**案件担当**（その案件を持つ社員）。後者は**編集担当**（この動画を編集するスタッフ）。**文書・画面・コードで呼び分ける** |
+| Notion `DB_案件.ステータス` と D1 の WorkflowRun | 前者は案件単位（運用中／契約中）。後者は動画1本単位の5状態 |
+| Notion `DB_タスク.期日` と D1 `tasks.due_at` | 前者は社員タスクの期日。後者は動画1本の締切 |
+
 ## 6. Database Schema
 
-PostgreSQL。すべてのテーブルは `workspace_id` を持ち、複合 UNIQUE / FK に `workspace_id` を含めて **Workspace をまたぐ参照を物理的に不可能にする**。
+**Cloudflare D1（SQLite）。** すべてのテーブルは `workspace_id` を持ち、Workspace をまたぐ参照を作らない。
 
 ### 6.1 共通規約
 
-- 主キーは `uuid`（`gen_random_uuid()`）。
-- `created_at` / `updated_at` は `timestamptz not null default now()`。
-- 日付のみの列は `date`。時刻を伴うものは `timestamptz`（UTC保存、表示は Workspace の `timezone`）。
+#### 論理型と D1 の物理型の対応
+
+**本書の §6 と §7 では意味のわかる論理型で書く。** D1（SQLite）の物理型への対応は次の1表で定義し、他の章で個別に断らない。
+
+| 論理型 | D1（SQLite）の物理型 | 規約 |
+|---|---|---|
+| `uuid` | `text` | アプリ側で UUID v4 を生成して入れる。DB 側の生成関数に依存しない |
+| `text` | `text` | — |
+| `integer` | `integer` | — |
+| `boolean` | `integer` | 0 / 1 のみ。`check (col in (0,1))` を付ける |
+| `date` | `text` | `YYYY-MM-DD`。**Workspace timezone の暦日**（下の業務日付の定義） |
+| `datetime` | `text` | RFC 3339 の UTC（`YYYY-MM-DDTHH:MM:SSZ`）。文字列比較で時系列順になる形式に固定する |
+| `json` | `text` | JSON 文字列。`settings` / `metadata` / `payload` / `params` / `actions` / `rule_snapshot` のみ。**検索キーになる値は列にする** |
+
+#### 規約
+
+- 主キーは `uuid`。**生成はアプリ側で行う**（`gen_random_uuid()` のような DB 関数を使わない）。
+- `created_at` / `updated_at` は `datetime not null`。**既定値を DB 関数に依存させず、アプリが業務時刻の規約に従って入れる**（下の業務日付の定義）。
 - 更新競合を扱うテーブルは `version integer not null default 1`（§22）。
-- 論理削除は `archived_at timestamptz`。物理削除は原則しない。
-- `jsonb` を使うのは `settings` / `metadata` / `payload` / `params` / `actions` / `rule_snapshot` のみ。検索キーになる値は列にする。
+- 論理削除は `archived_at datetime`。物理削除は原則しない。
+- **外部キー制約を有効にする。** SQLite は既定で外部キーを強制しないため、接続ごとに `pragma foreign_keys = on` を発行する。**これを忘れると参照整合性が黙って効かなくなる。** Repository の基底で1箇所だけ発行し、そこ以外から接続を取らせない。
+- **大文字小文字を区別しない一意性は式インデックスで作る。** email のような列は `unique index on (lower(email))` とする（`citext` のような型は無い）。
+- **`text` 列の比較は既定で大文字小文字を区別する。** 区別したくない箇所は明示的に `lower()` を通す。
+- **Notion 由来の写しのテーブルは `notion_page_id` に UNIQUE を張り、`synced_at` を持つ。** 人が編集する経路を作らない（§5.6）。
 
 #### 業務日付（business date）の定義
 
@@ -593,8 +691,8 @@ alter table member_roles
 
 | テーブル | 主な列 | 主な制約・索引 |
 |---|---|---|
-| `workspaces` | `id, name, slug, type, timezone, settings jsonb, archived_at` | `unique(slug)` |
-| `users` | `id, identity_provider, external_subject, email, display_name, avatar_url, status, last_login_at` | `unique(identity_provider, external_subject)`、`unique(lower(email))`。**同定は `external_subject`（OIDC `sub`）で行い、email は表示と招待照合のみ**（§8.2）。`workspace_id` を持たない例外テーブル |
+| `workspaces` | `id, name, slug, type, timezone, settings json, archived_at` | `unique(slug)` |
+| `users` | `id, identity_provider, external_subject, email, display_name, avatar_url, status, last_login_at` | `unique(lower(email))`（有効な User の範囲）。`external_subject` は **NULL 許容**（Cloudflare Access の `getIdentity()` から不変IDが取得できる場合のみ入れる。取得できる場合は `unique(identity_provider, external_subject)` を張る）。**同定は `users.id`。email は表示と招待照合のみ**（§8.2）。`workspace_id` を持たない例外テーブル |
 | `workspace_members` | `id, workspace_id, user_id, display_name, status, joined_at` | `unique(workspace_id, user_id)` |
 | `roles` | `id, workspace_id, key, name, is_system, description` | `unique(workspace_id, key)` |
 | `role_capabilities` | `workspace_id, role_id, capability_key, scope_type, scope_id` | `pk(role_id, capability_key, scope_type, scope_id)`、`fk(role_id, workspace_id)` |
@@ -602,7 +700,7 @@ alter table member_roles
 | `workflow_templates` | `id, workspace_id, key, name, applies_to, is_default, archived_at` | `unique(workspace_id, key)` |
 | `workflow_states` | `id, workspace_id, template_id, key, name, semantic, sort_order, is_initial, is_terminal, archived_at` | `unique(template_id, key)`、`semantic in (todo,in_progress,review,ready,done,blocked)` |
 | `workflow_transitions` | `id, workspace_id, template_id, from_state_id, to_state_id, action_label, required_capability, kind, is_primary, sort_order, archived_at` | `unique(template_id, from_state_id, to_state_id, kind)`。**物理削除しない**（履歴が参照する。§11.5 規則2）。`kind` は `forward` / `undo`（§11.3） |
-| `workflow_runs` | `id, workspace_id, template_id, current_state_id, subject_type, subject_id, period_key, started_at, completed_at, version` | `unique(workspace_id, template_id, subject_type, subject_id, period_key) where period_key is not null` と `unique(workspace_id, template_id, subject_type, subject_id) where period_key is null` の**部分ユニーク2本**（PostgreSQL の UNIQUE は NULL を互いに異なる値と扱うため、1本だけでは `period_key` NULL の重複を防げない）、`index(workspace_id, subject_type, subject_id)`、`index(workspace_id, current_state_id)`。`period_key` は Core が書式を解釈しない不透明な文字列（月次なら `2026-09`、期間概念が無ければ NULL） |
+| `workflow_runs` | `id, workspace_id, template_id, current_state_id, subject_type, subject_id, period_key, started_at, completed_at, version` | `unique(workspace_id, template_id, subject_type, subject_id, period_key) where period_key is not null` と `unique(workspace_id, template_id, subject_type, subject_id) where period_key is null` の**部分ユニーク2本**（UNIQUE は NULL を互いに異なる値として扱うため、1本だけでは `period_key` NULL の重複を防げない。SQLite も同じ挙動であり、部分インデックス（`where` 付き）に対応している）、`index(workspace_id, subject_type, subject_id)`、`index(workspace_id, current_state_id)`。`period_key` は Core が書式を解釈しない不透明な文字列（月次なら `2026-09`、期間概念が無ければ NULL） |
 | `workflow_run_transitions` | `id, workspace_id, run_id, from_state_id, to_state_id, transition_id, actor_member_id, occurred_at, note` | `index(run_id, occurred_at)`、`fk(run_id, workspace_id)` |
 | `tasks` | `id, workspace_id, title, description, workflow_run_id, priority, start_at, due_at, completed_at, source_type, source_id, created_by, archived_at` | `index(workspace_id, due_at)`、`index(workspace_id, source_type, source_id)`。**現在の状態と Template は `workflow_runs` が唯一の正**。Task は `workflow_run_id` だけを持つ（§11.1）。**`version` を持たない**：工程は `workflow_runs.version`、内容・日付は `content_items.version` が守る（§22.1） |
 | `task_assignments` | `id, workspace_id, task_id, workspace_member_id, assignment_role, assigned_at, assigned_by` | `unique(task_id, workspace_member_id, assignment_role)`、`index(workspace_id, workspace_member_id, assignment_role)` |
@@ -611,17 +709,17 @@ alter table member_roles
 | `working_schedules` | `id, workspace_id, workspace_member_id, date, starts_at, ends_at, source, source_connection_id, created_by` | `unique(workspace_member_id, date, starts_at)`、`index(workspace_id, date)` |
 | `time_offs` | `id, workspace_id, workspace_member_id, from_date, to_date, reason` | `index(workspace_id, from_date, to_date)` |
 | `business_calendar` | `id, workspace_id, date, kind, label, valid_source` | `unique(workspace_id, date)` |
-| `shift_change_requests` | `id, workspace_id, workspace_member_id, requested_changes jsonb, origin, origin_connection_id, origin_ref, status, reviewed_by, reviewed_at` | `index(workspace_id, status)` |
+| `shift_change_requests` | `id, workspace_id, workspace_member_id, requested_changes json, origin, origin_connection_id, origin_ref, status, reviewed_by, reviewed_at` | `index(workspace_id, status)` |
 | `daily_notes` | `id, workspace_id, date, body, updated_by, version` | `unique(workspace_id, date)`。Workspace 共有の日次メモ（§24.5） |
-| `automation_rules` | `id, workspace_id, name, trigger_type, predicates jsonb, actions jsonb, schema_version, enabled, last_evaluated_on, created_by` | `index(workspace_id, trigger_type, enabled)`。`predicates` は**登録済み述語 + パラメータの配列**で AND 結合。式 DSL は作らない（§13.3） |
-| `automation_runs` | `id, workspace_id, rule_id, trigger_event_id, rule_snapshot jsonb, status, started_at, finished_at, error, idempotency_key` | `unique(rule_id, idempotency_key)`。`rule_snapshot` は実行時点の Rule 内容（§13.6） |
+| `automation_rules` | `id, workspace_id, name, trigger_type, predicates json, actions json, schema_version, enabled, last_evaluated_on, created_by` | `index(workspace_id, trigger_type, enabled)`。`predicates` は**登録済み述語 + パラメータの配列**で AND 結合。式 DSL は作らない（§13.3） |
+| `automation_runs` | `id, workspace_id, rule_id, trigger_event_id, rule_snapshot json, status, started_at, finished_at, error, idempotency_key` | `unique(rule_id, idempotency_key)`。`rule_snapshot` は実行時点の Rule 内容（§13.6） |
 | `notifications` | `id, workspace_id, recipient_member_id, kind, dedupe_key, title, body, resource_type, resource_id, read_at, created_at` | `index(workspace_id, recipient_member_id, read_at)`、`unique(workspace_id, dedupe_key) where read_at is null`（§14.4 の抑制） |
 | `notification_deliveries` | `id, workspace_id, notification_id, channel, status, attempts, last_error, delivered_at` | `fk(notification_id, workspace_id)` |
-| `audit_logs` | `id, workspace_id, actor_type, actor_member_id, action, resource_type, resource_id, before jsonb, after jsonb, source, request_id, occurred_at` | `index(workspace_id, resource_type, resource_id, occurred_at)`、`index(workspace_id, request_id)`（§19.5 の障害調査） |
-| `recommendations` | `id, workspace_id, kind, subject_type, subject_id, payload jsonb, score, reason, status, decided_by, decided_at, expires_at` | `index(workspace_id, kind, status)` |
-| `outbox_events` | `id, workspace_id, event_type, payload jsonb, occurred_at, processed_at, attempts` | `index(processed_at) where processed_at is null` |
-| `jobs` | `id, workspace_id, queue, payload jsonb, run_after, attempts, max_attempts, locked_until, locked_by, status, last_error, idempotency_key` | `unique(queue, idempotency_key)`、`index(status, run_after)` |
-| `idempotency_keys` | `workspace_id, key, endpoint, request_hash, response_status, response_body jsonb, created_at, expires_at` | `pk(workspace_id, key)` |
+| `audit_logs` | `id, workspace_id, actor_type, actor_member_id, action, resource_type, resource_id, before json, after json, source, request_id, occurred_at` | `index(workspace_id, resource_type, resource_id, occurred_at)`、`index(workspace_id, request_id)`（§19.5 の障害調査） |
+| `recommendations` | `id, workspace_id, kind, subject_type, subject_id, payload json, score, reason, status, decided_by, decided_at, expires_at` | `index(workspace_id, kind, status)` |
+| `outbox_events` | `id, workspace_id, event_type, payload json, occurred_at, processed_at, attempts` | `index(processed_at) where processed_at is null` |
+| `jobs` | `id, workspace_id, queue, payload json, run_after, attempts, max_attempts, locked_until, locked_by, status, last_error, idempotency_key` | `unique(queue, idempotency_key)`、`index(status, run_after)` |
+| `idempotency_keys` | `workspace_id, key, endpoint, request_hash, response_status, response_body json, created_at, expires_at` | `pk(workspace_id, key)` |
 
 ### 6.3 Integration テーブル
 
@@ -630,7 +728,7 @@ alter table member_roles
 | `integration_connections` | `id, workspace_id, provider, account_label, external_account_id, scopes text[], access_token_enc, refresh_token_enc, token_expires_at, status, connected_by, revoked_at` |
 | `external_resource_links` | `id, workspace_id, connection_id, provider, external_kind, external_id, external_url, local_resource_type, local_resource_id, etag, last_synced_at` |
 | `webhook_subscriptions` | `id, workspace_id, connection_id, provider, channel_id, resource_id, verification_token_enc, expires_at, status` |
-| `webhook_receipts` | `id, provider, connection_id, external_event_key, received_at, signature_valid, payload jsonb, processed_at` |
+| `webhook_receipts` | `id, provider, connection_id, external_event_key, received_at, signature_valid, payload json, processed_at` |
 | `sync_cursors` | `id, workspace_id, connection_id, resource_key, cursor_token, last_full_sync_at, last_delta_sync_at` |
 
 `external_resource_links` は `unique(provider, external_id, local_resource_type, local_resource_id)` を張り、**SOCIAL BASE 独自IDと Google ID を同一視しない**。
@@ -658,7 +756,7 @@ alter table member_roles
 | `social_accounts` | `id, workspace_id, client_id, platform, handle, external_account_id, status` | `unique(workspace_id, platform, handle)` |
 | `content_items` | `id, workspace_id, client_id, service_contract_id, social_account_id, kind, title, body, target_month, publish_date, published_at, published_url, notes, revision_note, date_locked, schedule_squeezed, version, legacy_id, archived_at` | `unique(workspace_id, legacy_id)`、`index(workspace_id, target_month)`、`index(workspace_id, publish_date)`、`index(workspace_id, client_id, target_month)`、`index(workspace_id, service_contract_id, target_month)` |
 | `content_item_tasks` | `workspace_id, content_item_id, task_id` | `pk(workspace_id, content_item_id, task_id)`、**`unique(task_id)`**、`fk(content_item_id, workspace_id)`、`fk(task_id, workspace_id)` |
-| `assets` | `id, workspace_id, owner_type, owner_id, role, external_link_id, mime_type, metadata jsonb` | `index(workspace_id, owner_type, owner_id)` |
+| `assets` | `id, workspace_id, owner_type, owner_id, role, external_link_id, mime_type, metadata json` | `index(workspace_id, owner_type, owner_id)` |
 
 `content_item_tasks` は **Core を汚さずに ContentItem : Task の整合性を保証する**ための Module 側の結合テーブル。Core の `tasks.source_type` / `source_id` は外部キーを張れない多態参照なので、v1 の 1:1 は `unique(task_id)` でここに担保する。将来 1:N へ広げるときはこの UNIQUE を外すだけでよい。
 
@@ -666,43 +764,40 @@ alter table member_roles
 
 ### 6.5 Multi-Workspace Isolation
 
-三重で守る。
+**二重で守る。** PostgreSQL の RLS は使わない（ADR-019 改訂）。
 
 1. **アプリ層** — Repository は必ず `workspace_id` を引数に取る。取らないメソッドを作らない。
 2. **スキーマ層** — §6.1 の `unique(id, workspace_id)` と複合外部キーにより、別 Workspace の行を参照できない。**権限テーブル（`roles` / `member_roles` / `role_capabilities`）にも同じ防御を張る。** ここが抜けるとアプリ層の1行のバグが即座に権限昇格になる。
-3. **DB層（Defense in Depth）** — PostgreSQL Row Level Security。
 
-RLS は Phase 2 で入れる。後付けは既存クエリ全部の再検証が要るため、最初から入れる（ADR-019）。
+#### RLS を採用しない理由
 
-#### RLS 運用規約
+| 論点 | 判断 |
+|---|---|
+| 得られたはずの防御 | DB 自身が行単位で遮断する第3の層 |
+| 付随して必須になるもの | 読み取りを含む全アクセスの明示トランザクション化、`set local` のみの使用、所有者ロールとアプリロールの分離、`force row level security`、**本番と同じ接続プーラ構成を通した専用テスト** |
+| 本件の条件 | Workspace は1つ、利用者25人程度、**書き手はアプリ1つだけ**、D1 に RLS 相当の機構が無い |
+| 結論 | **付随コストが得られる防御に見合わない。** 同じ目的をスキーマ層（上の2）と Permission Matrix Test（§25.3）で達成する |
 
-**「RLS を有効化する」だけでは機能しない。** Serverless + Managed PostgreSQL（接続プーラ）構成では、次の4点を守らないと**無症状のまま無効化されるか、逆に Workspace をまたいで漏れる**。
+#### **RLS の削除は権限チェックを弱めるという意味ではない**
 
-**(1) ロールを分ける。** テーブル所有者は RLS をバイパスする。migration を流すロール（所有者）とアプリが接続するロール（非所有者、`bypassrls` なし）を分ける。加えて全 RLS 対象テーブルに `force row level security` を付ける。
+**次の4つは維持する。RLS の有無と独立している。**
 
-```sql
-alter table content_items enable row level security;
-alter table content_items force  row level security;
-```
+| 維持するもの | 内容 | 章 |
+|---|---|---|
+| **server-side permission check** | 認可はすべてサーバー（Worker）側で判定する。**UI の非表示・二度押し防止を安全性の根拠にしない** | §8.5 §21 |
+| **fail closed** | 判定できないものは拒否する。判定順序を変えない | §8.4 |
+| **Capability ベースの権限** | Role 名をコードに書かない。判定は `hasCapability(member, key, scope)` | §8.3 §9 |
+| **Audit** | 誰がいつ何をどう変えたかを必ず残す | §19 |
 
-これを怠ると、ポリシーを書いても一切適用されず、**テストでも本番でも「全行見える」のが正常に見えてしまう**。
+削除するのは **PostgreSQL 固有の機構である RLS だけ**であり、権限の設計思想は一切変えない。
 
-**(2) `SET` を使わない。`SET LOCAL` だけを使う。** transaction pooling では1つの物理接続が複数リクエストに使い回される。session レベルの `SET app.workspace_id` は次のリクエストへ持ち越され、**別ユーザーが前のリクエストの `workspace_id` を継承する**。これは Workspace 分離の完全な破綻であり、アプリ層は正しい値を渡しているためログにも異常が残らない。
+#### 代わりに強めること
 
-**(3) 読み取りを含む全 DB アクセスを明示トランザクションで包む。** `SET LOCAL` はトランザクション内でしか効かない。Query Service が autocommit でクエリを投げると GUC が未設定になる（§21.1）。
+RLS が担っていた「アプリ層のバグを DB 側で受け止める」役割を、次で埋める。
 
-**Repository の基底に「トランザクション開始 → `set local` → クエリ → commit」を1箇所だけ実装し、そこ以外から接続を取らせない。** これで (2)(3) が同時に解決する。`set`（LOCAL なし）の使用はコードレビューと lint で禁止する。
-
-**(4) 未設定時は0行にする。** `current_setting('app.workspace_id')` は未設定時に例外を投げる。ポリシーは次の形にして、fail closed かつ 500 にしない。
-
-```sql
-create policy ws_isolation on content_items
-  using (workspace_id = nullif(current_setting('app.workspace_id', true), '')::uuid);
-```
-
-**テスト** — §25.2 の RLS テストは「**本番と同じプーラ構成を通して**、リクエスト A の直後にリクエスト B を同一物理接続で実行し、B が A の workspace を継承しないこと」を必ず含める。直接接続でのテストは (2) を一切検出しない。
-
-採用するホスティングの接続プーリングモード（session / transaction）は §26.1 の決定事項とする。
+- **D1 への接続を Repository の基底1箇所に集約し、そこ以外から接続を取らせない。** `workspace_id` を伴わないクエリを書けない構造にする（lint とコードレビューで機械的に禁止する）
+- **`pragma foreign_keys = on` を接続ごとに発行する**（§6.1）。これを忘れると複合外部キーによるスキーマ層の防御が黙って無効になる。**この pragma が効いていることをテストで確認する**（§25.2）
+- **Permission Matrix Test を全 Capability × 全 Role で網羅する**（§25.3）。RLS の代替として、ここを省略しない
 
 ### 6.6 Migration 方式
 
@@ -715,17 +810,32 @@ create policy ws_isolation on content_items
 4. contract : 不要になった列・制約を落とす
 ```
 
-Production DB を手で編集しない。すべて migration ファイル経由。
+Production DB を手で編集しない。すべて migration ファイル経由。**適用は `wrangler d1 migrations` を正とし、production への適用は自動にせず承認を挟む**（§26.3）。
+
+#### D1（SQLite）固有の制約
+
+**SQLite の `alter table` は PostgreSQL より制限が強い。** expand / contract の 4 の段（不要になった列・制約を落とす）が、そのまま書けない場合がある。
+
+| やりたいこと | D1 での扱い |
+|---|---|
+| 列を足す | `alter table add column` で可。**ただし既定値つき非NULL列の追加は制約があるため、①NULL許容で追加 → ②backfill → ③制約を付けた形へ作り替え の順にする** |
+| 列の名前を変える | `alter table rename column` で可 |
+| 列を落とす | 条件付きで可。索引や制約から参照されている列は落とせない |
+| 列の型・制約（NOT NULL / CHECK / FK）を変える | **直接は変えられない。** 新しい表を作り、データを写し、旧表を落とし、名前を変える（表の作り替え） |
+
+**規約** — contract の段で表の作り替えが必要になる変更は、**1つの migration で「新表作成 → 写し → 索引再作成 → 旧表 drop → rename」を一続きに行う。** 途中で失敗しても中間状態が残らないようにし、作り替えの前後で件数を照合する検証を migration に含める。
+
+**外部キーの扱いに注意する。** 表の作り替え中は `pragma foreign_keys` の状態によって挙動が変わる。作り替えを行う migration では、順序（親→子）と pragma の扱いを migration ファイル内に明記する。**この手順は staging で実際に流してから production へ出す**（§26.3）。
 
 > **■ オーナー向け説明**
 >
-> **何を決めたか** — データベースの表の設計を決めました。すべてのデータに「どの Workspace のものか」を必ず持たせ、別の Workspace のデータが混ざらないよう3重に防ぎます。
+> **何を決めたか** — データベースの表の設計を決めました。すべてのデータに「どの Workspace のものか」を必ず持たせ、別の Workspace のデータが混ざらないよう2重に防ぎます（プログラム側とデータベースの構造側）。データベースは Cloudflare D1 を使います。
 >
 > **なぜそうするか** — 将来、営業部や個人用の Workspace を作ったときに、SOCIAL BASE のクライアント情報が見えてしまうことは絶対に避ける必要があります。
 >
 > **何が良くなるか** — 「見えてはいけないものが見える」事故が、プログラムにミスがあっても起きにくくなります。データベースの構造変更も、動かしたまま安全にできる手順にしてあります。
 >
-> **デメリット / 将来の制約** — 開発時にひと手間増えます。
+> **デメリット / 将来の制約** — 開発時にひと手間増えます。以前の案にあった「データベース自身が行単位で遮断する仕組み（RLS）」は使いません。**これは権限チェックを弱めるという意味ではありません。** 誰が何をできるかの判定は、これまでどおりサーバー側で必ず行い、判定できないものは拒否し、操作履歴も必ず残します。
 >
 > **あとから変更できるか** — 非常に大変（後から入れると全部のデータ取得を検証し直すことになります）。最初から入れます。
 >
@@ -736,6 +846,8 @@ Production DB を手で編集しない。すべて migration ファイル経由�
 ## 7. ER Diagram
 
 読みやすさのため3枚に分ける。すべての実体は `workspace_id` を持つ（図では省略）。
+
+**図中の型は論理型である。** D1（SQLite）の物理型への対応は §6.1 の対応表を正とする。
 
 ### 7.1 Core — Identity / Workspace / Permission / Task / Workflow
 
@@ -766,13 +878,13 @@ erDiagram
         text slug UK
         text type "team or personal"
         text timezone
-        jsonb settings
+        json settings
     }
     users {
         uuid id PK
         text identity_provider
         text external_subject UK
-        citext email
+        text email
         text display_name
         text status
     }
@@ -813,7 +925,7 @@ erDiagram
         int sort_order
         bool is_initial
         bool is_terminal
-        timestamptz archived_at
+        datetime archived_at
     }
     workflow_transitions {
         uuid id PK
@@ -823,7 +935,7 @@ erDiagram
         text action_label
         text required_capability
         text kind "forward or undo"
-        timestamptz archived_at
+        datetime archived_at
         bool is_primary
     }
     workflow_runs {
@@ -840,9 +952,9 @@ erDiagram
         text title
         uuid workflow_run_id FK
         int priority
-        timestamptz start_at
-        timestamptz due_at
-        timestamptz completed_at
+        datetime start_at
+        datetime due_at
+        datetime completed_at
         text source_type
         uuid source_id
     }
@@ -881,8 +993,8 @@ erDiagram
         uuid id PK
         text kind "module-registered (see 12.1)"
         text title
-        timestamptz starts_at
-        timestamptz ends_at
+        datetime starts_at
+        datetime ends_at
         bool all_day
         uuid recurrence_rule_id FK
         text subject_type
@@ -920,7 +1032,7 @@ erDiagram
     shift_change_requests {
         uuid id PK
         uuid workspace_member_id FK
-        jsonb requested_changes
+        json requested_changes
         text origin "ui or integration"
         text status "pending or approved or rejected"
         uuid reviewed_by FK
@@ -929,8 +1041,8 @@ erDiagram
         uuid id PK
         text name
         text trigger_type
-        jsonb predicates
-        jsonb actions
+        json predicates
+        json actions
         int schema_version
         bool enabled
     }
@@ -944,18 +1056,18 @@ erDiagram
     outbox_events {
         uuid id PK
         text event_type
-        jsonb payload
-        timestamptz occurred_at
-        timestamptz processed_at
+        json payload
+        datetime occurred_at
+        datetime processed_at
     }
     jobs {
         uuid id PK
         text queue
-        jsonb payload
-        timestamptz run_after
+        json payload
+        datetime run_after
         int attempts
         int max_attempts
-        timestamptz locked_until
+        datetime locked_until
         text status
         text idempotency_key
     }
@@ -966,7 +1078,7 @@ erDiagram
         text title
         text resource_type
         uuid resource_id
-        timestamptz read_at
+        datetime read_at
     }
     audit_logs {
         uuid id PK
@@ -975,8 +1087,8 @@ erDiagram
         text action
         text resource_type
         uuid resource_id
-        jsonb before
-        jsonb after
+        json before
+        json after
         text source
         text request_id
     }
@@ -985,7 +1097,7 @@ erDiagram
         text kind "module-registered"
         text subject_type
         uuid subject_id
-        jsonb payload
+        json payload
         numeric score
         text reason
         text status "pending or accepted or rejected or expired"
@@ -1051,7 +1163,7 @@ erDiagram
         text title
         char7 target_month
         date publish_date
-        timestamptz published_at
+        datetime published_at
         text published_url
         text notes
         text revision_note
@@ -1080,7 +1192,7 @@ erDiagram
         text external_account_id
         text access_token_enc
         text refresh_token_enc
-        timestamptz token_expires_at
+        datetime token_expires_at
         text status
     }
     external_resource_links {
@@ -1099,7 +1211,7 @@ erDiagram
         uuid connection_id FK
         text channel_id
         text resource_id
-        timestamptz expires_at
+        datetime expires_at
         text status
     }
     webhook_receipts {
@@ -1108,14 +1220,14 @@ erDiagram
         uuid connection_id FK
         text external_event_key
         bool signature_valid
-        timestamptz processed_at
+        datetime processed_at
     }
     sync_cursors {
         uuid id PK
         uuid connection_id FK
         text resource_key
         text cursor_token
-        timestamptz last_delta_sync_at
+        datetime last_delta_sync_at
     }
 ```
 
@@ -1155,39 +1267,64 @@ erDiagram
 
 ### 8.2 Identity
 
-**推奨：Google Workspace アカウントによる OAuth ログイン（OIDC）。**
+**決定：Cloudflare Access を Worker に適用し、Cloudflare 標準の `ctx.access` から認証済みユーザー情報を取得する。**
 
 理由は3つ。
 
 1. 全員が既に Google アカウントを持っている（Drive / Calendar を業務で使っている）。
-2. 認証基盤を二重に持たなくて済む。
-3. 退職時に Google アカウントを止めれば SOCIAL BASE のログインも同時に閉じる。パスワード管理をこちらで持たない。
+2. **Access JWT の検証ロジックを SOCIAL BASE 側で独自実装しない。** 暗号処理を自前で持たない。
+3. 退職時に Access からアカウントを外せば SOCIAL BASE のログインも同時に閉じる。パスワード管理をこちらで持たない。
 
-セッションは HttpOnly / Secure / SameSite=Lax の Cookie。`User.email` のドメインで許可を絞る。
+#### 取得方法
 
-> **注意** — 「Google アカウントを止めれば全部閉じる」は**ログインについてのみ**成り立つ。その人が接続した Drive / Calendar の Integration トークンも同時に失効するため、接続主体は個人にしない（§15.1）。
+| 項目 | 内容 |
+|---|---|
+| 適用単位 | **Access のポリシーを Worker 自体に結びつける**（ホスト名ではない）。リクエストがコードへ届く前にエッジで評価される |
+| 認証済みの目印 | **`ctx.access` が存在する** |
+| 本人情報 | **`ctx.access.getIdentity()`**。取得できるのは **email / name / groups** |
+| アプリの識別 | `ctx.access.aud` |
+| 未認証 | コードに到達しない。万一 `ctx.access` が無いリクエストが来た場合は **401**（fail closed） |
+| ローカル開発 | `wrangler.jsonc` の `dev` ブロックに `aud` と擬似 identity を書く。`wrangler dev` でも `ctx.access` が届く |
 
-#### 同定は `sub` で行う。email は識別子に使わない
+**規約：Access JWT を自前で検証しない。** 公開鍵の取得・`kid` の突き合わせ・署名検証・`iss` / `aud` の確認を SOCIAL BASE のコードに書かない。
 
-`users` は `identity_provider` と `external_subject`（OIDC の `sub`）を持ち、`unique(identity_provider, external_subject)` で同定する。
+**制約：Access のコンテキストは Service Binding / RPC を越えて伝播しない。** 呼び出し先の Worker は呼び出し元の本人情報を受け取らない。したがって **Worker は1つに保つ**（§3.2）。将来分割する場合は、本人情報を明示的に渡し、**渡された値を信用せず受け側で再判定する**設計にする。
+
+**Access は認証だけを行う。認可は SOCIAL BASE の責任である。** `ctx.access` があることは「Access のポリシーを通った誰かである」ことしか意味しない。何をしてよいかは §8.4 の順序で D1 の Membership / Capability から判定する。
+
+#### 同定は D1 の不変な内部IDで行う。email は識別子に使わない
+
+`users` は**発行後に変えない内部ID（`users.id`）を主キーに持ち、これを人の同定に使う**。Workspace 内での所属は `workspace_members`（§8.1）が表し、こちらも不変の `workspace_members.id` を持つ。
 
 **email をプライマリな識別子にしない。** email は Google Workspace 側で再割り当て可能な可変の値である。具体的に次の経路で壊れる。
 
-1. 友美（`tomomi@example.co.jp`、Role = `internal`）が退職し、Google アカウントを停止する。
+1. 友美（`tomomi@example.co.jp`、Role = `internal`）が退職し、アカウントを停止する。
 2. 数か月後、情シスが同じアドレスを新入社員へ再発行する（役割アドレスなら日常的に起こる）。
 3. 新入社員が初回ログインする。email で `users` を引くと**友美の User にそのままログインする**。
 
-結果として新入社員は友美の `WorkspaceMember`・`MemberRole`・`task_assignments` をすべて引き継ぎ、Audit Log は「友美が操作した」と記録し続ける。**§19 の「誰がいつ何をどう変えたか」という要件そのものが偽になる。** 招待制はこの経路を防がない（`WorkspaceMember` は既に存在するため）。
+結果として新入社員は友美の `workspace_members`・`member_roles`・`task_assignments` をすべて引き継ぎ、Audit Log は「友美が操作した」と記録し続ける。**§19 の「誰がいつ何をどう変えたか」という要件そのものが偽になる。** 招待制はこの経路を防がない（`workspace_members` の行は既に存在するため）。
 
-逆に姓名変更によるアドレス変更（`kato@` → `natsumi.kato@`）では、同一人物が別ユーザーとして重複作成され、担当と監査履歴が分断される。
+逆に姓名変更によるアドレス変更（`kato@` → `natsumi.kato@`）では、同一人物が別 User として重複作成され、担当と監査履歴が分断される。
 
 **規約**
 
-- ログイン時の検索キーは `(identity_provider, external_subject)`。
-- email は毎回のログインで `sub` を鍵に上書きする（アドレス変更に自動追随する）。
-- 招待は email で出し、**初回ログイン時に `sub` を束ねる（claim）**。以後は `sub` が正。まだ `sub` が束ねられていない招待レコードにだけ email 一致を許す。
+| # | 規約 |
+|---|---|
+| 1 | **人を指す全ての列は `workspace_member_id`（Workspace 内の操作者）または `users.id`（人物）を持つ。** `task_assignments` / `audit_logs` / `member_roles` などに email を保存して人を指さない |
+| 2 | email は**初回ログイン時に内部IDへ結びつける照合用の属性**。以後は表示と照合のみに使う。`unique index on (lower(email))` は**有効な Member の範囲で**張る |
+| 3 | ログインのたびに、内部IDを鍵にして email と表示名を上書きする（アドレス変更に自動追随する） |
+| 4 | 招待は email で出し、**初回ログイン時に内部IDへ束ねる（claim）**。まだ束ねられていない招待レコードにだけ email 一致を許す |
+| 5 | **退職・契約終了時は Access からアカウントを外し、`users.status` と `workspace_members.status` を無効にする。行は残す**（履歴を壊さない） |
+| 6 | **無効化済み User の email で新規ログインが来たら、自動で既存 User に結びつけない。新しい User も自動作成しない。「要確認」として止める（fail closed）** |
+| 7 | `getIdentity()` に IdP 側の不変ユーザーIDが含まれる場合は、それも保存して照合の強度を上げる。**含まれるかは公式ドキュメントで確認できていないため、Phase 3 で実測して確認する** |
 
-**招待制** — ログインできても `WorkspaceMember` が存在しなければどの Workspace にも入れない（fail closed）。
+**運用ルール（オーナー決定）** — **退職者等のメールアドレスを別人へ安易に再利用しない。** SOCIAL BASE のためだけでなく、他サービスを含めた本人取り違えの防止のため。規約6はこれを技術側で二重に受け止めるものであり、運用ルールの代替ではない。
+
+**共有ログインの禁止（オーナー決定）** — 社員・業務委託とも **1人1アカウント**。共有アカウントを作らない。業務委託の方も本人の個別アカウントを Access で許可する。
+
+> **注意** — 「アカウントを止めれば全部閉じる」は**ログインについてのみ**成り立つ。その人が接続した Drive / Calendar の Integration トークンも同時に失効するため、接続主体は個人にしない（§15.1）。
+
+**招待制** — ログインできても有効な `workspace_members` の行が存在しなければどの Workspace にも入れない（fail closed）。
 
 ### 8.3 Permission は Capability で持つ
 
@@ -1242,6 +1379,32 @@ Scope        : workspace 全体、または client / contract 単位
 
 ---
 
+### 8.6 操作者の扱い（「依頼者」を入力させない）
+
+**操作者を UI から受け取らない。** 画面が送ってきた名前・ID を信用せず、必ず `ctx.access` 由来の本人から解決した `workspace_member_id` を使う。
+
+| 場面 | 操作者 |
+|---|---|
+| 画面からの書き込み | `ctx.access.getIdentity()` → `users` → `workspace_members` で解決した本人 |
+| **cron 起動（定期実行）** | **`ctx.access` が存在しない。** 操作者を `system` として記録し、**人向けの Capability を要する操作を実行させない** |
+| webhook 受信 | 送信元の検証後、`system` または連携主体として記録する。人として記録しない |
+
+#### 「依頼者」は入力させず自動記録する
+
+現行の進捗管理スプレッドシートには「依頼者」列があり、人が手で入力している。**SOCIAL BASE では入力欄を新設しない。**
+
+- `content_items` の作成時に、**作成した本人を `created_by`（`workspace_member_id`）として自動で記録する。**
+- 画面に「依頼者」の入力欄を追加しない（**UI は変更しない**）。
+- 表示が必要になった場合は `created_by` から解決する。**同じ情報を人が二度入力する構造を作らない**（§5.6）。
+
+#### 「緊急度」も入力させない
+
+同スプレッドシートの「緊急度」（高／中／低）も**入力欄を新設しない。導出値として算出する。**
+
+- 入力元は既に持っているデータだけ：**締切までの残営業日・現在の工程・遅延しているか**。
+- 算出はサーバー側で行い、Read Model に載せて返す（§3.3 の「導出される業務値はサーバーが計算する」に従う）。
+- **列として保存しない。** 保存すると「人が直せる値」に見え、二重更新の入口になる。
+
 ## 9. Permission Matrix
 
 ### 9.1 Capability 一覧
@@ -1287,6 +1450,7 @@ Scope        : workspace 全体、または client / contract 単位
 | `content.generate` | 翌月分を生成する |
 | `asset.manage` | Drive フォルダ・ファイルの関連付け |
 | `analytics.read` | 分析結果を見る |
+| `staff_task.read` | **Notion の一般社員 Task（企画・台本・指示出し）を見る。** 表示制御用で書き込み権限ではない（§21.5） |
 
 ### 9.2 v1 の既定 Role
 
@@ -1329,6 +1493,7 @@ Scope        : workspace 全体、または client / contract 単位
 | `content.generate` | ○ | ○ | — |
 | `asset.manage` | ○ | ○ | — |
 | `analytics.read` | ○ | ○ | — |
+| `staff_task.read` | ○ | ○ | — |
 
 ### 9.3 現行の判定との対応
 
@@ -1580,7 +1745,9 @@ Transition（現行 `STATUS_ACTIONS` / `ACTION_TO` / `PREV_STATUS` の内容）
 
 **State も Transition も削除しない。** 使われなくなったものは `archived_at` を立てるだけにする。過去の `workflow_run_transitions` が `from_state_id` / `to_state_id` / `transition_id` で参照し続けるため、物理削除すると履歴が壊れるか、外部キー違反で削除自体が失敗する。
 
-Template の編集が既存 Run を壊さないよう、次の7規則で守る。**保存時に検証してエラーにする。**
+**v1 では Workflow の定義を画面から編集させない**（§5.6 / ADR-030）。5状態と遷移は固定値として投入し、変更が必要になった場合は migration で行う。
+
+したがって次の7規則は、**保存時の検証ではなく migration レビューのチェックリストとして適用する。** 画面から編集できるようにする判断が出た時点で、同じ規則を保存時の検証として実装する。
 
 1. State の追加・**表示名変更**・並び替えは既存 Run に影響しない。
 2. **Transition も削除しない。`archived_at` を立てるだけにする。** 履歴が `transition_id` で参照しているため（State と同じ扱い）。
@@ -1849,7 +2016,7 @@ v1 の述語は §13.5 の9ルールを賄う9個で足りる。増やすとき�
 
 - `AutomationRun` を必ず保存する（`rule_id / trigger_event_id / status / started_at / finished_at / error`）。
 - **冪等性** — `unique(rule_id, idempotency_key)`。`idempotency_key = rule_id + trigger_event_id`（`date.reached` は `rule_id + 日付 + 対象リソースID`）。同じイベントが再配送されても2回実行されない。
-- **Rule versioning** — `schema_version` を持ち、Run には**実行時点の Rule 内容を `automation_runs.rule_snapshot jsonb` へ保存する**。あとから Rule を変えても、過去の Run が何をしたか追える。
+- **Rule versioning** — `schema_version` を持ち、Run には**実行時点の Rule 内容を `automation_runs.rule_snapshot json` へ保存する**。あとから Rule を変えても、過去の Run が何をしたか追える。
 - **失敗時** — Job の retry（§23.3）に乗る。max_attempts 超過で dead-letter に落とし、社員へ通知する。**無音で消えない。**
 - **無効化** — `enabled = false` で即停止できる。暴走時の止め方を必ず用意する。
 - **catch-up** — `automation_rules.last_evaluated_on` を持ち、起動時に未評価の日を順に処理する。Job が落ちた日の Rule が永久に飛ばないようにする。上限7日で、それより古い分は通知して打ち切る（MEDIUM-6）。
@@ -1926,7 +2093,7 @@ Automation / Domain Event -> Notification（何を知らせるか）
 
 ---
 
-## 15. Google Drive Integration
+## 15. External Data Integration（Google Drive / Notion）
 
 ### 15.1 Integration framework（§15-17 共通）
 
@@ -1964,7 +2131,7 @@ interface IntegrationProvider {
 - `integration_connections.connected_by` は「誰が接続操作をしたか」の**監査用の記録**であり、トークンの帰属を表さない。
 - §26.5 に「接続アカウント自体の失効検知」を追加する。トークン期限とは別に、アカウント停止による失効を検知して通知する。
 
-どのアカウントを使うかは運用の判断のため §28 Q14 で確認する。
+**決定（オーナー承認済み）** — 接続主体は**共有の運用アカウント**とする（§28 Q14 解決）。個人アカウントでは接続しない。
 
 #### リフレッシュの single-flight
 
@@ -2016,7 +2183,71 @@ Drive 未接続・トークン失効・API エラーは、**工程操作をブ�
 
 ---
 
+### 15.6 Notion Integration（読み取り同期）
+
+**Notion は §5.6 のとおり、顧客・案件・運用ルール・一般社員 Task・ネタストックの Source of Truth である。** SOCIAL BASE はこれを**片方向で読むだけ**にする。
+
+#### 方向と経路
+
+| 項目 | 決定 |
+|---|---|
+| 方向 | **Notion → SOCIAL BASE の片方向のみ。** マスタへ書き戻さない |
+| 認証 | Notion の内部インテグレーションのトークン。**Worker の Secret に保管する**（§26.1）。閲覧者個人の連携に依存しない |
+| 起動 | 1日1回の定期同期（cron）＋ 画面操作で必要になった分の読み取り |
+| 保存先 | `clients` / `service_contracts` の**読み取り専用の写し**（`notion_page_id` UK、`synced_at`）。人が編集する経路を作らない |
+| 一般社員 Task | **写しを持たず、必要時に読んで表示する**（§21.5） |
+| ネタストック | **v1 では読まない。** UI に画面を追加しない |
+
+#### 取得するプロパティを列挙する（列挙しないものは取得しない）
+
+| DB | 取得するプロパティ |
+|---|---|
+| `DB_顧客マスター` | `会社名` / `ステータス` / `セグメント` / `業種` / `案件`(relation) |
+| `DB_案件` | `案件名` / `顧客`(relation) / `事業ライン` / `目的` / `ステータス` / `動画投稿本数` / `静止画投稿本数` |
+| `DB_タスク` | `タスク名` / `ステータス` / `期日` / `担当` / `関連案件`(relation) |
+
+**`契約金額` と `先方担当者` は取得しない。** SOCIAL BASE が必要としない財務情報・個人情報を最初からシステムへ持ち込まない。**スタッフ向けの応答にも含まれない**ことを API のスキーマ検証で保証する（§21.2）。
+
+#### 同期の規則（実データに存在する不整合への対応）
+
+**次の6規則は、実際の `DB_案件` の内容から導いたものである。** 想定ではない。
+
+| # | 規則 | 根拠 |
+|---|---|---|
+| 1 | `事業ライン` が SNS運用系のものだけを同期対象にする | `採用_Lステップ構築` が2件あり、動画本数が空 |
+| 2 | 記入例・テンプレート行を除外する | 「サンプル案件（記入例）」が `ステータス = 運用中` で存在する |
+| 3 | `ステータス` が空の行は同期せず「要確認」として通知する | ステータスも事業ラインも空の行が1件ある。黙って無視すると案件が抜ける |
+| 4 | `静止画投稿本数` の空欄は 0 として扱う | 0 と空欄が混在している |
+| 5 | 取得するプロパティを列挙し、それ以外は取得しない | 同じ DB に `契約金額` がある |
+| 6 | **必須プロパティが欠けたら同期を止めて通知する（fail closed）** | Notion にスキーマ契約が無く、プロパティ名の変更で連携が黙って壊れる |
+
+**規則3・6で止めたものは黙って捨てない。** `integration_sync_issues` として残し、画面と通知に「要確認」として出す。**「同期できたつもりで案件が消えている」状態を作らない。**
+
+#### レート制限と画面表示
+
+**Notion API は接続あたり平均 毎秒3リクエスト**（超過は 429）。したがって次を規約とする。
+
+- **画面表示は必ず D1 の写しから返す。** リクエストのたびに Notion を呼ばない
+- 同期は retry + backoff。429 を受けたら待つ
+- relation は1プロパティ100件、1リクエストの応答は 500KB が上限。**ページングを前提に実装する**
+- §26.5 の監視に「Notion の最終同期時刻」を加える（24時間以上更新がなければ通知）
+
+#### スキーマ変更の検知
+
+同期の先頭で、上の表に挙げたプロパティが**すべて存在し型が一致すること**を検証する。欠けていれば同期を中止して通知する（規則6）。
+
+**運用ルール（オーナー承認済み）** — `DB_案件` の既存プロパティ名・選択肢を変更する前に事前確認を行う。**必要最小限の構造化プロパティの追加は許可済み**（工程数・撮影のタイミングなど。現在は `メモ` の自然文にしかない）。追加されたプロパティを使い始めるときは、上の表と検証に加える。
+
 ## 16. Google Calendar Integration
+
+> **決定（オーナー承認済み・2026-09-03）** — **v1 では Google Calendar を正典にも必須連携にも含めない。** 本章は将来連携する場合の設計として残す。
+>
+> - **Calendar を Source of Truth にしない**（§5.6）。SOCIAL BASE の業務判断（締切・遅延・負荷）の根拠に Calendar を使わない
+> - 将来連携する場合も **D1 を正典とし、Calendar は D1 から同期する外部表示先として扱う**
+> - したがって §16.2 の「同期の方向」は、**v1 では適用しない。** 連携を始める判断が出た時点で、この決定に沿って §16.2〜§16.5 を見直す
+> - 投稿予定日を Calendar へ書き出すかは未決（§28 Q6）。**書き出さないことを推奨する**
+
+**この決定により、Phase から Calendar 連携は外れる**（§27 の後段）。定例MTGを画面に出す必要が生じた場合は、Calendar を読むのではなく `ScheduleEntry` として SOCIAL BASE 側に持つことを先に検討する。
 
 ### 16.1 対応付け
 
@@ -2254,7 +2485,8 @@ v1 は Rule-based。`recommendations` に `score` / `reason` / 採否結果が�
 | Schedule | 投稿予定日・締切の変更 |
 | Permission | Role 変更、Capability 付与 |
 | Membership | 招待・削除 |
-| Master data | Client / ServiceContract / Workflow Template の変更 |
+| Master data | Workflow Template の変更。**Client / ServiceContract は Notion が正典のため SOCIAL BASE では変更されない**（§5.6）。代わりに **Notion 同期の結果**（取り込み件数・除外した行・停止した理由）を記録する（§15.6） |
+| **操作者** | すべての記録に、認証済みの `workspace_member_id` を必ず持たせる。cron 経由は `system`（§8.6） |
 | Integration | 接続・解除・トークン更新失敗 |
 | Automation | Rule の作成・変更・実行 |
 | Slack | シフト変更申請・承認・却下 |
@@ -2264,7 +2496,7 @@ v1 は Rule-based。`recommendations` に `score` / `reason` / 採否結果が�
 
 `workspace_id / actor_type(user|system|integration) / actor_member_id / action / resource_type / resource_id / before / after / source(ui|api|slack|automation) / request_id / occurred_at`
 
-**「誰がいつ何をどう変えたか」が追えること**が要件。`before` / `after` は変更のあった列だけを `jsonb` で持つ。
+**「誰がいつ何をどう変えたか」が追えること**が要件。`before` / `after` は変更のあった列だけを `json` で持つ。
 
 `actor_type = system` は Automation 実行を指す。誰の操作でもない変更が無記名で残らないようにする。
 
@@ -2377,15 +2609,15 @@ v1 は Rule-based。`recommendations` に `score` / `reason` / 採否結果が�
 UI 専用の通信に閉じない。**将来 Integration や別クライアントからも使える Service 境界**にする。
 
 ```
-UI -> Application Layer -> Domain -> Repository -> PostgreSQL
+UI -> Cloudflare Access -> Application Layer -> Domain -> Repository -> D1
 ```
 
 Application Layer は2種類。
 
 | | 役割 |
 |---|---|
-| **Command Service** | 状態を変える。認可・検証・Domain 呼び出し・Outbox 書き込みを1トランザクションで行う |
-| **Query Service** | 読み取り専用。画面に合わせた Read Model を返す（§5.5）。**読み取りも必ず明示トランザクションで包み、先頭で `set local app.workspace_id` を発行する**（§6.5）。autocommit で投げると RLS の GUC が未設定になり全画面が0件になる |
+| **Command Service** | 状態を変える。認可・検証を先に行い、**書き込み（version チェック付き UPDATE / 遷移履歴 / Audit / Outbox）を1回のバッチで原子的に実行する**（§22.6） |
+| **Query Service** | 読み取り専用。画面に合わせた Read Model を返す（§5.5）。**Repository の基底1箇所からのみ D1 へ接続し、`workspace_id` を伴わないクエリを書けない構造にする**（§6.5）。導出値（優先度・緊急度・負荷スコア）はここで計算して返し、Frontend に業務判断を再計算させない（§3.3） |
 
 ### 21.2 API の形
 
@@ -2454,6 +2686,23 @@ GET  /api/v1/workspaces/:ws/views/clients
 > **判断が必要なこと** — なし。
 
 ---
+
+### 21.5 Notion 由来データの API（Read Only）
+
+**一般社員 Task（Notion `DB_タスク`）の Source of Truth は Notion である**（§5.6）。SOCIAL BASE は**原則 Read Only** として扱う。
+
+| 項目 | 決定 |
+|---|---|
+| 提供する API | 参照のみ（`StaffTaskQuery`）。**作成・更新・削除の API を作らない** |
+| 認可 | **`staff_task.read` を要求する**（§9.1）。`editor` は持たないため、**スタッフの画面には社員タスクが出ない**。UI の出し分けではなくサーバー側で判定する |
+| 保存 | D1 に写しを持たない。必要時に §15.6 の経路で読む |
+| 表示 | 「今日」画面に社員向けの当日分として混ぜて表示する（**UI の構成・見た目は変更しない**） |
+| 書き込み | **行わない。** Notion 側へ状態を書き戻す API を用意しない |
+| 失敗時 | Notion が応答しない場合は当該ブロックだけ「取得できていません」を出し、**制作進捗の操作は通常どおり続けられる**（§26.6 の方針に従う） |
+
+**なぜ Read Only にするか。** 社員はすでに Notion で企画・台本・指示出しのタスクを管理している。SOCIAL BASE 側に同じものを作ると、**同じ情報を人が二度入力する構造**になり、本システムの目的（手入力を減らす）に反する。書き込みを足すかどうかは業務ルールの判断であり、設計で黙って足さない。
+
+`clients` / `service_contracts` についても同様に、**Notion 由来の写しを更新する API を作らない**（§5.6）。翌月生成（§12.5）はこの写しを**読んで**使う。
 
 ## 22. Concurrency / Idempotency
 
@@ -2525,19 +2774,33 @@ Read Model の1行は ContentItem と Task と WorkflowRun を結合したもの
 
 ### 22.6 トランザクション境界
 
-1つの Command は1トランザクション。
+**1つの Command の書き込みは、1つの原子的な単位で行う。**
 
 ```
-BEGIN
-  認可チェック
-  version チェック付きの UPDATE
+[ 原子的な単位（1回のバッチ） ]
+  version チェック付きの UPDATE      -- 0行なら 409
   workflow_run_transitions へ INSERT
   audit_logs へ INSERT
   outbox_events へ INSERT
-COMMIT
 ```
 
-**Outbox は同一トランザクション内で書く。** これにより「業務データは変わったのに通知が飛ばない」「通知は飛んだのにデータが変わっていない」が起きない。外部APIの呼び出しはトランザクションの外（Job）で行う。
+**Outbox は同一の原子的単位で書く。** これにより「業務データは変わったのに通知が飛ばない」「通知は飛んだのにデータが変わっていない」が起きない。外部APIの呼び出しはこの単位の外（Job）で行う。
+
+#### D1 の制約に合わせた実装規約
+
+［事実］**D1 は対話的トランザクション（`BEGIN` / `COMMIT`）を持たない。** SQL の `BEGIN TRANSACTION` はエラーになる。複数文を原子的に実行する手段は**バッチ API（`db.batch()`）**であり、内部で1つの SQLite トランザクションとして実行され、例外時は自動でロールバックされる。
+
+［設計］したがって次を規約とする。
+
+| # | 規約 |
+|---|---|
+| 1 | **書き込みは1回のバッチにまとめる。** 上の4文を1つのバッチとして送る。`BEGIN` / `COMMIT` を SQL に書かない |
+| 2 | **バッチの中で読んで分岐しない。** バッチは文を先に組み立てて送るため、「読んでから決める」ができない。**分岐は条件付き UPDATE の `where` に埋め込み、影響行数で結果を判定する**（§22.1 の 0行 → 409、§22.2 の `from_state_id` 一致） |
+| 3 | **認可チェックはバッチの前に行う**（§8.4）。認可の読み取りは原子的単位の外になるため、**認可の結果に依存する更新も §22.1 の `version` 条件を必ず併せて持たせる**。権限が変わった直後の操作は 409 で弾かれ、黙って通らない |
+| 4 | **ORM のトランザクション API に依存しない。** ［事実］D1 アダプタでは ORM の暗黙・明示トランザクションが**無視されて個別クエリとして実行され、原子性が失われる**実装が存在する。**ORM は型付きクエリビルダとしてのみ使い、原子性はバッチ API で担保する**（§3.2） |
+| 5 | **原子性が要る箇所をテストで固定する。** バッチの途中で失敗させ、**業務データ・Audit・Outbox のいずれも書かれていない**ことを検証する（§25.2） |
+
+**なぜ規約2で足りるか。** 本設計の更新はすべて「期待した版であること」または「期待した State から出発していること」を `where` に持つ。読んでから決める必要がある処理は存在しない。**読んで分岐したくなった時点で、それは Command の切り方が間違っている。**
 
 > **■ オーナー向け説明**
 >
@@ -2560,7 +2823,7 @@ COMMIT
 ### 23.1 Domain Event -> Outbox -> Job
 
 ```
-Command（同期・トランザクション内）
+Command（同期・1回のバッチで原子的に）
    -> outbox_events へ書き込み
 COMMIT
    -> Outbox Drainer（定期起動）が未処理を拾う
@@ -2570,9 +2833,28 @@ COMMIT
 
 **UI の HTTP リクエスト内で Google / Slack の API を呼ばない。** 外部が遅い日に画面が固まる。
 
-### 23.2 v1 の実装：PostgreSQL-backed Queue
+### 23.2 v1 の実装：D1-backed Queue
 
-`jobs` テーブルをキューにする。`SELECT ... FOR UPDATE SKIP LOCKED` で取り出す。**Redis は入れない。**
+`jobs` テーブルをキューにする。**Redis は入れない。**
+
+［事実］**SQLite / D1 に `SELECT ... FOR UPDATE SKIP LOCKED` は無い。** 代わりに SQLite は書き込みを直列化するため、**条件付き UPDATE 1文で claim できる。**
+
+```sql
+-- claim：期限切れまたは未ロックの Job を、1文で自分のものにする
+update jobs
+   set locked_until = :until, attempts = attempts + 1
+ where id in (
+   select id from jobs
+    where queue = :queue
+      and run_after <= :now
+      and (locked_until is null or locked_until < :now)
+    order by run_after
+    limit :limit
+ )
+returning *;
+```
+
+**この1文が原子的であることに依存する。** 複数の cron 実行が同時に走っても、同じ Job を二重に取り出さない。`returning` で取れた行だけを処理する。
 
 常駐 Worker を持たず、**スケジュール起動（cron トリガー）でドレインする**。
 
@@ -2592,7 +2874,7 @@ UTC で組んだまま業務日付を UTC 暦日で判定すると、**毎月12�
 
 | 保証 | 内容 |
 |---|---|
-| Durability | Command のトランザクションと Outbox 書き込みが原子的。COMMIT した変更に対応する Job は必ず存在する |
+| Durability | **Command の書き込みと Outbox 書き込みが同一のバッチで原子的**（§22.6）。成功した変更に対応する Job は必ず存在する |
 | 配送 | at-least-once。exactly-once は前提にしない |
 | Retry | 指数バックオフ（1分 -> 5分 -> 25分 …）。`attempts` を記録 |
 | Max attempts | 既定5回。超えたら dead-letter |
@@ -2640,7 +2922,14 @@ interface JobQueue {
 
 ### 24.1 前提となる制約
 
-**Artifact の CSP は外部ホストへの fetch / XHR / WebSocket を遮断する。** 設定で外せる制約ではない。
+**Artifact のページから外部ホストへの fetch / XHR / WebSocket は遮断される。** 設定で外せる制約ではない。
+
+［補足・2026-09-03 再確認］公開 Artifact のランタイムには、**閲覧者本人の Claude コネクタを借りて外部と通信する経路（`mcp` 能力）が存在する。** したがって「外部と一切繋がらない」は不正確である。ただし本番の基盤にできない理由は別にあり、それは次の2点である。
+
+- **閲覧者本人を識別する能力（`user`）が利用可能な能力一覧に含まれない。** 「誰が承認したか」を残せず、本人に依存する権限判定もできない
+- **定期実行の仕組みが無い。** 誰も画面を開いていない時刻に督促・翌月生成・同期を動かせない
+
+いずれも回避策が無いため、**Artifact を最終的な本番環境にはしない。** 加えて共有データは last-writer-wins でトランザクションが無く、再送された書き込みは2回適用され得る。
 
 したがって「UI を artifact に置いたまま Layer B だけ API クライアントへ差し替える」ことは**できない**。UI ごと API と同一オリジンへ移す必要がある。
 
@@ -2651,7 +2940,7 @@ ml-editing-board.html      --コピー-->   ml-editing-board.html
                                          presentation-only は Frontend に残す
   Layer B                  --廃棄-->     API クライアント
   Layer C                  --契約維持-->  Visual / Interaction Contract を維持
-  <script id="state">JSON  --抽出-->     PostgreSQL へ import
+  <script id="state">JSON  --抽出-->     D1 へ import
 ```
 
 **運用URLが変わる。** 現行 `claude.ai/code/artifact/9ef7dd31-0f03-4e34-983c-83298a759d8c` から、新しいアドレスへ移る。スタッフ全員への周知とブックマーク変更が必要。
@@ -2666,7 +2955,7 @@ Step 0  Freeze
         新機能は artifact 側へ足さない（二重実装の禁止）。
 
 Step 1  Build
-        新オリジンに UI + API + PostgreSQL を構築する。
+        新オリジンに UI + API + D1 を構築する。
         マスターデータ（Client / ServiceContract / Member / WorkingSchedule /
         WorkflowTemplate / BusinessCalendar）を投入する。
 
@@ -2883,6 +3172,39 @@ Step 4（リハーサル）と Step 5-4（カットオーバー当日）の両�
 
 カットオーバーは**業務が止まっている時間帯**に行う。推奨は金曜の業務終了後。土日で確認し、月曜から新環境で運用を始める。
 
+### 24.8 移行元は3系統ある
+
+**移行元は artifact の `STATE` だけではない。** 現在の業務は3か所に分かれている。
+
+| # | 移行元 | 中身 | 移行先 |
+|---|---|---|---|
+| 1 | **artifact の `STATE`** | 動画1本ごとの進捗（5状態）・投稿予定日・締切・担当・タイトル・URL・メモ・修正指示・クライアント設定・日次メモ | **D1**（§24.4 の Matrix） |
+| 2 | **進捗管理スプレッドシート** | 作業リスト 203行（担当 / ✓ / クライアント名 / 動画内容 / 投稿予定日 / 編集完了希望日 / 月・数 / 進捗 / 緊急度 / 依頼者 / 備考・参考動画）＋ ネタストック2枚 198行 | 下の対応表 |
+| 3 | **Notion**（`DB_顧客マスター` / `DB_案件` / `DB_タスク`） | 顧客・案件・契約本数・運用ルール・一般社員 Task | **移行しない。Notion がそのまま正典**（§5.6 / §15.6） |
+
+#### スプレッドシートの項目ごとの移行先
+
+| シートの項目 | 移行先 | 備考 |
+|---|---|---|
+| 担当 | D1 `task_assignments`（**編集担当**） | `STATE` 側と重複するため、Parity 確認で突き合わせる |
+| ✓（着手済） | **移行しない** | 5状態のほうが細かい。✓ 1個では「編集中」と「確認待ち」を区別できない |
+| クライアント名 | Notion の `DB_案件` へ名前で解決 | 解決できない名前は「要確認」として残す。**黙って捨てない** |
+| 動画内容（仮タイトル） | D1 `content_items.title` | — |
+| 投稿予定日 | D1 `content_items.publish_date` | — |
+| 編集完了希望日 | D1 `tasks.due_at` | — |
+| 月・数（月本数の何本目か） | **移行しない（導出値）** | Notion の `動画投稿本数` と D1 の実績から**自動で算出する**。人が数えることをやめる |
+| 進捗（何本目かの数字） | **移行しない（導出値）** | 同上 |
+| **緊急度**（高／中／低） | **移行しない（導出値）** | 締切・現在工程・遅延状態から算出する（§8.6）。**入力欄を新設しない** |
+| **依頼者** | **移行しない（自動記録に置き換え）** | 以後は `content_items.created_by` に自動で記録する（§8.6）。**入力欄を新設しない** |
+| 備考・参考動画（ファイル名・参考URLの文字列） | D1 `content_items.notes` へそのまま移す | 文字列のまま移し、**Drive 連携（§15.2）が入ったあとに Asset へ紐づけ直す**。移行時点でファイル名を解決しようとしない |
+| **ネタストック 198行** | **Notion へ移す** | SOCIAL BASE には取り込まない。**UI に画面を追加しない**（オーナー決定） |
+
+#### 廃止するもの
+
+**進捗管理スプレッドシートの「作業リスト」タブは、カットオーバーをもって廃止する。** ネタストックは Notion へ移すため、シート自体を業務から外せる。
+
+**Parity 確認（§24.6）に次を加える。** シート 203行と `STATE` の行が1対1で対応すること、対応しない行を「要確認」として全件列挙すること。**件数が合わないまま切り替えない。**
+
 > **■ オーナー向け説明**
 >
 > **何を決めたか** — 今のシステムを止めずに、少しずつ新しいほうへ移す手順を決めました。まず新しいほうを「見るだけ」で公開し、数字が全部一致することを確認してから、書き込みを移します。
@@ -2926,16 +3248,30 @@ Domain Rules。外部依存なしで動く層。
 
 ### 25.2 Database Integration
 
-実 PostgreSQL で検証する。SQLite やモックで代替しない。
+**実際の D1 に対して検証する。モックで代替しない。** CI ではローカルの D1（同一の SQLite エンジン）に migration を流して実行し、**staging では本物の D1 に対して同じテストを1回通す**（実行環境差を残さない）。
 
 - 複合外部キーが Workspace をまたぐ参照を拒否すること
 - **別 Workspace の Role を Member に付与する INSERT が拒否されること**（BLOCKER-1）
-- **RLS を、本番と同じプーラ構成を通して検証すること。** リクエスト A の直後にリクエスト B を同一物理接続で実行し、B が A の `workspace_id` を継承しないこと。**直接接続でのテストはこの不具合を一切検出しない**（BLOCKER-2）
-- アプリ用ロール（非所有者）で他 Workspace の行が見えないこと。`force row level security` が効いていること
+- **`pragma foreign_keys = on` が効いていること。** これが無効だと複合外部キーによるスキーマ層の防御が黙って効かなくなる（§6.5）。**pragma を意図的に外した状態で上の2件が「通ってしまう」ことを確認する否定テストを含める**
 - `version` 不一致の UPDATE が0行になること
+- **Workflow transition が `from_state_id` 不一致で0行になること**（§22.2）
+- **1回のバッチの原子性。** バッチの途中で失敗させ、**業務データ・`workflow_run_transitions`・`audit_logs`・`outbox_events` のいずれも書かれていない**ことを確認する（§22.6 規約5）
+- **`BEGIN TRANSACTION` を含む SQL がコードに存在しないこと**（静的検査。D1 では実行時エラーになる）
+- **ORM のトランザクション API を使っていないこと**（静的検査。§22.6 規約4）
+- **Job の claim が二重に取り出さないこと。** 同一キューに対する claim を並行に実行し、同じ Job が2回返らないことを確認する（§23.2）
 - `unique(queue, idempotency_key)` が重複を弾くこと
 - `period_key` の部分ユニーク2本が、**`period_key` が NULL の場合も**同一対象の Run 重複を弾くこと（NULL を含む単一の UNIQUE では弾けないことを逆に確かめる回帰テストを含む）
-- 主要 Query（§5.5）の `EXPLAIN` が Seq Scan にならないこと
+- 主要 Query（§5.5）の `EXPLAIN QUERY PLAN` が全表走査にならないこと。**1リクエストあたりのクエリ数の上限を検査する**（D1 の 1 呼び出しあたりのクエリ数制限に収めるため。§26.1）
+- **`unique index on (lower(email))` が大文字小文字の違う重複を弾くこと**（§6.1。`citext` 相当の型が無いため式インデックスで代替している）
+
+#### Notion 同期の契約テスト
+
+**Notion にはスキーマ契約が無い**（§15.6）。プロパティ名や選択肢の変更で連携が黙って壊れるため、次を機械で固定する。
+
+- §15.6 の表に挙げたプロパティが**すべて存在し型が一致すること**を検証する処理が存在し、**欠けたときに同期を中止して通知すること**（fail closed）
+- **除外規則6件がすべて効くこと。** 記入例行・`ステータス` 空の行・`事業ライン` が対象外の行を含む固定の応答を入力し、**同期対象から外れ、かつ「要確認」として残ること**を確認する
+- **`契約金額` と `先方担当者` を取得していないこと。** 実際のリクエストに当該プロパティが含まれないこと、および**スタッフ向けの応答スキーマに現れないこと**を検査する（§15.6 / §21.2）
+- レート制限（429）を受けたときに待って再試行し、**取りこぼしなく完了すること**
 
 ### 25.3 Permission Test（最重要）
 
@@ -3017,19 +3353,31 @@ E2E は Playwright。ログイン、工程の進行、動画追加、翌月生�
 
 | 要素 | 方針 |
 |---|---|
-| Database | Managed PostgreSQL（自動バックアップ・PITR 対応のもの） |
-| API | Serverless HTTP（リクエストごとに起動。常駐プロセスを持たない） |
-| Static | `ml-editing-board.html` を API と同一オリジンから配信 |
-| Jobs | スケジュール起動（cron トリガー）で `jobs` をドレイン |
-| Secrets | ホスティング環境の Secret Manager |
-| 接続プーリング | **採用するモード（session / transaction）を決定事項として明記する**。transaction pooling を使う場合は §6.5 の RLS 運用規約（`set local` のみ、全アクセスを明示トランザクション化）が必須になる |
-| DB ロール | migration 用（所有者）とアプリ用（非所有者・`bypassrls` なし）を分ける（§6.5） |
+| Database | **Cloudflare D1**（SQLite）。時点復元（Time Travel）が標準で付く |
+| API | **Cloudflare Workers**（リクエストごとに起動。常駐プロセスを持たない）。**Worker は1つに保つ**（§3.2 / §8.2 の Access コンテキストの制約） |
+| 認証 | **Cloudflare Access を Worker に適用**。`ctx.access` から本人情報を取得する（§8.2） |
+| Static | `ml-editing-board.html` を **API と同一オリジンから配信**（Worker の静的配信） |
+| Jobs | **Cron Triggers** で `jobs` をドレイン（§23.2） |
+| Secrets | **Worker の Secret**（Notion のトークン、Google の運用アカウントの資格情報、Slack の署名鍵など） |
+| 接続 | **接続プーラを持たない。** D1 への接続は Repository の基底1箇所からのみ行う（§6.5） |
+| トランザクション | **対話的トランザクションは無い。** 原子性はバッチ API で担保する（§22.6） |
+| DB ロール | **分けない**（D1 にロール分離の機構が無い）。**Workspace 境界はアプリ層とスキーマ層で守る**（§6.5） |
 
-**特定クラウドへの依存は Integration Adapter 層に閉じる。** Domain とApplication Layer はホスティング先を知らない。
+#### 見積り上の上限（超過監視の対象）
+
+［事実］Workers 有料プランは月 1,000万リクエスト / CPU 3,000万ミリ秒を含み、超過は従量。D1 は月 250億行の読み取り / 5,000万行の書き込み / 5GB のストレージを含み、超過は従量。**1リクエストあたりのクエリ数にも上限がある。**
+
+［設計］**課金アラートを設定する。** 加えて §25.2 で「1リクエストあたりのクエリ数」を機械で検査する。索引の無いクエリや繰り返し処理の誤りで行の読み取りが跳ねることが、唯一現実的な超過経路である。
+
+**特定クラウドへの依存は Integration Adapter 層と Repository 層に閉じる。** Domain と Application Layer はホスティング先を知らない。**SQLite 固有の書き方を避け、SQL を Repository の内側に閉じる**ことで、将来 PostgreSQL へ移す余地を残す（§3.2）。
 
 ### 26.2 環境
 
 `local` / `staging` / `production` の3つ。staging は production と同じ構成で、データは匿名化したコピーまたは合成データ。**production のデータを staging へそのままコピーしない**（顧客情報を含むため）。
+
+**local は D1 のローカル実行（SQLite ファイル）で動かす。** Docker も PostgreSQL の導入も要らない。
+
+**Notion の扱いを環境ごとに分ける。** 同期は読み取りのみで本番 Notion を壊さないが、**staging から本番 Notion を読むと顧客情報が staging に入る。** したがって staging は**合成データを入れた別の Notion か、固定の応答（fixture）を使う**。本番 Notion のトークンを staging の Secret に置かない。
 
 ### 26.3 CI / CD
 
@@ -3045,7 +3393,7 @@ DB migration は expand / contract（§6.6）。`production` への migration �
 
 ### 26.4 バックアップとリストア
 
-- Managed PostgreSQL の自動バックアップ（日次 + PITR）。
+- **D1 の Time Travel（時点復元）。** 追加費用なしで直近30日の任意の時点へ戻せる（有料プラン）。
 - **リストア手順を文書化し、実際に staging で復元テストを行う。** 手順書だけ作って試さない状態にしない。
 - 復元テストは四半期ごと。
 
@@ -3059,6 +3407,9 @@ DB migration は expand / contract（§6.6）。`production` への migration �
 | Job の dead-letter 件数 | **1件でも発生したら通知** |
 | **Job Runner のハートビート** | Job Runner が最後にドレインした時刻。**この監視だけは Job を経由しない外形監視から行う**。Job Runner が止まったときに「止まった」という通知を Job で送っても届かない（MEDIUM-7）。10分以上更新がなければ通知 |
 | Integration の最終同期時刻 | 24時間以上更新がなければ通知 |
+| **Notion の最終同期時刻** | 24時間以上更新がなければ通知（§15.6） |
+| **Notion 同期の「要確認」件数** | 除外規則3・6で止めた行が残っていれば通知（§15.6）。**黙って案件が抜けた状態を放置しない** |
+| **課金の超過** | Workers / D1 の含有枠に対する使用率。閾値を超えたら通知（§26.1） |
 | OAuth トークンの期限 | 期限7日前に通知 |
 | **接続アカウント自体の失効** | トークン期限とは別に、アカウント停止による失効を検知して通知する（§15.1） |
 | webhook チャンネルの期限 | 期限前に自動更新。失敗したら通知 |
@@ -3107,63 +3458,90 @@ DB migration は expand / contract（§6.6）。`production` への migration �
 
 ### Phase 2 — Foundation
 
-PostgreSQL、migration、環境（local / staging / production）、CI、テスト基盤、structured logging、設定管理、Secret 管理、**RLS**。
+**D1**、migration、環境（local / staging / production）、CI、テスト基盤、structured logging、設定管理、Secret 管理、**Cloudflare Access の適用と `ctx.access` の受け取り**。
 
-完了条件：空のスキーマに対して CI が全 green。
+**RLS は入れない**（§6.5 / ADR-019 改訂）。代わりに次を Phase 2 で用意する。
+
+- Repository の基底1箇所からのみ D1 へ接続する構造（`workspace_id` を伴わないクエリを書けない形）
+- 接続ごとの `pragma foreign_keys = on` と、それが効いていることの検証（§25.2）
+- 書き込みをバッチ API で原子的に行う仕組み（§22.6）
+- `BEGIN TRANSACTION` と ORM のトランザクション API を禁止する静的検査（§25.2）
+
+完了条件：**空のスキーマに対して CI が全 green。** ローカルで `wrangler dev` に擬似 identity を与え、`ctx.access` が届くこと。
 
 ### Phase 3 — Identity / Workspace / Permission
 
 最初の Vertical Slice。
 
 ```
-Google ログイン -> セッション -> Workspace 取得 -> Capability 判定 -> 現行UIの表示出し分け
+Cloudflare Access で認証 -> ctx.access で Identity 取得 -> D1 Membership 特定
+  -> Capability 判定 -> 現行UIの表示出し分け
 ```
 
-完了条件：現行の `visibleViews()` / `writable()` と**同じ画面が出る**。Permission Matrix Test が全 green。
+**Access は認証だけを担い、認可は D1 で判定する**（§8.2 / §8.4）。`getIdentity()` に IdP 側の不変IDが含まれるかを**ここで実測して確認する**（§8.2 規約7）。
 
-### Phase 4 — Task / Workflow
+完了条件：現行の `visibleViews()` / `writable()` と**同じ画面が出る**。Permission Matrix Test が全 green。cron 経路が `system` として動き、人向け Capability を要する操作を実行できないこと。
+
+### Phase 4 — Notion 読み取り同期
+
+**Client / ServiceContract / 一般社員 Task を Notion から読む**（§15.6）。旧 Phase 5 の「クライアント管理画面を作る」を置き換えるもので、**マスタ編集UIは作らない**。
+
+完了条件：**Notion の `DB_案件` に1行足すと画面に出る。** 除外規則6件が効き、止めた行が「要確認」として残る。`契約金額` と `先方担当者` を取得していないことがテストで固定されている。
+
+### Phase 5 — Task / Workflow
 
 ```
-Task 一覧 -> 詳細 -> Workflow transition -> DB commit -> Audit -> UI 更新
+Task 一覧 -> 詳細 -> Workflow transition -> D1 へバッチで commit -> Audit -> UI 更新
 ```
 
-完了条件：**現行の「今日」画面の主要操作が Backend で動く。** 409 の競合処理と Idempotency が効く。Visual Regression で画素差0。
+完了条件：**現行の「今日」画面の主要操作が Backend で動く。** 409 の競合処理と Idempotency が効く。**同時操作で片方が黙って消えないこと。** Visual Regression で画素差0。
 
-### Phase 5 — Client / ServiceContract / Assignment / Schedule
+### Phase 6 — Assignment / Schedule / 締切と負荷
 
-クライアント管理・契約マスタ・担当・投稿カレンダーを接続する。**マスターデータが画面から編集できるようになる Phase。**
+担当・投稿カレンダー・締切・翌月生成・負荷計算を接続する。**契約本数は Phase 4 で取り込んだ Notion 由来の値を読んで使う。**
 
-完了条件：新規クライアント1社を画面から追加でき、翌月生成に反映される。
+完了条件：翌月生成が動き、遅れ・停滞が自動で出る。**「何本目か」を人が数えなくなる。**
 
-### Phase 6 — Recurring Workflow / Automation
+### Phase 7 — Recurring Workflow / Automation
 
 Client 準備 Alert、定例資料の7日前/3日前/前日、毎月12日の分析サイクル、締切超過通知。Automation Engine 上に載せる。
 
-完了条件：§13.5 の9個の Rule が動き、`AutomationRun` が残る。冪等性テストが green。
+完了条件：§13.5 の9個の Rule が動き、`AutomationRun` が残る。**誰も画面を開いていない時刻に督促が飛び、二重に飛ばない。** 冪等性テストが green。
 
-### Phase 7 — Google Integration
+### Phase 8 — Google Drive Integration
 
-Drive を先、Calendar を後。OAuth / webhook / sync / retry / audit を含む。
+OAuth / webhook / sync / retry / audit を含む。接続主体は**共有の運用アカウント**（§15.1）。
 
-完了条件：フォルダの変更を検知できる。Calendar の定例MTGが取り込まれる。トークン失効から復帰できる。
+完了条件：フォルダの変更を検知できる。トークン失効から復帰できる。**素材をリンクから直接開けるようになり、備考にファイル名を書く運用が終わる。**
 
-### Phase 8 — Slack Integration
+### Phase 9 — AI 支援（台本・企画の下書き・タイトル整形）
+
+Notion の顧客マスター（USP・ターゲット・訴求・不安）を材料に下書きを作る。**Integration Adapter 層に置き、Domain には入れない。** 顧客情報を外部へ送る範囲を明示し、月の上限額を設定する。
+
+完了条件：下書きが理由つきで出て、人が直して使える。**送信する情報の範囲がテストで固定されている。**
+
+### Phase 10 — Slack Integration
 
 シフト変更の構造化受付から。自然言語の AI 抽出は後段。
 
 完了条件：Slack からシフト変更申請 -> 承認 -> Capacity 再計算 まで通る。署名検証と再送耐性のテストが green。
 
-### Phase 9 — Recommendation
-
-投稿予定日、Capacity、担当変更。Rule-based。
-
-完了条件：提案が理由つきで表示され、Accept で反映され、Audit に残る。
-
-### Phase 10 — Production Hardening
+### Phase 11 — Production Hardening と移行
 
 Security review、Permission matrix test、rate limit、retry、dead-letter、backup、**restore test**、monitoring、performance、Integration 失敗時のUX。
 
-そして §24 の移行を実施する。
+そして §24 の移行を実施する。**移行元は3系統**（artifact の `STATE` / 進捗管理スプレッドシート / Notion）であることに注意する（§24.8）。
+
+### 後段（v1 に含めない）
+
+| 項目 | 理由 |
+|---|---|
+| Recommendation（提案機能） | 負荷計算は Phase 6 に含むが、提案と採否の記録は優先順位に直接効かない（§18） |
+| Google Calendar 連携 | **v1 では正典にも必須連携にも含めない**（§16） |
+| 進捗の Notion への書き出し | D1 を正典としたまま片方向で写すことは後から足せる（§15.6） |
+| ネタストックの画面 | Notion に置く。**UI に画面を追加しない**（§24.8） |
+| Workflow の画面からの編集 | v1 は固定値（§11.5） |
+| 他部署・個人利用への流用 | 優先順位の最後。**このために v1 を複雑にしない** |
 
 > **■ オーナー向け説明**
 >
@@ -3185,31 +3563,50 @@ Security review、Permission matrix test、rate limit、retry、dead-letter、ba
 
 ### 28.1 オーナーの判断が必要なこと
 
-技術的な実装詳細ではなく、**料金・運用方法・ユーザー体験・権限・業務ルール・将来やりたいこと**に関わるもの。設計はどちらでも対応できる形にしてあるが、決めないと実装に入れない。
+技術的な実装詳細ではなく、**料金・運用方法・ユーザー体験・権限・業務ルール・将来やりたいこと**に関わるもの。
 
-| # | 論点 | 参照 | 推奨案 | 決めないとどうなるか |
+**2026-09-03 に Architecture Reassessment（`SOCIAL_BASE_ARCHITECTURE_REASSESSMENT.md`）の A〜E が正式承認され、5件が解決した。** 下の表の「状態」を正とする。
+
+#### 解決済み（オーナー承認済み）
+
+| # | 論点 | 決定 |
+|---|---|---|
+| Q1 | ログイン方式 | **Google アカウント。実装は Cloudflare Access に任せ、JWT 検証を自前実装しない**（§8.2） |
+| Q11 | 月額のかかるサービス構成と概算費用 | **Cloudflare Workers 有料プラン（最低 $5/月）＋ D1（枠内）＋ Access（50人まで無料）。** 独自ドメインは任意（§26.1） |
+| Q14 | Drive / Calendar の接続に使うアカウント | **共有の運用アカウント。個人アカウントでは接続しない**（§15.1） |
+| A | Source of Truth の役割分担 | **Notion＝マスタ / Drive＝ファイル本体 / D1＝業務トランザクション**（§5.6） |
+| B | RLS の扱い | **PostgreSQL 固有の RLS は削除する。** ただし server-side permission check / fail closed / Capability ベースの権限 / Audit は維持する（§6.5） |
+| C | スプレッドシート廃止で行き場のない3項目 | **緊急度＝自動判定（入力欄を作らない）/ 依頼者＝操作ユーザーから自動記録 / ネタストック198行＝Notion へ移行。UI 追加は行わない**（§8.6 / §24.8） |
+| D | アカウント運用 | **1人1アカウント。共有ログイン禁止。業務委託も本人の個別アカウントを許可。退職者等のメールアドレスを別人へ安易に再利用しない**（§8.2） |
+| E | Notion の運用ルール | **`DB_案件` への必要最小限の構造化プロパティ追加を許可。既存プロパティ名・選択肢の変更は事前確認**（§15.6） |
+| Q6 | 投稿予定日を Google カレンダーへ書き出すか | **v1 では Calendar を連携しない**ため対象外（§16）。将来連携する場合も推奨は書き出さない |
+| Q12 | Phase の優先順位 | **組み替え済み。** Notion 読み取りを Phase 4 に前倒し、クライアント管理画面の新規作成を削除、AI 支援を Phase 9 として明示（§27） |
+
+#### 未決（Phase 2 の開始を妨げないもの）
+
+| # | 論点 | 参照 | 推奨案 | いつまでに必要か |
 |---|---|---|---|---|
-| Q1 | **ログイン方式**。Google アカウントでのログインでよいか | §8.2 | Google（既に全員が持ち、Drive/Calendar 連携と同じ同意で済む） | Phase 3 に入れない |
-| Q2 | **権限表**（§9.2）の内容でよいか | §9.2 | 表のとおり。運用開始後も画面から変更可 | Phase 3 の Permission Test が書けない |
-| Q3 | **「承認」をスタッフもできるままにするか**。今は全員が承認できる | §9.4 | 移行時は現行どおり全員可。運用しながら決める | 移行時に挙動が変わる可能性 |
-| Q4 | **翌月分の生成**を自動にするか、手動ボタンのままか | §12.5 | 当面は手動（現行どおり）。慣れてから自動化 | Phase 6 の Rule を決められない |
-| Q5 | **自動通知9個**（§13.5）の内容と日数（14日前・7日前・3日前・毎月12日）が実運用に合っているか | §13.5 | 表のとおりで開始し、運用しながら調整 | 通知が多すぎ／少なすぎになる |
-| Q6 | **投稿予定日を Google カレンダーにも書き出すか** | §16.5 | 書き出さない（予定が多くなりすぎる） | Phase 7 の範囲が決まらない |
-| Q7 | **シフト変更に社員の承認を必須にするか**。本人申請だけで確定してよいか | §17.3 | 承認必須（勤務予定は担当割当と締切に直結するため） | Phase 8 のフローが決まらない |
-| Q8 | **カットオーバーの日時**。業務が止まる時間帯 | §24.7 | 金曜の業務終了後。土日で確認し月曜から新環境 | 移行日を決められない |
-| Q9 | **新しいURLを独自ドメインにするか** | §24.1 | 独自ドメイン（覚えやすく、将来変わりにくい） | 周知のやり直しが発生し得る |
-| Q10 | **シフト表にいた「編集スタッフ以外の7名」**（`SHIFT_UNMATCHED`）を登録するか | §24.4 | 登録しない（現行と同じ扱い）。必要なら後から追加 | 移行時にデータが欠ける可能性 |
-| Q11 | **月額のかかるサービス構成**と概算費用 | §26.1 | 構成候補と金額を Phase 2 着手前に提示する | 予算の合意が取れない |
-| Q12 | **Phase の優先順位**。「新しいクライアントを画面から追加できる」（Phase 5）を早めるか | §27 | 順序どおり（土台なしに Phase 5 だけ前倒しはできない） | — |
-| Q13 | **移行時にスタッフの「動画追加」「担当変更」「投稿予定日の変更」を現行どおり全員可のままにするか** | §9.3 | 現行どおり全員可。移行で挙動を変えない | Phase 3 の Permission Test が書けない |
-| Q14 | **Google Drive / Calendar の接続に使うアカウント**。個人アカウントだと退職時に全社の連携が止まる | §15.1 | 共有の運用アカウント（または service account） | Phase 7 で接続主体が決まらない |
-| Q15 | **移行時にサンプルデータをどう扱うか**。公開版が `seeded:true` のままなら、サンプルの進捗が本番の初期状態になる | §24.4 | **サンプルのまま移し、新環境でも「この月はサンプルです」と表示し続ける。** 画面の「サンプルを削除」は使わない（当月の全行を無条件削除するため、実データが混ざっていれば一緒に消える） | Step 2-1 の判断ができない |
+| Q2 | **権限表**（§9.2）の内容でよいか | §9.2 | 表のとおり。運用開始後も変更可 | **Phase 3 まで。** Permission Matrix Test の期待値になる |
+| Q13 | 移行時にスタッフの「動画追加」「担当変更」「投稿予定日の変更」を現行どおり全員可のままにするか | §9.3 | 現行どおり全員可。移行で挙動を変えない | **Phase 3 まで**（Q2 と同時に決めるのが自然） |
+| Q3 | 「承認」をスタッフもできるままにするか | §9.4 | 移行時は現行どおり全員可。運用しながら決める | Phase 5 まで |
+| Q4 | 翌月分の生成を自動にするか、手動ボタンのままか | §12.5 | 当面は手動（現行どおり） | Phase 6 まで |
+| Q5 | 自動通知9個（§13.5）の内容と日数が実運用に合っているか | §13.5 | 表のとおりで開始し、運用しながら調整 | Phase 7 まで |
+| Q7 | シフト変更に社員の承認を必須にするか | §17.3 | 承認必須 | Phase 10 まで |
+| Q9 | 新しいURLを独自ドメインにするか | §24.1 | 独自ドメイン（覚えやすく、将来変わりにくい）。**しない場合は費用ゼロ** | Phase 11 まで |
+| Q8 | カットオーバーの日時 | §24.7 | 金曜の業務終了後。土日で確認し月曜から新環境 | Phase 11 まで |
+| Q10 | シフト表にいた「編集スタッフ以外の7名」（`SHIFT_UNMATCHED`）を登録するか | §24.4 | 登録しない（現行と同じ扱い） | Phase 11 まで |
+| Q15 | 移行時にサンプルデータをどう扱うか | §24.4 | **サンプルのまま移し、新環境でも「この月はサンプルです」と表示し続ける。** 画面の「サンプルを削除」は使わない | Phase 11 まで |
+
+**Q2 と Q13 以外は Phase 2 の完了までに決まらなくても進行を妨げない。**
 
 ### 28.2 技術リスク
 
 | # | リスク | 影響 | 対策 |
 |---|---|---|---|
-| R1 | **CSP によるホスティング移行**。UI ごと新オリジンへ移す必要があり、運用URLが変わる | 全スタッフのブックマーク変更が必要 | §24.2 の段階移行。旧URLを2週間残す |
+| R1 | **ホスティング移行**。UI ごと新オリジンへ移す必要があり、運用URLが変わる | 全スタッフのブックマーク変更が必要 | §24.2 の段階移行。旧URLを2週間残す |
+| **R11** | **Notion にスキーマ契約が無い。** プロパティ名や選択肢を変えると連携が黙って壊れる | 翌月生成が止まる／案件が画面から消える | §15.6 の検証（必須プロパティが欠けたら停止して通知）＋ 除外規則6件＋「要確認」の可視化。運用ルールとして**変更前の事前確認**（オーナー承認済み） |
+| **R12** | **`getIdentity()` に IdP 側の不変IDが含まれるか未確認** | 本人の同定を外部の可変値に頼ることになる | `users.id` を主キーにし email を識別子にしない（§8.2）。無効化済みの email での新規ログインは fail closed。**Phase 3 で実測して確認する** |
+| **R13** | **D1 に対話的トランザクションが無い** | 「読んでから決める」実装を書くと原子性が失われる | §22.6 の規約5件。`BEGIN` と ORM のトランザクション API を静的検査で禁止し、原子性をテストで固定する（§25.2） |
 | R2 | **移行時のデータ欠落** | 過去の進捗が失われる | §24.4 の Matrix を1行ずつ検証。§24.6 の Parity で件数・計算結果・画面を全一致させてから切り替え |
 | R3 | **`trans` の遷移履歴が復元できない** | 移行前の「誰が承認したか」は追えない | `trans{}` は各状態の最終時刻であり履歴ではなく、実データに時系列の逆転が実在する。展開すれば虚偽の監査履歴になるため展開しない（§24.4）。raw JSON だけ `audit_logs` に残す。**これは受け入れる** |
 | R4 | **祝日・営業日データの保守** | 登録が止まると営業日判定が土日のみに劣化する | `business_calendar` の残日数を監視し90日前に通知（§13.5）。担当を運用で決める |
@@ -3217,7 +3614,7 @@ Security review、Permission matrix test、rate limit、retry、dead-letter、ba
 | R6 | **Google API のレート制限・quota** | 同期が止まる | retry + backoff。24時間同期がなければ通知（§26.5） |
 | R7 | **一覧の全件描画**。350件で40,779px（既存バックログ LATER 14） | 件数増加で描画が重くなる | Read Model をページング可能にしておく。UI の対応は UI フェーズの課題として別管理 |
 | R8 | **Workflow を設定可能にしたことによる破壊** | 使用中の State を消して履歴が壊れる | §11.5 の7規則。保存時に検証しエラーにする |
-| R9 | **Permission の設定ミス** | 見えてはいけないものが見える | §25.3 の Matrix Test + RLS（§6.5）の二重化 |
+| R9 | **Permission の設定ミス** | 見えてはいけないものが見える | §6.5 の二重化（アプリ層・スキーマ層）＋ §25.3 の Matrix Test。**RLS を使わないため、Matrix Test を全 Capability × 全 Role で網羅し、省略しない。** 認可判定は Worker 側の1箇所に集約する |
 | R10 | **staging に本番データをコピーする誘惑** | 顧客情報の流出 | §26.2 で禁止。匿名化または合成データ |
 
 ### 28.3 設計上の未決事項（実装フェーズで詰める）
@@ -3249,16 +3646,31 @@ Security review、Permission matrix test、rate limit、retry、dead-letter、ba
 
 各項目に「■ オーナー向け」を付ける。詳細な説明は参照先の章末にある。
 
-### ADR-001 Source of Truth を PostgreSQL にする
+### ADR-001 Source of Truth を役割で分ける（2026-09-03 改訂）
 
-- **文脈** — 現在は artifact の HTML 内に JSON として保存し、操作ごとに全文を再公開している。
-- **決定** — 本番データの Source of Truth を PostgreSQL にする。artifact と `STATE` は Legacy / Migration Source。
-- **理由** — 実認証・監査・同時編集・外部連携のすべてが DB を前提にする。artifact 上では原理的に作れない。
-- **結果** — Managed PostgreSQL の費用が発生する。移行作業が必要になる。
+- **文脈** — 現在は artifact の HTML 内に JSON として保存し、操作ごとに全文を再公開している。加えて進捗は Google スプレッドシートに手入力され、顧客・案件・運用ルール・一般社員 Task は **Notion に既に構造化されて存在する**。素材は Google Drive にある。
+- **決定** — **Source of Truth を1つに集約しない。役割で分ける。**
+  - 業務トランザクション（進捗・工程・担当・業務予定・権限・Audit・システム内部データ）＝ **Cloudflare D1**
+  - 人が保守するマスタ（顧客・案件・運用ルール・一般社員 Task・ネタストック）＝ **Notion**（SOCIAL BASE は片方向で読むだけ）
+  - ファイル本体（素材・完成物）＝ **Google Drive**
+  - artifact と `STATE`、および進捗管理スプレッドシートは **Legacy / Migration Source**
+- **理由** — 同時更新の検出・監査・冪等性を要するデータだけが専用の置き場を必要とする。**人が既に Notion で保守しているマスタを D1 に作り直すと、同じ情報を人が二度入力する構造になり、本システムの目的（手入力を減らす）に反する。** Notion 側の制約（条件付き更新が無い・API 経由の書き込みは連携として記録される・毎秒3リクエスト）はマスタでは許容できるが、トランザクションデータでは許容できない。
+- **結果** — 正典が3か所に分かれるため、**どのデータがどこの正典かを §5.6 の1表で固定し、二重更新を作らないことを規約とする。** Notion にスキーマ契約が無いことへの対策（§15.6）が必要になる。
 - **変更容易度** — 非常に大変。
-- **参照** — §3
+- **参照** — §3.2 §5.6 §15.6
 
-> **■ オーナー向け** データを専用の保管庫へ移します。やりたいこと（ログイン・Drive連携・自動通知）のほぼ全部がこれを前提にしています。月額費用が発生します。あとから戻すのは非常に大変です。判断は確定済み。
+> **■ オーナー向け** 進捗や操作履歴は専用の保管庫（D1）へ、顧客や契約は**今までどおり Notion に**、ファイルは**今までどおり Drive に**置きます。Notion への入力作業は増えません。あとから役割分担を変えるのは非常に大変です。判断は確定済み（A）。
+
+### ADR-001b 業務データベースに Cloudflare D1 を使う（2026-09-03 追加）
+
+- **文脈** — ADR-001 で「トランザクショナルなデータベースが必要」と決めたが、PostgreSQL である必要があるかは別問題である。
+- **決定** — **Cloudflare D1（SQLite）を使う。** PostgreSQL は採用しない。
+- **理由** — 必要な5つ（トランザクション・版番号による競合検出・一意制約・SQL migration・時点復元）をすべて満たす。不要な3つ（RLS・PostgreSQL 固有型・多数同時接続）のために月額と保守を増やす理由がない。加えて **Access / Workers / Cron / Secret / 静的配信と同じ基盤に揃い、ローカル開発に Docker と PostgreSQL の導入が要らない。**
+- **結果** — **対話的トランザクションが無い**ため、書き込みはバッチ API で原子的に行う（§22.6）。`alter table` の制限により contract の段で表の作り替えが必要になる（§6.6）。`FOR UPDATE SKIP LOCKED` が無いため Job の claim は条件付き UPDATE 1文で行う（§23.2）。RLS が無い（ADR-019 参照）。
+- **変更容易度** — 多少大変（SQL を Repository の内側に閉じ、SQLite 固有の書き方を避けることで PostgreSQL へ移る余地を残す）。
+- **参照** — §3.2 §6.1 §22.6 §26.1
+
+> **■ オーナー向け** データベースは Cloudflare のものを使います。バックアップ（30日ぶんの巻き戻し）が追加費用なしで付き、月額は最低 $5 です。将来どうしても必要になれば別のデータベースへ移せますが、多少大変です。判断は確定済み（A）。
 
 ### ADR-002 Modular Monolith から始める
 
@@ -3350,7 +3762,7 @@ Security review、Permission matrix test、rate limit、retry、dead-letter、ba
 
 > **■ オーナー向け** 契約内容（月何本・工程数・投稿担当）を画面から変えられるようにします。今はプログラムを編集しないと変えられません。判断不要。
 
-### ADR-011 PostgreSQL-backed Queue を v1 とし、差し替え可能にする
+### ADR-011 D1-backed Queue を v1 とし、差し替え可能にする
 
 - **決定** — `jobs` テーブル + スケジュール起動でドレイン。`JobQueue` 抽象の後ろに置く。Redis は入れない。
 - **理由** — 常駐 Worker を持たず運用負荷を最小化する。保証（§23.3）を満たせば実装は問わない。
@@ -3426,15 +3838,27 @@ Security review、Permission matrix test、rate limit、retry、dead-letter、ba
 
 > **■ オーナー向け** Slack からシフト変更を出せますが、AI が読み取った内容は本人が確認し、社員が承認して初めて確定します。**判断が必要：承認を必須にするか（Q7）。**
 
-### ADR-019 Row Level Security を最初から入れる
+### ADR-019 Row Level Security は採用しない（2026-09-03 撤回・差し替え）
 
-- **決定** — Phase 2 で RLS を有効化する。後付けにしない。
-- **理由** — 後から入れると既存クエリ全部の再検証が要る。Workspace 分離はアプリのバグでも破られてはいけない。
-- **結果** — 有効化だけでは機能しない。所有者ロールとアプリロールの分離、`force row level security`、`set local` のみの使用、読み取りを含む全アクセスの明示トランザクション化が必須（§6.5 RLS 運用規約）。テストは本番と同じプーラ構成を通す。
-- **変更容易度** — 非常に大変（後付けの場合）。
-- **参照** — §6.5
+**旧決定（撤回）** — 「Phase 2 で RLS を有効化する。後付けにしない。」
 
-> **■ オーナー向け** 別の Workspace のデータが混ざらないよう、データベース自身にも防御を入れます。プログラムにミスがあっても漏れません。判断不要。
+- **文脈** — 旧決定は Source of Truth が PostgreSQL である前提に立っていた。ADR-001b で D1（SQLite）を採用したため、RLS 相当の機構が存在しない。
+- **決定** — **RLS を採用しない。** Workspace 分離は**アプリ層とスキーマ層の二重**で守る（§6.5）。
+- **理由** — Workspace は1つ、利用者は25人程度、**書き手はアプリ1つだけ**。RLS に付随して必須になるもの（読み取りを含む全アクセスの明示トランザクション化、`set local` のみの使用、DB ロールの分離、`force row level security`、本番と同じ接続プーラ構成を通した専用テスト）が、得られる防御に見合わない。
+- **結果** — 防御の層が1枚減る。これを次で埋める。
+  - D1 への接続を Repository の基底1箇所に集約し、`workspace_id` を伴わないクエリを書けない構造にする
+  - 接続ごとに `pragma foreign_keys = on` を発行し、**効いていることをテストで確認する**（外れるとスキーマ層の防御が黙って無効になる）
+  - **Permission Matrix Test を全 Capability × 全 Role で網羅し、省略しない**（§25.3）
+- **維持するもの（重要）** — **RLS の削除は権限チェックを弱めるという意味ではない。** 次の4つは RLS の有無と独立に維持する。
+  1. **server-side permission check** — 認可はすべて Worker 側で判定する。UI の非表示・二度押し防止を安全性の根拠にしない
+  2. **fail closed** — 判定できないものは拒否する（§8.4）
+  3. **Capability ベースの権限** — Role 名をコードに書かない（§8.3 / §9）
+  4. **Audit** — 誰がいつ何をどう変えたかを必ず残す（§19）
+- **再検討の条件** — **他部署へ本格展開して Workspace が複数になったとき。** そのとき PostgreSQL への移行とあわせて再検討する。
+- **変更容易度** — 多少大変（後から入れる場合は既存クエリの再検証が必要）。
+- **参照** — §6.5 §25.2 §25.3
+
+> **■ オーナー向け** 「データベース自身が行単位で遮断する仕組み」は使いません。**これは権限チェックを弱めるという意味ではありません。** 誰が何をできるかの判定はこれまでどおりサーバー側で必ず行い、判定できないものは拒否し、操作履歴も必ず残します。将来、営業部など別の部署にも広げるときに改めて検討します。判断は確定済み（B）。
 
 ### ADR-020 Read -> Write -> Parity -> Legacy撤去 の段階移行
 
@@ -3488,6 +3912,66 @@ Security review、Permission matrix test、rate limit、retry、dead-letter、ba
 
 ---
 
+### ADR-025 認証は Cloudflare Access に任せ、JWT 検証を自前実装しない（2026-09-03 追加）
+
+- **決定** — Access を Worker 自体に適用し、**`ctx.access` / `ctx.access.getIdentity()`** から認証済みユーザー情報を取得する。**Access JWT の検証ロジックを SOCIAL BASE 側に書かない。**
+- **理由** — 公開鍵の取得・`kid` の突き合わせ・署名検証・`iss` / `aud` の確認を自前で持つと、暗号処理の実装ミスが認証の穴になる。Cloudflare 標準機能で本人確認を行うほうが実装量も間違える余地も小さい。
+- **結果** — **Access は認証のみを担い、認可は D1 の Membership / Capability で判定する**（§8.4）。**Access のコンテキストは Service Binding / RPC を越えて伝播しない**ため、Worker を1つに保つ。cron 経路には `ctx.access` が無いため `system` として扱う。
+- **変更容易度** — 多少大変。
+- **参照** — §8.2 §8.6 §26.1
+
+> **■ オーナー向け** ログインの仕組みは Cloudflare のものをそのまま使います。自分たちで作らないぶん、間違いが起きにくくなります。使い勝手は変わりません。判断は確定済み（A / 追加指示）。
+
+### ADR-026 人の同定は D1 の不変な内部IDで行う（2026-09-03 追加）
+
+- **決定** — 人の同定は **`users.id`（発行後に変えない内部ID）** で行う。**email を主キーにしない。** 人を指す列は `workspace_member_id` または `users.id` を持つ。
+- **理由** — email は Google Workspace 側で再割り当て可能な可変の値である。退職者のアドレスを新入社員へ再発行すると、email を鍵にした実装では**前任者の担当と監査履歴を新任者が引き継ぐ**。§19 の要件そのものが偽になる。加えて **`getIdentity()` に IdP 側の不変ユーザーIDが含まれるかを公式ドキュメントで確認できていない**（確認できたのは email / name / groups）。外部から来る値だけに同定を委ねない。
+- **結果** — 無効化済み User の email で新規ログインが来たら、自動で既存 User に結びつけず、新規作成もせず「要確認」で止める（fail closed）。**運用ルールとして、退職者等のメールアドレスを別人へ安易に再利用しない**（SOCIAL BASE に限らず他サービスを含めた本人取り違えの防止）。**`getIdentity()` の返却内容は Phase 3 で実測して確認する。**
+- **変更容易度** — 非常に大変（後から直すと全ての参照を貼り替えることになる）。
+- **参照** — §8.2 §19 §28.2 R12
+
+> **■ オーナー向け** システムの中では、人をメールアドレスではなく専用の番号で管理します。名前やアドレスが変わっても履歴が途切れません。**あわせて「退職者のメールアドレスを別の人に使い回さない」という運用ルールをお願いしています。** 判断は確定済み（D）。
+
+### ADR-027 Notion は片方向の読み取りのみにする（2026-09-03 追加）
+
+- **決定** — Notion からの取り込みは **Notion → SOCIAL BASE の片方向のみ**。マスタへ書き戻さない。**一般社員 Task は Read Only** とし、書き込み API を作らない。
+- **理由** — 双方向にすると正典が二重になり、どちらが正しいか決められなくなる。社員はすでに Notion で企画・台本・指示出しを管理しているため、SOCIAL BASE 側に同じものを作ると**同じ情報を人が二度入力する構造**になる。
+- **結果** — Notion にスキーマ契約が無いため、必須プロパティの検証と除外規則6件、および「要確認」の可視化が必要になる（§15.6）。**`契約金額` と `先方担当者` は取得しない。** 画面表示は必ず D1 の写しから返す（毎秒3リクエストの制限）。
+- **変更容易度** — 簡単（書き戻しを足すのは後からでも可能。ただし足す前に正典の所在を決め直す）。
+- **参照** — §5.6 §15.6 §21.5
+
+> **■ オーナー向け** Notion は今までどおり社員が更新し、SOCIAL BASE はそれを読むだけにします。**SOCIAL BASE 側に同じ入力欄を作りません。** 判断は確定済み（A / E）。
+
+### ADR-028 Google Calendar は v1 で扱わない（2026-09-03 追加）
+
+- **決定** — **v1 では Google Calendar を正典にも必須連携にも含めない。** 将来連携する場合も **D1 を正典とし、Calendar は D1 から同期する外部表示先**として扱う。
+- **理由** — 優先順位（1: チームで便利に使える / 2: 手入力を減らす / 3: 漏れを防ぐ / 4: 保守を簡単にする）に対して、Calendar 連携は直接効かない。取り込みを行うと Calendar 由来の予定が業務判断の根拠になり、正典が増える。
+- **結果** — §16 は将来の設計として残す。定例MTGを画面に出す必要が生じた場合は、Calendar を読むのではなく `ScheduleEntry` として SOCIAL BASE 側に持つことを先に検討する。
+- **変更容易度** — 簡単。
+- **参照** — §5.6 §16 §27
+
+> **■ オーナー向け** カレンダー連携は最初の版には入れません。あとから足せます。判断は確定済み（A）。
+
+### ADR-029 緊急度と依頼者は入力させない（2026-09-03 追加）
+
+- **決定** — **緊急度は導出値として算出し、列にも保存しない。依頼者は操作ユーザーから自動記録する。どちらも入力欄を新設しない。**
+- **理由** — 現行の進捗管理スプレッドシートでは両方を人が手入力している。**新しい入力先を作ることは本システムの目的（手入力を減らす）に反する。** 緊急度は締切・現在工程・遅延状態から一意に決まる。依頼者は動画を作成した本人であり、認証済みの操作者から確定できる。
+- **結果** — **FIX済み UI に画面項目を追加しない。** 緊急度を保存しないため「人が直せる値」に見えず、二重更新の入口を作らない。表示が必要になった場合は Read Model で計算して返す。
+- **変更容易度** — 簡単（保存したくなった時点で列を足せる）。
+- **参照** — §8.6 §24.8
+
+> **■ オーナー向け** 「緊急度」と「依頼者」を人が入力する欄は作りません。緊急度は締切と進み具合から自動で判定し、依頼者はログインした本人から自動で記録します。**画面の見た目は変わりません。** 判断は確定済み（C）。
+
+### ADR-030 Workflow の定義は v1 では画面から編集させない（2026-09-03 追加）
+
+- **決定** — 5状態と遷移は**固定値として投入する。** 画面から編集する機能を v1 では作らない。変更が必要になった場合は migration で行う。
+- **理由** — 5状態は業務として固定している。編集可能にすると「使用中の State を消して履歴が壊れる」リスク（§28.2 R8）を自ら作ることになる。将来の汎用化のために v1 を複雑にしない。
+- **結果** — §11.5 の7規則は**保存時の検証ではなく migration レビューのチェックリストとして適用する。** 画面から編集できるようにする判断が出た時点で、同じ規則を保存時の検証として実装する。テーブル構造は変更不要。
+- **変更容易度** — 簡単（テーブルは既に設定可能な形になっている）。
+- **参照** — §11.5 §5.6
+
+> **■ オーナー向け** 工程の名前や順番を画面から変える機能は、最初の版には作りません。今の5段階を固定で入れます。あとから足せます。判断は確定済み（A）。
+
 ## 変更履歴
 
 | 日付 | 版 | 内容 |
@@ -3497,3 +3981,4 @@ Security review、Permission matrix test、rate limit、retry、dead-letter、ba
 | 2026-08-29 | **v3** | 第2回 Senior Review（BLOCKER 0 / HIGH 3 / MEDIUM 9 / LATER 1）を反映。`generate()` の投稿担当補正が34/50本に適用されない非対称性、`seeded` の扱い（Q15）、`contract_version_hash` の定義と `service_contracts.version`、`period_key` NULL の部分ユニーク2本、`id` を持たない結合テーブルの規約、`assignEditors()` の手順化、undo Transition の列挙と `kind` 列、絞り込み3箇所の明示、Job Runner のハートビート。v2 編集で残った章またぎの矛盾7箇所を解消 |
 | 2026-08-29 | **v4** | 第3回 Senior Review（BLOCKER 0 / HIGH 3 / MEDIUM 7 / LATER 1）を反映。`assignEditors()` を merge の前（手順7）へ修正、Q15 の推奨を「サンプルを削除」から「サンプルのまま移して表示を残す」へ変更、undo Transition の一意制約に `kind` を追加、`contract_version_hash` を `generation_input_hash` へ改名して営業日と勤務予定を含める、`default_editor_member_id` の役割を明確化、Step 2-1 の実測項目を具体化、0件対0件の Parity 空通過を禁止 |
 | 2026-08-29 | **v5** | 第4回 Senior Review（**判定 A・BLOCKER 0 / HIGH 0** / MEDIUM 5 / LATER 1）を反映。§5.1 と §7.3 ER のスキーマ波及漏れ、`generation_input_hash` に前月の営業日を追加、`default_editor_member_id` は画面の初期値にも使わない（現行の既定は「未割当」）、契約の `starts_on` / `ends_on` / `version` の移行方法、Step 5-2 に「サンプルを削除を押さない」を追記。整合性チェックの mermaid 重複検出をラベル違いにも対応（検出力を実証） |
+| 2026-09-03 | **v6** | Architecture Reassessment（`SOCIAL_BASE_ARCHITECTURE_REASSESSMENT.md` v3）の A〜E 承認を反映。**Source of Truth を役割で分割**（D1 = 業務トランザクション / Notion = 人が保守するマスタ / Drive = ファイル本体。§5.6 を正典とする）。**PostgreSQL を D1 に置き換え**、RLS を撤回（ADR-019）。認証を Cloudflare Access の `ctx.access` に確定し JWT 自前検証を廃止（ADR-025）。人の同定を `users.id` に確定（ADR-026）。Notion は片方向読み取りのみ・一般社員 Task は Read Only（ADR-027）。Calendar は v1 で扱わない（ADR-028）。緊急度・依頼者は入力させない（ADR-029）。Workflow 定義は v1 固定（ADR-030）。優先順位 P0 を追加。移行元が3系統であることを追記（§24.8）。**UI は変更していない。** |
