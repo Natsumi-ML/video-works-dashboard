@@ -484,12 +484,12 @@ Slack Adapter -> ShiftChangeRequest（Core: 未確定の変更要求）
 ### 5.2 SOCIAL BASE Module
 
 **Client** — 運用クライアント。**Source of Truth は Notion `DB_顧客マスター`（§5.6）。D1 側は読み取り専用の写しであり、画面から編集させない。**
-`id / workspace_id / notion_page_id UK / name / display_name / status(active|paused|ended) / synced_at / created_at`
+`id / workspace_id / notion_page_id UK / name / display_name / status(active|paused|ended) / synced_at / archived_at / created_at`
 
 現行 `STATE.clients` と `SEED_CONTRACTS.client` の移行先だが、移行後の更新経路は Notion だけになる。
 
 **ServiceContract** — 契約。**Source of Truth は Notion `DB_案件`（§5.6）。D1 側は読み取り専用の写し。**
-`id / workspace_id / notion_page_id UK / client_id / kind(動画|静止画) / monthly_count / step_count / lead_time_business_days / default_publisher_member_id / default_editor_member_id / workflow_template_id / starts_on / ends_on / status / synced_at / version`
+`id / workspace_id / notion_page_id UK / client_id / kind(動画|静止画) / monthly_count / step_count / lead_time_business_days / default_publisher_member_id / default_editor_member_id / workflow_template_id / starts_on / ends_on / status / synced_at / archived_at / version`
 
 `monthly_count` は Notion の `動画投稿本数` / `静止画投稿本数` から取り込む。**`契約金額` と `先方担当者` は取得対象に入れない**（§15.6）。`SEED_CONTRACTS` はここへ移行するが、移行後の更新経路は Notion だけになる。
 
@@ -578,7 +578,7 @@ Write Model は正規化する。Read Model は画面が使いやすい形にす
 | Client（顧客） | **Notion `DB_顧客マスター`** | Notion のみ | 読み取り専用の写し。画面から編集させない |
 | ServiceContract / 運用ルール（月本数・種類・事業ライン） | **Notion `DB_案件`** | Notion のみ | 読み取り専用の写し。翌月生成と本数管理の入力になる |
 | 企画の素（USP・ターゲット・訴求・不安） | **Notion `DB_顧客マスター` の本文** | Notion のみ | 保存しない。必要時に読む |
-| 一般社員 Task（企画・台本・指示出し） | **Notion `DB_タスク`** | Notion のみ | **原則 Read Only。SOCIAL BASE から書かない**（§21.5） |
+| 一般社員 Task（企画・台本・指示出し） | **Notion `DB_タスク`** | Notion のみ | **読み取り専用の写しを持つ**（`staff_task_mirror`）。表示はこの写しから返す。**SOCIAL BASE から Notion へ書かない**（§21.5） |
 | ネタストック | **Notion** | Notion のみ | v1 では参照しない。UI に画面を追加しない |
 | Asset 本体（素材・完成物のファイル） | **Google Drive** | Drive のみ | ファイルを複製しない。`external_link_id` だけを持つ（機械が書く） |
 | ContentItem（動画・投稿1本） | **D1** | SOCIAL BASE のみ | 正典 |
@@ -597,6 +597,10 @@ Write Model は正規化する。Read Model は画面が使いやすい形にす
 | business_calendar（営業日・祝日） | **D1** | SOCIAL BASE（年1回） | 正典 |
 | 緊急度 | **持たない（導出値）** | **入力欄を作らない** | 締切・現在工程・遅延状態から算出する（§5.5 / §18） |
 | 依頼者 | **D1（自動記録）** | **入力欄を作らない** | 作成者・操作ユーザーから自動記録（§8.6 / §19） |
+
+#### 写しは削除しない
+
+**Notion 由来の写し（`clients` / `service_contracts` / `staff_task_mirror`）は削除しない。** Notion 側で消えても `archived_at` を立てるだけにする。`content_items` がこれらを参照しているため、**削除すると外部キー違反になるか、連鎖削除で実データを失う**（§15.6）。
 
 #### 二重更新の禁止
 
@@ -692,7 +696,7 @@ alter table member_roles
 | テーブル | 主な列 | 主な制約・索引 |
 |---|---|---|
 | `workspaces` | `id, name, slug, type, timezone, settings json, archived_at` | `unique(slug)` |
-| `users` | `id, identity_provider, external_subject, email, display_name, avatar_url, status, last_login_at` | `unique(lower(email))`（有効な User の範囲）。`external_subject` は **NULL 許容**（Cloudflare Access の `getIdentity()` から不変IDが取得できる場合のみ入れる。取得できる場合は `unique(identity_provider, external_subject)` を張る）。**同定は `users.id`。email は表示と招待照合のみ**（§8.2）。`workspace_id` を持たない例外テーブル |
+| `users` | `id, identity_provider, external_subject, email, display_name, avatar_url, status, last_login_at` | **`unique(lower(email))`（無効化済みを含む全 User。§8.2 規約2）。**`external_subject` は **NULL 許容**（Cloudflare Access の `getIdentity()` から不変IDが取得できる場合のみ入れる。取得できる場合は `unique(identity_provider, external_subject)` を張る）。**同定は `users.id`。email は表示と招待照合のみ**（§8.2）。`workspace_id` を持たない例外テーブル |
 | `workspace_members` | `id, workspace_id, user_id, display_name, status, joined_at` | `unique(workspace_id, user_id)` |
 | `roles` | `id, workspace_id, key, name, is_system, description` | `unique(workspace_id, key)` |
 | `role_capabilities` | `workspace_id, role_id, capability_key, scope_type, scope_id` | `pk(role_id, capability_key, scope_type, scope_id)`、`fk(role_id, workspace_id)` |
@@ -725,11 +729,12 @@ alter table member_roles
 
 | テーブル | 主な列 |
 |---|---|
-| `integration_connections` | `id, workspace_id, provider, account_label, external_account_id, scopes text[], access_token_enc, refresh_token_enc, token_expires_at, status, connected_by, revoked_at` |
+| `integration_connections` | `id, workspace_id, provider, account_label, external_account_id, scopes json, access_token_enc, refresh_token_enc, token_expires_at, status, connected_by, revoked_at` |
 | `external_resource_links` | `id, workspace_id, connection_id, provider, external_kind, external_id, external_url, local_resource_type, local_resource_id, etag, last_synced_at` |
 | `webhook_subscriptions` | `id, workspace_id, connection_id, provider, channel_id, resource_id, verification_token_enc, expires_at, status` |
 | `webhook_receipts` | `id, provider, connection_id, external_event_key, received_at, signature_valid, payload json, processed_at` |
 | `sync_cursors` | `id, workspace_id, connection_id, resource_key, cursor_token, last_full_sync_at, last_delta_sync_at` |
+| `integration_sync_issues` | `id, workspace_id, provider, source_kind, source_ref, reason, detail json, first_seen_at, last_seen_at, resolved_at` |
 
 `external_resource_links` は `unique(provider, external_id, local_resource_type, local_resource_id)` を張り、**SOCIAL BASE 独自IDと Google ID を同一視しない**。
 
@@ -751,12 +756,13 @@ alter table member_roles
 
 | テーブル | 主な列 | 制約 |
 |---|---|---|
-| `clients` | `id, workspace_id, name, display_name, status, legacy_key, archived_at` | `unique(workspace_id, name)` |
-| `service_contracts` | `id, workspace_id, client_id, kind, monthly_count, step_count, lead_time_business_days, default_publisher_member_id, default_editor_member_id, workflow_template_id, starts_on, ends_on, status, version, legacy_id` | `unique(workspace_id, legacy_id)`、`check(monthly_count >= 0)`、`check(lead_time_business_days >= 0)` |
+| `clients` | `id, workspace_id, notion_page_id, name, display_name, status, synced_at, legacy_key, archived_at` | `unique(workspace_id, notion_page_id)`、`unique(workspace_id, name)`。**Notion 由来の読み取り専用の写し**（§5.6）。同期の同定キーは `notion_page_id`。`name` の UNIQUE は移行時の名前解決のために残す |
+| `service_contracts` | `id, workspace_id, notion_page_id, client_id, kind, monthly_count, step_count, lead_time_business_days, default_publisher_member_id, default_editor_member_id, workflow_template_id, starts_on, ends_on, status, synced_at, version, legacy_id` | `unique(workspace_id, notion_page_id)`、`unique(workspace_id, legacy_id)`、`check(monthly_count >= 0)`、`check(lead_time_business_days >= 0)`。**Notion 由来の読み取り専用の写し。** `version` は同期の世代管理用で、人の編集による競合検出には使わない（§22.1） |
 | `social_accounts` | `id, workspace_id, client_id, platform, handle, external_account_id, status` | `unique(workspace_id, platform, handle)` |
-| `content_items` | `id, workspace_id, client_id, service_contract_id, social_account_id, kind, title, body, target_month, publish_date, published_at, published_url, notes, revision_note, date_locked, schedule_squeezed, version, legacy_id, archived_at` | `unique(workspace_id, legacy_id)`、`index(workspace_id, target_month)`、`index(workspace_id, publish_date)`、`index(workspace_id, client_id, target_month)`、`index(workspace_id, service_contract_id, target_month)` |
+| `content_items` | `id, workspace_id, client_id, service_contract_id, social_account_id, kind, title, body, target_month, publish_date, published_at, published_url, notes, revision_note, date_locked, schedule_squeezed, **created_by**, version, legacy_id, archived_at` | `unique(workspace_id, legacy_id)`、`fk(created_by, workspace_id) references workspace_members(id, workspace_id)`、`index(workspace_id, target_month)`、`index(workspace_id, publish_date)`、`index(workspace_id, client_id, target_month)`、`index(workspace_id, service_contract_id, target_month)` |
 | `content_item_tasks` | `workspace_id, content_item_id, task_id` | `pk(workspace_id, content_item_id, task_id)`、**`unique(task_id)`**、`fk(content_item_id, workspace_id)`、`fk(task_id, workspace_id)` |
 | `assets` | `id, workspace_id, owner_type, owner_id, role, external_link_id, mime_type, metadata json` | `index(workspace_id, owner_type, owner_id)` |
+| `staff_task_mirror` | `id, workspace_id, notion_page_id, title, status, due_on, assignee_member_id, related_contract_id, synced_at, archived_at` | `unique(workspace_id, notion_page_id)`、`index(workspace_id, due_on)`。**`assignee_member_id` と `related_contract_id` は NULL 許容**（§15.6 の解決規則）。**Notion `DB_タスク` の読み取り専用の写し**（§15.6 / §21.5）。**SOCIAL BASE から更新する経路を作らない。行は削除せず archive する** |
 
 `content_item_tasks` は **Core を汚さずに ContentItem : Task の整合性を保証する**ための Module 側の結合テーブル。Core の `tasks.source_type` / `source_id` は外部キーを張れない多態参照なので、v1 の 1:1 は `unique(task_id)` でここに担保する。将来 1:N へ広げるときはこの UNIQUE を外すだけでよい。
 
@@ -794,6 +800,8 @@ alter table member_roles
 #### 代わりに強めること
 
 RLS が担っていた「アプリ層のバグを DB 側で受け止める」役割を、次で埋める。
+
+- **追記専用のテーブルは DB 側で書き換えを拒否する。** `audit_logs` と `workflow_run_transitions` に `before update` / `before delete` のトリガーを張り、`raise(abort, ...)` で止める。**RLS が無くても「履歴は書き換えない」は DB で守れる**（§19）。トリガーが効いていることをテストで確認する（§25.2）
 
 - **D1 への接続を Repository の基底1箇所に集約し、そこ以外から接続を取らせない。** `workspace_id` を伴わないクエリを書けない構造にする（lint とコードレビューで機械的に禁止する）
 - **`pragma foreign_keys = on` を接続ごとに発行する**（§6.1）。これを忘れると複合外部キーによるスキーマ層の防御が黙って無効になる。**この pragma が効いていることをテストで確認する**（§25.2）
@@ -1311,7 +1319,7 @@ erDiagram
 | # | 規約 |
 |---|---|
 | 1 | **人を指す全ての列は `workspace_member_id`（Workspace 内の操作者）または `users.id`（人物）を持つ。** `task_assignments` / `audit_logs` / `member_roles` などに email を保存して人を指さない |
-| 2 | email は**初回ログイン時に内部IDへ結びつける照合用の属性**。以後は表示と照合のみに使う。`unique index on (lower(email))` は**有効な Member の範囲で**張る |
+| 2 | email は**初回ログイン時に内部IDへ結びつける照合用の属性**。以後は表示と照合のみに使う。**`unique index on (lower(email))` は無効化済みの行も含めた全 User に対して張る。** 有効な行だけに限定すると、退職者の email で2人目の User を作れてしまい、規約6 をアプリのバグ1つで破れるようになる。**制約で構造的に不可能にする** |
 | 3 | ログインのたびに、内部IDを鍵にして email と表示名を上書きする（アドレス変更に自動追随する） |
 | 4 | 招待は email で出し、**初回ログイン時に内部IDへ束ねる（claim）**。まだ束ねられていない招待レコードにだけ email 一致を許す |
 | 5 | **退職・契約終了時は Access からアカウントを外し、`users.status` と `workspace_members.status` を無効にする。行は残す**（履歴を壊さない） |
@@ -1441,9 +1449,9 @@ Scope        : workspace 全体、または client / contract 単位
 | キー | 意味 |
 |---|---|
 | `client.read` | クライアント一覧・詳細を見る |
-| `client.manage` | クライアントの追加・変更・Drive設定 |
+| `client.manage` | **SOCIAL BASE 側のクライアント属性**（Drive設定・撮影日・企画ステータス・資料フロー）の変更。**クライアントの追加と名称・契約の変更は Notion で行う**（§5.6 / ADR-027） |
 | `contract.read` | 契約内容を見る |
-| `contract.manage` | 契約（月本数・工程数・担当）の変更 |
+| `contract.manage` | 契約（月本数・工程数・担当）の変更。**v1 では対応する操作が無い**（契約は Notion で変更する。§5.6 / ADR-027）。キーは将来のために残すが、これを要求する API を v1 では作らない |
 | `content.read` | 制作物を見る |
 | `content.update` | タイトル・URL・メモ・修正指示を書く |
 | `content.review.internal` | 社員が対応する要確認項目（Drive未設定・タイトル未入力）を見る。**表示制御用で書き込み権限ではない** |
@@ -1526,6 +1534,8 @@ Scope        : workspace 全体、または client / contract 単位
 | 投稿予定日 / 締切の変更 | `:4667` ほかの日付入力 | `schedule.manage` |
 | タイトル・URL・メモ・修正指示 | `:4778` ほか | `content.update` |
 | クライアントの Drive URL・撮影日・企画ステータス・資料フロー | `:4659` `:4721` `:4745` | `client.manage` / `asset.manage`（画面自体が社員のみのため実質社員限定） |
+
+**`staff_task.read` は現行に対応する分岐が無い新規 Capability である。** Notion の一般社員 Task を画面に出すのは移行後に増える機能であり、現行の挙動を再現する対象ではない（§21.5）。
 
 **§9.2 の既定 Role は、この表をそのまま再現するように組んである。** `editor` が `task.create` / `task.assign` / `schedule.manage` を持つのはそのため。移行時に絞りたい場合はオーナー判断（§28 Q13）であり、設計で黙って変えない。
 
@@ -2195,7 +2205,7 @@ Drive 未接続・トークン失効・API エラーは、**工程操作をブ�
 | 認証 | Notion の内部インテグレーションのトークン。**Worker の Secret に保管する**（§26.1）。閲覧者個人の連携に依存しない |
 | 起動 | 1日1回の定期同期（cron）＋ 画面操作で必要になった分の読み取り |
 | 保存先 | `clients` / `service_contracts` の**読み取り専用の写し**（`notion_page_id` UK、`synced_at`）。人が編集する経路を作らない |
-| 一般社員 Task | **写しを持たず、必要時に読んで表示する**（§21.5） |
+| 一般社員 Task | **読み取り専用の写し（`staff_task_mirror`）を持つ。** 画面表示はこの写しから返す（レート制限のため。§21.5） |
 | ネタストック | **v1 では読まない。** UI に画面を追加しない |
 
 #### 取得するプロパティを列挙する（列挙しないものは取得しない）
@@ -2220,6 +2230,29 @@ Drive 未接続・トークン失効・API エラーは、**工程操作をブ�
 | 4 | `静止画投稿本数` の空欄は 0 として扱う | 0 と空欄が混在している |
 | 5 | 取得するプロパティを列挙し、それ以外は取得しない | 同じ DB に `契約金額` がある |
 | 6 | **必須プロパティが欠けたら同期を止めて通知する（fail closed）** | Notion にスキーマ契約が無く、プロパティ名の変更で連携が黙って壊れる |
+
+#### 同期は削除しない（archive のみ）
+
+**［重要］Notion 側で案件やクライアントが消えても、写しの行を削除しない。** `content_items` は `service_contract_id` / `client_id` で写しを参照しているため、**写しを削除すると外部キー違反になるか、連鎖削除で実データを失う。**
+
+| Notion 側の状態 | 写しの扱い |
+|---|---|
+| 新規に現れた | 行を追加する |
+| 内容が変わった | 取得対象のプロパティだけを更新する（`synced_at` を更新） |
+| 消えた／`ステータス` が運用中でなくなった／除外規則に該当するようになった | **`status` を終了に変え、`archived_at` を立てるだけ。行は消さない** |
+| 再び現れた | `archived_at` を外して復帰させる（`notion_page_id` で同定するため同じ行に戻る） |
+
+**したがって同期は「スナップショット置換」ではなく「スナップショット突き合わせ（追加・更新・archive）」である。** ADR-024 の移行時のスナップショット同期とは扱いが異なる。
+
+**archive された案件に紐づく `content_items` は残る。** 過去の実績が消えないことを Parity 確認（§24.6）と回帰テスト（§25.2）で固定する。
+
+#### Notion 側の人・関連の解決規則
+
+| 項目 | 規則 |
+|---|---|
+| `DB_タスク.担当`（Notion ユーザー） | **email で `users` を引き、`workspace_members` を解決する。** 解決できない場合は `assignee_member_id` を NULL にし、表示は Notion 上の氏名の文字列にとどめる。**推測で他人に割り当てない**（fail closed） |
+| `DB_タスク.関連案件` | 同期対象の `service_contracts` に存在すれば紐づける。**同期対象外（Lステップ等）や archive 済みなら `related_contract_id` は NULL** にし、タスク自体は表示する。外部キー違反で同期を止めない |
+| `DB_案件.顧客`（relation） | `clients` の `notion_page_id` で解決する。解決できない場合は §15.6 規則3 と同じ扱い（同期せず「要確認」） |
 
 **規則3・6で止めたものは黙って捨てない。** `integration_sync_issues` として残し、画面と通知に「要確認」として出す。**「同期できたつもりで案件が消えている」状態を作らない。**
 
@@ -2260,6 +2293,8 @@ Drive 未接続・トークン失効・API エラーは、**工程操作をブ�
 保存するのは `connection / calendar_id / external_event_id / local_resource_id / sync_token / channel_id / expiration / last_synced_at`。
 
 ### 16.2 同期の方向
+
+**［v1 では適用しない］** 以下は将来 Calendar を連携する場合の設計である（本章冒頭の決定）。
 
 **v1 は「読み取り中心＋限定的な書き込み」にする。**
 
@@ -2695,10 +2730,10 @@ GET  /api/v1/workspaces/:ws/views/clients
 |---|---|
 | 提供する API | 参照のみ（`StaffTaskQuery`）。**作成・更新・削除の API を作らない** |
 | 認可 | **`staff_task.read` を要求する**（§9.1）。`editor` は持たないため、**スタッフの画面には社員タスクが出ない**。UI の出し分けではなくサーバー側で判定する |
-| 保存 | D1 に写しを持たない。必要時に §15.6 の経路で読む |
+| 保存 | **D1 に読み取り専用の写し（`staff_task_mirror`）を持つ。** 画面表示は必ずこの写しから返し、リクエストごとに Notion を呼ばない（毎秒3リクエストの制限。§15.6） |
 | 表示 | 「今日」画面に社員向けの当日分として混ぜて表示する（**UI の構成・見た目は変更しない**） |
 | 書き込み | **行わない。** Notion 側へ状態を書き戻す API を用意しない |
-| 失敗時 | Notion が応答しない場合は当該ブロックだけ「取得できていません」を出し、**制作進捗の操作は通常どおり続けられる**（§26.6 の方針に従う） |
+| 失敗時 | 同期が失敗しても写しは残るため表示は続く。**最終同期時刻が24時間より古い場合は「同期できていません」の注記を出す**（§26.5）。**制作進捗の操作は通常どおり続けられる**（§26.6 の方針に従う） |
 
 **なぜ Read Only にするか。** 社員はすでに Notion で企画・台本・指示出しのタスクを管理している。SOCIAL BASE 側に同じものを作ると、**同じ情報を人が二度入力する構造**になり、本システムの目的（手入力を減らす）に反する。書き込みを足すかどうかは業務ルールの判断であり、設計で黙って足さない。
 
@@ -2725,7 +2760,7 @@ Read Model の1行は ContentItem と Task と WorkflowRun を結合したもの
 | 投稿予定日 / 締切の変更 | `content_items.version` |
 | 担当変更 | `content_items.version`（Assignment は行の追加削除で version を持たない） |
 | 日次メモ | `daily_notes.version` |
-| 契約内容の変更 | `service_contracts.version` |
+| ~~契約内容の変更~~ | **該当なし。** 契約は Notion が正典で SOCIAL BASE では変更しない（§5.6 / ADR-027）。`service_contracts.version` は同期の世代管理に使い、人の編集の競合検出には使わない |
 
 **`version` はその行を UPDATE する Command が必ず＋1する**（トリガーではなく Repository の UPDATE 文に含める）。子テーブルだけを書き換える操作（例：`task_assignments` の差し替え）も、親の `version` を進めて競合検出の対象にする。
 
@@ -2796,7 +2831,7 @@ Read Model の1行は ContentItem と Task と WorkflowRun を結合したもの
 |---|---|
 | 1 | **書き込みは1回のバッチにまとめる。** 上の4文を1つのバッチとして送る。`BEGIN` / `COMMIT` を SQL に書かない |
 | 2 | **バッチの中で読んで分岐しない。** バッチは文を先に組み立てて送るため、「読んでから決める」ができない。**分岐は条件付き UPDATE の `where` に埋め込み、影響行数で結果を判定する**（§22.1 の 0行 → 409、§22.2 の `from_state_id` 一致） |
-| 3 | **認可チェックはバッチの前に行う**（§8.4）。認可の読み取りは原子的単位の外になるため、**認可の結果に依存する更新も §22.1 の `version` 条件を必ず併せて持たせる**。権限が変わった直後の操作は 409 で弾かれ、黙って通らない |
+| 3 | **認可チェックはバッチの前に行う**（§8.4）。ただし読み取りが原子的単位の外になるため、**権限が失効した直後の1回の書き込みを `version` 条件では止められない**（対象行が変わっていないため）。したがって**書き込み文そのものに認可述語を埋め込む**。<br>`update content_items set ... where id = :id and workspace_id = :ws and version = :v and exists (select 1 from member_roles mr join role_capabilities rc on ... where mr.workspace_member_id = :actor and rc.capability_key = :cap)`<br>**これにより認可の評価が書き込みと同一の原子的単位に入る。** 0行なら 403 か 409 のいずれかであり、区別が必要な場合は直後に読み直して判定する |
 | 4 | **ORM のトランザクション API に依存しない。** ［事実］D1 アダプタでは ORM の暗黙・明示トランザクションが**無視されて個別クエリとして実行され、原子性が失われる**実装が存在する。**ORM は型付きクエリビルダとしてのみ使い、原子性はバッチ API で担保する**（§3.2） |
 | 5 | **原子性が要る箇所をテストで固定する。** バッチの途中で失敗させ、**業務データ・Audit・Outbox のいずれも書かれていない**ことを検証する（§25.2） |
 
@@ -3263,6 +3298,8 @@ Domain Rules。外部依存なしで動く層。
 - `period_key` の部分ユニーク2本が、**`period_key` が NULL の場合も**同一対象の Run 重複を弾くこと（NULL を含む単一の UNIQUE では弾けないことを逆に確かめる回帰テストを含む）
 - 主要 Query（§5.5）の `EXPLAIN QUERY PLAN` が全表走査にならないこと。**1リクエストあたりのクエリ数の上限を検査する**（D1 の 1 呼び出しあたりのクエリ数制限に収めるため。§26.1）
 - **`unique index on (lower(email))` が大文字小文字の違う重複を弾くこと**（§6.1。`citext` 相当の型が無いため式インデックスで代替している）
+- **`unique(lower(email))` が無効化済みの User の email に対しても効くこと。** 無効化した User と同じ email で2人目を作れないことを確認する（§8.2 規約2 / 規約6）
+- **`audit_logs` と `workflow_run_transitions` の追記専用トリガーが効くこと。** UPDATE と DELETE がそれぞれ失敗することを確認する（§6.5）
 
 #### Notion 同期の契約テスト
 
@@ -3272,6 +3309,9 @@ Domain Rules。外部依存なしで動く層。
 - **除外規則6件がすべて効くこと。** 記入例行・`ステータス` 空の行・`事業ライン` が対象外の行を含む固定の応答を入力し、**同期対象から外れ、かつ「要確認」として残ること**を確認する
 - **`契約金額` と `先方担当者` を取得していないこと。** 実際のリクエストに当該プロパティが含まれないこと、および**スタッフ向けの応答スキーマに現れないこと**を検査する（§15.6 / §21.2）
 - レート制限（429）を受けたときに待って再試行し、**取りこぼしなく完了すること**
+- **同期が写しの行を削除しないこと。** Notion 側から案件が消えた応答を入力し、**行が archive されるだけで残り、その案件に紐づく `content_items` が失われないこと**を確認する（§15.6）
+- **同期対象外の案件を指す社員タスクが、同期を止めずに `related_contract_id` = NULL で取り込まれること**
+- **解決できない担当者が他人に割り当てられないこと**（`assignee_member_id` = NULL になること）
 
 ### 25.3 Permission Test（最重要）
 
@@ -3467,7 +3507,16 @@ DB migration は expand / contract（§6.6）。`production` への migration �
 - 書き込みをバッチ API で原子的に行う仕組み（§22.6）
 - `BEGIN TRANSACTION` と ORM のトランザクション API を禁止する静的検査（§25.2）
 
-完了条件：**空のスキーマに対して CI が全 green。** ローカルで `wrangler dev` に擬似 identity を与え、`ctx.access` が届くこと。
+**Phase 2 で実測して確認する前提（現時点で未検証のもの）**
+
+| # | 確認すること | 外れた場合の影響 |
+|---|---|---|
+| 1 | **Access を Worker に適用した状態で cron トリガーが発火するか** | 発火しないと自動処理が一切動かず、Phase 7 の前提が崩れる。**Phase 2 の最初に確認する** |
+| 2 | `*.workers.dev` で Access が使えるか（独自ドメインが必須か） | 必須なら Q9（独自ドメイン）が Phase 2 の前提条件に繰り上がる |
+| 3 | `ctx.access.getIdentity()` の返却内容に IdP 側の不変IDが含まれるか | 含まれなければ §8.2 規約2・6 だけで同定を守る（設計は既にそうしてある） |
+| 4 | 静的ファイルを Worker から同一オリジンで配信できること | できなければ UI の置き場を再検討する |
+
+完了条件：**空のスキーマに対して CI が全 green。** ローカルで `wrangler dev` に擬似 identity を与え、`ctx.access` が届くこと。**上の4件の実測結果を記録すること。**
 
 ### Phase 3 — Identity / Workspace / Permission
 
@@ -3604,7 +3653,7 @@ Security review、Permission matrix test、rate limit、retry、dead-letter、ba
 | # | リスク | 影響 | 対策 |
 |---|---|---|---|
 | R1 | **ホスティング移行**。UI ごと新オリジンへ移す必要があり、運用URLが変わる | 全スタッフのブックマーク変更が必要 | §24.2 の段階移行。旧URLを2週間残す |
-| **R11** | **Notion にスキーマ契約が無い。** プロパティ名や選択肢を変えると連携が黙って壊れる | 翌月生成が止まる／案件が画面から消える | §15.6 の検証（必須プロパティが欠けたら停止して通知）＋ 除外規則6件＋「要確認」の可視化。運用ルールとして**変更前の事前確認**（オーナー承認済み） |
+| **R11** | **Notion にスキーマ契約が無い。** プロパティ名や選択肢を変えると連携が黙って壊れる | 翌月生成が止まる／案件が画面から消える | §15.6 の検証（必須プロパティが欠けたら停止して通知）＋ 除外規則6件＋「要確認」の可視化＋**写しを削除せず archive するだけにすること**。運用ルールとして**変更前の事前確認**（オーナー承認済み） |
 | **R12** | **`getIdentity()` に IdP 側の不変IDが含まれるか未確認** | 本人の同定を外部の可変値に頼ることになる | `users.id` を主キーにし email を識別子にしない（§8.2）。無効化済みの email での新規ログインは fail closed。**Phase 3 で実測して確認する** |
 | **R13** | **D1 に対話的トランザクションが無い** | 「読んでから決める」実装を書くと原子性が失われる | §22.6 の規約5件。`BEGIN` と ORM のトランザクション API を静的検査で禁止し、原子性をテストで固定する（§25.2） |
 | R2 | **移行時のデータ欠落** | 過去の進捗が失われる | §24.4 の Matrix を1行ずつ検証。§24.6 の Parity で件数・計算結果・画面を全一致させてから切り替え |
