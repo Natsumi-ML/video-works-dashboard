@@ -3,8 +3,9 @@
 このリポジトリを変更する前に、必ず以下を参照してください。UI/UXの変更は「UI仕様書」を、システム（データ・権限・Workflow・外部連携）の変更は「システム設計書」を正とします。
 
 ## システム設計書
-- `SOCIAL_BASE_SYSTEM_DESIGN.md` — システム設計の唯一の正典。データモデル、権限、Workflow、外部連携、移行手順。
-- `SOCIAL_BASE_SENIOR_REVIEW.md` / `SOCIAL_BASE_REVIEW_RESOLUTION.md` — 設計レビューと採否判断。有効な仕様は必ず正典へ反映されているため、仕様確認は正典だけを見ればよい。
+- `SOCIAL_BASE_SYSTEM_DESIGN.md` — システム設計の唯一の正典（v6）。データモデル、権限、Workflow、外部連携、移行手順。**Source of Truth は §5.6 の表を唯一の正とする**（D1 = 業務トランザクション / Notion = 人が保守するマスタ / Drive = ファイル本体）。
+- `SOCIAL_BASE_ARCHITECTURE_REASSESSMENT.md` — 2026-09-03 のアーキテクチャ再評価（確定）。**Source of Truth の役割分担・D1 採用・Artifact を本番にしない判定の根拠**。設計書の前提を変えた文書なので、設計判断の背景を知りたいときはここを読む。
+- `SOCIAL_BASE_SENIOR_REVIEW.md` / `_2` / `_3` / `_4` / `_5` / `SOCIAL_BASE_REVIEW_RESOLUTION.md` — 設計レビューと採否判断。有効な仕様は必ず正典へ反映されているため、仕様確認は正典だけを見ればよい。
 
 ## UI仕様書
 - `SOCIAL_BASE_UI_IMPLEMENTATION_SPEC.md`
